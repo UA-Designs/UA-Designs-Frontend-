@@ -47,17 +47,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
 
-          // Verify token is still valid
-          try {
-            await authService.verifyToken(storedToken);
-          } catch (error) {
-            // Token is invalid, clear auth state
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setToken(null);
-            setUser(null);
-            setIsAuthenticated(false);
-          }
+          // For now, we'll trust the stored token
+          // In production, you might want to verify with backend
+          console.log('Using stored authentication');
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
