@@ -4,6 +4,7 @@ import { ProjectProvider } from './contexts/ProjectContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -32,10 +33,11 @@ import ProjectStakeholders from './pages/PMBOK/Stakeholders/ProjectStakeholders'
 
 function App() {
   return (
-    <AuthProvider>
-      <ProjectProvider>
-        <NotificationProvider>
-          <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ProjectProvider>
+          <NotificationProvider>
+            <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -85,10 +87,11 @@ function App() {
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </NotificationProvider>
-      </ProjectProvider>
-    </AuthProvider>
+            </Routes>
+          </NotificationProvider>
+        </ProjectProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
