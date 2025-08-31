@@ -31,9 +31,9 @@ const Login: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         background: `
-          radial-gradient(circle at 20% 50%, rgba(0, 255, 0, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
-          radial-gradient(circle at 40% 80%, rgba(0, 255, 0, 0.08) 0%, transparent 50%),
+          radial-gradient(circle at 20% 50%, rgba(0, 204, 102, 0.12) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(0, 204, 102, 0.08) 0%, transparent 50%),
+          radial-gradient(circle at 40% 80%, rgba(0, 204, 102, 0.10) 0%, transparent 50%),
           linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #0d0d0d 100%)
         `,
         padding: '20px',
@@ -49,7 +49,7 @@ const Login: React.FC = () => {
           left: '10%',
           width: '200px',
           height: '200px',
-          background: 'radial-gradient(circle, rgba(0, 255, 0, 0.1) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(0, 204, 102, 0.12) 0%, transparent 70%)',
           borderRadius: '50%',
           animation: 'float 6s ease-in-out infinite',
         }}
@@ -61,7 +61,7 @@ const Login: React.FC = () => {
           right: '15%',
           width: '150px',
           height: '150px',
-          background: 'radial-gradient(circle, rgba(0, 255, 0, 0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(0, 204, 102, 0.10) 0%, transparent 70%)',
           borderRadius: '50%',
           animation: 'float 8s ease-in-out infinite reverse',
         }}
@@ -73,7 +73,7 @@ const Login: React.FC = () => {
           maxWidth: 420,
           background: 'rgba(26, 26, 26, 0.95)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0, 255, 0, 0.2)',
+          border: '1px solid rgba(0, 204, 102, 0.25)',
           borderRadius: '20px',
           boxShadow: `
             0 20px 40px rgba(0, 0, 0, 0.4),
@@ -90,13 +90,13 @@ const Login: React.FC = () => {
             style={{
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #00ff00 0%, #00cc00 100%)',
+              background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
               borderRadius: '20px',
               margin: '0 auto 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(0, 255, 0, 0.3)',
+              boxShadow: '0 8px 24px rgba(0, 204, 102, 0.35)',
               fontSize: '32px',
               fontWeight: 'bold',
               color: '#000000',
@@ -136,7 +136,7 @@ const Login: React.FC = () => {
             ]}
           >
             <Input 
-              prefix={<UserOutlined style={{ color: '#00ff00' }} />} 
+              prefix={<UserOutlined style={{ color: '#00cc66' }} />} 
               placeholder="Enter your email"
               style={{
                 background: 'rgba(13, 13, 13, 0.8)',
@@ -155,7 +155,7 @@ const Login: React.FC = () => {
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: '#00ff00' }} />}
+              prefix={<LockOutlined style={{ color: '#00cc66' }} />}
               placeholder="Enter your password"
               style={{
                 background: 'rgba(13, 13, 13, 0.8)',
@@ -176,22 +176,22 @@ const Login: React.FC = () => {
               style={{
                 width: '100%',
                 height: '52px',
-                background: 'linear-gradient(135deg, #00ff00 0%, #00cc00 100%)',
+                background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
                 border: 'none',
                 borderRadius: '12px',
                 color: '#000000',
                 fontWeight: '700',
                 fontSize: '16px',
-                boxShadow: '0 8px 24px rgba(0, 255, 0, 0.4)',
+                boxShadow: '0 8px 24px rgba(0, 204, 102, 0.45)',
                 transition: 'all 0.3s ease',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 255, 0, 0.5)';
+                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 204, 102, 0.55)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 255, 0, 0.4)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 204, 102, 0.45)';
               }}
             >
               Sign In
@@ -208,7 +208,7 @@ const Login: React.FC = () => {
             <Link to="/forgot-password">
               <Text 
                 style={{ 
-                  color: '#00ff00', 
+                  color: '#00cc66', 
                   fontSize: '14px',
                   textDecoration: 'none',
                 }}
@@ -229,7 +229,7 @@ const Login: React.FC = () => {
         <div
           style={{
             background: 'rgba(0, 255, 0, 0.05)',
-            border: '1px solid rgba(0, 255, 0, 0.2)',
+            border: '1px solid rgba(0, 204, 102, 0.25)',
             borderRadius: '12px',
             padding: '16px',
             marginTop: '20px',
@@ -258,14 +258,14 @@ const Login: React.FC = () => {
           
           .ant-input:focus,
           .ant-input-focused {
-            border-color: #00ff00 !important;
-            box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2) !important;
+            border-color: #00cc66 !important;
+            box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
           
           .ant-input-password:focus,
           .ant-input-password-focused {
-            border-color: #00ff00 !important;
-            box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2) !important;
+            border-color: #00cc66 !important;
+            box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
         `}
       </style>

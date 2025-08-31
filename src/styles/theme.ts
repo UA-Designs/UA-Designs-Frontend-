@@ -3,8 +3,8 @@ import type { ThemeConfig } from 'antd';
 export const theme: ThemeConfig = {
   token: {
     // Primary colors - Matching UA Designs logo
-    colorPrimary: '#00ff00', // Neon green from logo
-    colorSuccess: '#00ff00', // Neon green for success states
+    colorPrimary: '#00cc66', // Darker, more sophisticated green
+    colorSuccess: '#00cc66', // Darker green for success states
     colorWarning: '#ffaa00', // Orange for warnings
     colorError: '#ff0040', // Red for errors
     colorInfo: '#00aaff', // Blue for info

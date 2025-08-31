@@ -178,14 +178,25 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <AntLayout style={{ minHeight: '100vh' }}>
+    <AntLayout 
+      style={{ 
+        minHeight: '100vh',
+        background: `
+          radial-gradient(circle at 20% 50%, rgba(0, 204, 102, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(0, 204, 102, 0.03) 0%, transparent 50%),
+          linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #0d0d0d 100%)
+        `,
+      }}
+    >
       <Sider
         trigger={null}
         collapsible
         collapsed={collapsed}
         style={{
-          background: token.colorBgContainer,
-          borderRight: `1px solid ${token.colorBorder}`,
+          background: 'rgba(13, 13, 13, 0.95)',
+          borderRight: '1px solid rgba(0, 204, 102, 0.2)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
         }}
       >
         <div
@@ -194,9 +205,11 @@ const Layout: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderBottom: `1px solid ${token.colorBorder}`,
-            background: 'transparent',
+            borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
+            background: 'rgba(0, 204, 102, 0.05)',
             padding: '8px',
+            margin: '8px',
+            borderRadius: '12px',
           }}
         >
           <Logo 
@@ -210,7 +223,11 @@ const Layout: React.FC = () => {
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={handleMenuClick}
-          style={{ borderRight: 0 }}
+          style={{ 
+            borderRight: 0,
+            background: 'transparent',
+            margin: '8px',
+          }}
         />
       </Sider>
 
@@ -218,8 +235,10 @@ const Layout: React.FC = () => {
         <Header
           style={{
             padding: '0 24px',
-            background: token.colorBgContainer,
-            borderBottom: `1px solid ${token.colorBorder}`,
+            background: 'rgba(26, 26, 26, 0.95)',
+            borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 2px 20px rgba(0, 0, 0, 0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -230,7 +249,22 @@ const Layout: React.FC = () => {
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: '16px', width: 64, height: 64 }}
+              style={{ 
+                fontSize: '16px', 
+                width: 64, 
+                height: 64,
+                color: '#00cc66',
+                borderRadius: '12px',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
             />
             <Logo 
               size="small" 
@@ -245,11 +279,24 @@ const Layout: React.FC = () => {
               placement="bottomRight"
               trigger={['click']}
             >
-              <Badge count={unreadCount} size="small">
+              <Badge count={unreadCount} size="small" color="#00cc66">
                 <Button
                   type="text"
                   icon={<BellOutlined />}
-                  style={{ fontSize: '16px' }}
+                  style={{ 
+                    fontSize: '16px',
+                    color: '#00cc66',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
                 />
               </Badge>
             </Dropdown>
@@ -259,19 +306,35 @@ const Layout: React.FC = () => {
               placement="bottomRight"
               trigger={['click']}
             >
-              <Space style={{ cursor: 'pointer' }}>
+              <Space style={{ 
+                cursor: 'pointer',
+                padding: '8px 12px',
+                borderRadius: '12px',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+              >
                 <Avatar
                   src={user?.avatar}
                   icon={<UserOutlined />}
-                  style={{ backgroundColor: token.colorPrimary }}
+                  style={{ 
+                    backgroundColor: '#00cc66',
+                    border: '2px solid rgba(0, 204, 102, 0.3)',
+                    boxShadow: '0 4px 12px rgba(0, 204, 102, 0.3)',
+                  }}
                 />
                 {!collapsed && (
                   <div>
-                    <Text strong>
+                    <Text strong style={{ color: '#ffffff' }}>
                       {user?.firstName} {user?.lastName}
                     </Text>
                     <br />
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <Text style={{ color: '#00cc66', fontSize: '12px', fontWeight: '500' }}>
                       {user?.role?.replace('_', ' ').toUpperCase()}
                     </Text>
                   </div>
@@ -284,10 +347,11 @@ const Layout: React.FC = () => {
         <Content
           style={{
             margin: '24px 16px',
-            padding: 24,
-            background: token.colorBgContainer,
-            borderRadius: token.borderRadius,
+            padding: 0,
+            background: 'transparent',
+            borderRadius: '16px',
             minHeight: 'calc(100vh - 112px)',
+            overflow: 'hidden',
           }}
         >
           <Outlet />

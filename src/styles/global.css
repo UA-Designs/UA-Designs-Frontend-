@@ -51,7 +51,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #00ff00; /* Neon green on hover */
+  background: #00cc66; /* Neon green on hover */
 }
 
 /* Ant Design customizations - Dark theme */
@@ -81,13 +81,13 @@ body {
 }
 
 .ant-menu-dark .ant-menu-item-selected {
-  background-color: #00ff00;
+  background-color: #00cc66;
   color: #000000;
 }
 
 .ant-menu-dark .ant-menu-item:hover {
   background-color: rgba(0, 255, 0, 0.1);
-  color: #00ff00;
+  color: #00cc66;
 }
 
 .ant-card {
@@ -112,8 +112,8 @@ body {
 }
 
 .ant-btn-primary {
-  background: #00ff00;
-  border-color: #00ff00;
+  background: #00cc66;
+  border-color: #00cc66;
   color: #000000;
   box-shadow: 0 4px 16px rgba(0, 255, 0, 0.3);
 }
@@ -135,7 +135,7 @@ body {
 
 .ant-input:focus,
 .ant-select-focused .ant-select-selector {
-  border-color: #00ff00;
+  border-color: #00cc66;
   box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
 }
 
@@ -344,7 +344,7 @@ body {
 .dashboard-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(0, 255, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.4);
-  border-color: #00ff00;
+  border-color: #00cc66;
 }
 
 .stat-card {
@@ -406,7 +406,7 @@ body {
 }
 
 .status-indicator.active {
-  background-color: #00ff00;
+  background-color: #00cc66;
   box-shadow: 0 0 12px rgba(0, 255, 0, 0.5);
 }
 
@@ -432,7 +432,7 @@ body {
 }
 
 .priority-low {
-  color: #00ff00;
+  color: #00cc66;
   text-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 }
 
