@@ -39,8 +39,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('Initializing authentication...');
         const storedToken = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
+
+        console.log('Stored token exists:', !!storedToken);
+        console.log('Stored user exists:', !!storedUser);
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -49,7 +53,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // For now, we'll trust the stored token
           // In production, you might want to verify with backend
-          console.log('Using stored authentication');
+          console.log('Using stored authentication - user authenticated');
+        } else {
+          console.log('No stored authentication found');
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -57,7 +63,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       } finally {
-        setIsLoading(false);
+        console.log('Auth initialization complete, setting loading to false');
+        // Add a small delay to ensure loading state is visible
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 100);
       }
     };
 
