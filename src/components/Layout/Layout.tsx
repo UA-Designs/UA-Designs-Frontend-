@@ -36,6 +36,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import Logo from '../Logo/Logo';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
@@ -194,18 +195,15 @@ const Layout: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             borderBottom: `1px solid ${token.colorBorder}`,
-            background: token.colorPrimary,
-            color: 'white',
+            background: 'transparent',
+            padding: '8px',
           }}
         >
-          <BankOutlined
-            style={{ fontSize: 24, marginRight: collapsed ? 0 : 8 }}
+          <Logo 
+            size={collapsed ? 'small' : 'medium'} 
+            showText={!collapsed}
+            className="sidebar-logo"
           />
-          {!collapsed && (
-            <Text strong style={{ color: 'white' }}>
-              UA Designs PMS
-            </Text>
-          )}
         </div>
         <Menu
           mode="inline"
@@ -227,12 +225,19 @@ const Layout: React.FC = () => {
             justifyContent: 'space-between',
           }}
         >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ fontSize: '16px', width: 64, height: 64 }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ fontSize: '16px', width: 64, height: 64 }}
+            />
+            <Logo 
+              size="small" 
+              showText={false}
+              className="header-logo"
+            />
+          </div>
 
           <Space size="middle">
             <Dropdown

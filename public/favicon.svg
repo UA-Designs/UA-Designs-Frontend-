@@ -1,0 +1,28 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="uaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a2a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d0d0d;stop-opacity:1" />
+    </linearGradient>
+    <filter id="neonGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" fill="#0d0d0d" rx="4"/>
+  
+  <!-- UA Block -->
+  <rect x="6" y="8" width="20" height="16" fill="url(#uaGradient)" stroke="#00ff00" stroke-width="1" rx="2" filter="url(#neonGlow)"/>
+  
+  <!-- UA Text -->
+  <text x="16" y="19" font-family="Inter, sans-serif" font-size="12" font-weight="900" text-anchor="middle" fill="#ffffff" text-shadow="0 0 4px rgba(0,255,0,0.5)">UA</text>
+  
+  <!-- Designs Text -->
+  <text x="16" y="26" font-family="Inter, sans-serif" font-size="6" font-weight="300" font-style="italic" text-anchor="middle" fill="#00ff00" text-shadow="0 0 2px rgba(0,255,0,0.4)">designs</text>
+</svg>

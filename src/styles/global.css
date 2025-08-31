@@ -512,3 +512,44 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* UA Designs Logo Animations */
+@keyframes neonPulse {
+  0% {
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(0, 255, 0, 0.8), 0 0 35px rgba(0, 255, 0, 0.4);
+  }
+}
+
+/* Logo hover effects */
+.ua-designs-logo:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+.ua-designs-logo:hover .ant-typography {
+  text-shadow: 0 0 15px rgba(0, 255, 0, 0.7) !important;
+}
+
+/* Logo positioning in different contexts */
+.sidebar-logo {
+  width: 100%;
+  justify-content: center;
+}
+
+.header-logo {
+  margin-left: 8px;
+}
+
+/* Responsive logo adjustments */
+@media (max-width: 768px) {
+  .header-logo {
+    display: none;
+  }
+  
+  .ua-designs-logo {
+    transform: scale(0.9);
+  }
+}
