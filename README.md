@@ -30,6 +30,25 @@ A modern React-based Project Management System frontend built with TypeScript, V
 4. **Open your browser**
    Navigate to `http://localhost:5173`
 
+## 🔐 Login Credentials
+
+For testing and development purposes, you can use these demo accounts:
+
+### Demo Users
+
+| Role | Email | Password | Description |
+|------|-------|----------|-------------|
+| **Project Manager** | `john.doe@uadesigns.com` | `password123` | Full access to all project management features |
+| **Team Lead** | `jane.smith@uadesigns.com` | `password123` | Team management and project oversight |
+| **Contractor** | `mike.johnson@uadesigns.com` | `password123` | Limited access for external team members |
+
+### Admin Access
+- **Email**: `admin@uadesigns.com`
+- **Password**: `admin123`
+- **Role**: System Administrator with full access
+
+> **Note**: These are demo credentials for development/testing. In production, ensure proper authentication and user management.
+
 ## 📁 Project Structure
 
 ```
@@ -116,6 +135,31 @@ VITE_DEBUG=true
 - **HTTP Client**: Axios
 - **Styling**: CSS + Ant Design themes
 - **Code Quality**: ESLint + Prettier
+
+## 🏷️ Brand Identity
+
+### Logo & Design System
+- **Logo**: Custom UA Designs logo with 3D block letters and neon green accents
+- **Color Palette**: 
+  - Primary: Neon Green (`#00ff00`)
+  - Background: Dark (`#0d0d0d`, `#1a1a1a`)
+  - Text: White (`#ffffff`)
+- **Typography**: Inter & SF Pro Display fonts
+- **Theme**: Dark mode with futuristic, tech-forward aesthetic
+- **Design Language**: Geometric, sharp-edged components with glowing effects
+
+### Logo Usage
+The UA Designs logo appears in:
+- Browser tab (favicon)
+- Sidebar navigation
+- Header bar
+- All branded components
+
+The logo features:
+- 3D isometric "UA" block letters
+- Neon green hexagonal outline
+- Cursive "designs" script text
+- Glowing animations and hover effects
 
 ## 📦 Key Dependencies
 
