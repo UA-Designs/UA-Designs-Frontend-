@@ -6,7 +6,7 @@
       <stop offset="100%" style="stop-color:#0d0d0d;stop-opacity:1" />
     </linearGradient>
     <filter id="neonGlow">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
       <feMerge> 
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
@@ -17,12 +17,12 @@
   <!-- Background -->
   <rect width="32" height="32" fill="#0d0d0d" rx="4"/>
   
-  <!-- UA Block -->
-  <rect x="6" y="8" width="20" height="16" fill="url(#uaGradient)" stroke="#00ff00" stroke-width="1" rx="2" filter="url(#neonGlow)"/>
+  <!-- UA Block - 3D Effect -->
+  <rect x="4" y="6" width="24" height="14" fill="url(#uaGradient)" stroke="#00ff00" stroke-width="1.5" rx="2" filter="url(#neonGlow)"/>
   
   <!-- UA Text -->
-  <text x="16" y="19" font-family="Inter, sans-serif" font-size="12" font-weight="900" text-anchor="middle" fill="#ffffff" text-shadow="0 0 4px rgba(0,255,0,0.5)">UA</text>
+  <text x="16" y="15" font-family="Inter, sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="#ffffff">UA</text>
   
   <!-- Designs Text -->
-  <text x="16" y="26" font-family="Inter, sans-serif" font-size="6" font-weight="300" font-style="italic" text-anchor="middle" fill="#00ff00" text-shadow="0 0 2px rgba(0,255,0,0.4)">designs</text>
+  <text x="16" y="25" font-family="Inter, sans-serif" font-size="5" font-weight="300" font-style="italic" text-anchor="middle" fill="#00ff00">designs</text>
 </svg>
