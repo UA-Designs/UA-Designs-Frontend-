@@ -42,23 +42,34 @@ const Logo: React.FC<LogoProps> = ({
         justifyContent: 'center',
       }}
     >
-      <img
-        src="/ua-designs-logo.svg"
-        alt="UA Designs Logo"
+      {/* Fallback to text logo if image doesn't exist */}
+      <div
         style={{
           width: styles.width,
           height: styles.height,
-          objectFit: 'contain',
-          filter: 'drop-shadow(0 0 10px rgba(0, 255, 0, 0.3))',
+          background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#000000',
+          fontSize: size === 'small' ? '16px' : size === 'large' ? '32px' : '24px',
+          fontWeight: 'bold',
+          boxShadow: '0 4px 12px rgba(0, 204, 102, 0.3)',
           transition: 'all 0.3s ease',
+          cursor: 'pointer',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.filter = 'drop-shadow(0 0 15px rgba(0, 255, 0, 0.6)) scale(1.05)';
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 204, 102, 0.4)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.filter = 'drop-shadow(0 0 10px rgba(0, 255, 0, 0.3)) scale(1)';
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 204, 102, 0.3)';
         }}
-      />
+      >
+        UA
+      </div>
     </div>
   );
 };

@@ -275,7 +275,7 @@ const Layout: React.FC = () => {
       <AntLayout>
         <Header
           style={{
-            padding: '0 24px',
+            padding: '0 16px',
             background: 'rgba(26, 26, 26, 0.95)',
             borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
             backdropFilter: 'blur(20px)',
@@ -283,20 +283,25 @@ const Layout: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            height: '64px',
+            minHeight: '64px',
+            maxHeight: '64px',
+            overflow: 'hidden',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
               style={{ 
                 fontSize: '16px', 
-                width: 64, 
-                height: 64,
+                width: 48, 
+                height: 48,
                 color: '#00cc66',
-                borderRadius: '12px',
+                borderRadius: '8px',
                 transition: 'all 0.3s ease',
+                flexShrink: 0,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
@@ -314,7 +319,7 @@ const Layout: React.FC = () => {
             />
           </div>
 
-          <Space size="middle">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <Dropdown
               menu={{ items: notificationMenuItems }}
               placement="bottomRight"
@@ -327,7 +332,9 @@ const Layout: React.FC = () => {
                   style={{ 
                     fontSize: '16px',
                     color: '#00cc66',
-                    borderRadius: '12px',
+                    borderRadius: '8px',
+                    width: 40,
+                    height: 40,
                     transition: 'all 0.3s ease',
                   }}
                   onMouseEnter={(e) => {
@@ -347,11 +354,16 @@ const Layout: React.FC = () => {
               placement="bottomRight"
               trigger={['click']}
             >
-              <Space style={{ 
+              <div style={{ 
                 cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: '12px',
+                padding: '4px 8px',
+                borderRadius: '8px',
                 transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                maxWidth: '200px',
+                minWidth: 0,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
@@ -363,26 +375,41 @@ const Layout: React.FC = () => {
                 <Avatar
                   src={user?.avatar}
                   icon={<UserOutlined />}
+                  size="small"
                   style={{ 
                     backgroundColor: '#00cc66',
                     border: '2px solid rgba(0, 204, 102, 0.3)',
-                    boxShadow: '0 4px 12px rgba(0, 204, 102, 0.3)',
+                    boxShadow: '0 2px 8px rgba(0, 204, 102, 0.3)',
+                    flexShrink: 0,
                   }}
                 />
                 {!collapsed && (
-                  <div>
-                    <Text strong style={{ color: '#ffffff' }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ 
+                      color: '#ffffff', 
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
                       {user?.firstName} {user?.lastName}
-                    </Text>
-                    <br />
-                    <Text style={{ color: '#00cc66', fontSize: '12px', fontWeight: '500' }}>
+                    </div>
+                    <div style={{ 
+                      color: '#00cc66', 
+                      fontSize: '11px', 
+                      fontWeight: '500',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
                       {user?.role?.replace('_', ' ').toUpperCase()}
-                    </Text>
+                    </div>
                   </div>
                 )}
-              </Space>
+              </div>
             </Dropdown>
-          </Space>
+          </div>
         </Header>
 
         <Content
