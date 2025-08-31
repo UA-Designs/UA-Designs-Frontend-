@@ -6,6 +6,7 @@ import {
   LockOutlined,
   MailOutlined,
   BankOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { RegisterRequest, UserRole } from '../../types';
@@ -24,6 +25,10 @@ const Register: React.FC = () => {
     } catch (error) {
       // Error is handled by the auth context
     }
+  };
+
+  const handleGoBack = () => {
+    navigate(-1); // Go back to previous page
   };
 
   return (
@@ -69,6 +74,49 @@ const Register: React.FC = () => {
           animation: 'float 8s ease-in-out infinite reverse',
         }}
       />
+
+      {/* Back Button */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          zIndex: 10,
+        }}
+      >
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={handleGoBack}
+          style={{
+            background: 'rgba(26, 26, 26, 0.8)',
+            border: '1px solid rgba(0, 204, 102, 0.3)',
+            borderRadius: '12px',
+            color: '#00cc66',
+            fontSize: '16px',
+            fontWeight: '600',
+            height: '44px',
+            padding: '0 16px',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
+            e.currentTarget.style.borderColor = '#00cc66';
+            e.currentTarget.style.transform = 'translateX(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 204, 102, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(26, 26, 26, 0.8)';
+            e.currentTarget.style.borderColor = 'rgba(0, 204, 102, 0.3)';
+            e.currentTarget.style.transform = 'translateX(0)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+          }}
+        >
+          Back
+        </Button>
+      </div>
 
       <Card
         style={{
