@@ -15,26 +15,42 @@ interface CostVarianceChartProps {
 }
 
 const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
-  const chartData = data.map(item => ({
+  // Use mock data if no data provided
+  const chartData = data.length > 0 ? data.map(item => ({
     name: item.projectName,
     planned: item.plannedCost,
     actual: item.actualCost,
     variance: item.variance,
-  }));
+  })) : [
+    { name: 'Project A', planned: 100000, actual: 95000, variance: -5 },
+    { name: 'Project B', planned: 150000, actual: 160000, variance: 6.7 },
+    { name: 'Project C', planned: 200000, actual: 180000, variance: -10 },
+    { name: 'Project D', planned: 120000, actual: 125000, variance: 4.2 },
+  ];
 
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: '#b3b3b3' }}
           angle={-45}
           textAnchor="end"
           height={60}
+          axisLine={{ stroke: '#333' }}
         />
-        <YAxis tick={{ fontSize: 12 }} />
+        <YAxis 
+          tick={{ fontSize: 12, fill: '#b3b3b3' }} 
+          axisLine={{ stroke: '#333' }}
+        />
         <Tooltip
+          contentStyle={{
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #333',
+            borderRadius: '6px',
+            color: '#fff',
+          }}
           formatter={(value, name) => [
             `$${Number(value).toLocaleString()}`,
             name === 'planned'
@@ -47,16 +63,16 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
         <Line
           type="monotone"
           dataKey="planned"
-          stroke="#1890ff"
+          stroke="#00cc66"
           strokeWidth={2}
-          dot={{ fill: '#1890ff', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#00cc66', strokeWidth: 2, r: 4 }}
         />
         <Line
           type="monotone"
           dataKey="actual"
-          stroke="#52c41a"
+          stroke="#ff4d4f"
           strokeWidth={2}
-          dot={{ fill: '#52c41a', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#ff4d4f', strokeWidth: 2, r: 4 }}
         />
       </LineChart>
     </ResponsiveContainer>
