@@ -20,7 +20,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
     "noImplicitAny": false,
-    "skipLibCheck": true,
     "noImplicitReturns": false,
     "noImplicitThis": false,
     "strictNullChecks": false,
