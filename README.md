@@ -32,22 +32,12 @@ A modern React-based Project Management System frontend built with TypeScript, V
 
 ## 🔐 Login Credentials
 
-For testing and development purposes, you can use these demo accounts:
-
-### Demo Users
-
-| Role | Email | Password | Description |
-|------|-------|----------|-------------|
-| **Project Manager** | `john.doe@uadesigns.com` | `password123` | Full access to all project management features |
-| **Team Lead** | `jane.smith@uadesigns.com` | `password123` | Team management and project oversight |
-| **Contractor** | `mike.johnson@uadesigns.com` | `password123` | Limited access for external team members |
-
 ### Admin Access
 - **Email**: `admin@uadesigns.com`
 - **Password**: `admin123`
 - **Role**: System Administrator with full access
 
-> **Note**: These are demo credentials for development/testing. In production, ensure proper authentication and user management.
+> **Note**: This application now connects to a real API. Contact your system administrator for additional user accounts and credentials.
 
 ## 📁 Project Structure
 
