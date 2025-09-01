@@ -42,14 +42,41 @@ const Logo: React.FC<LogoProps> = ({
         justifyContent: 'center',
       }}
     >
-      {/* Fallback to text logo if image doesn't exist */}
+      {/* UA Designs Logo Image */}
+      <img
+        src="/UA LOGO.jpg"
+        alt="UA Designs"
+        style={{
+          width: styles.width,
+          height: styles.height,
+          objectFit: 'contain',
+          transition: 'all 0.3s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+        onError={(e) => {
+          // Fallback to text logo if image doesn't exist
+          const target = e.target as HTMLImageElement;
+          target.style.display = 'none';
+          const fallback = target.nextElementSibling as HTMLElement;
+          if (fallback) {
+            fallback.style.display = 'flex';
+          }
+        }}
+      />
+      {/* Fallback text logo (hidden by default) */}
       <div
         style={{
           width: styles.width,
           height: styles.height,
-          background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+          background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
           borderRadius: '12px',
-          display: 'flex',
+          display: 'none',
           alignItems: 'center',
           justifyContent: 'center',
           color: '#000000',
@@ -70,6 +97,7 @@ const Logo: React.FC<LogoProps> = ({
       >
         UA
       </div>
+
     </div>
   );
 };

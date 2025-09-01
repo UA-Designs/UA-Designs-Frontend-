@@ -20,12 +20,34 @@ const { Text } = Typography;
 const RecentActivities: React.FC = () => {
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchActivities = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
         const data = await dashboardService.getRecentActivities(10);
-        setActivities(data);
+        
+        // Transform API data to match component expectations
+        const transformedData = data.map(activity => ({
+          id: activity.id?.toString() || Math.random().toString(),
+          type: activity.type || ActivityType.PROJECT_CREATED,
+          description: activity.message || activity.description || 'Activity',
+          user: {
+            id: activity.userId || 'unknown',
+            firstName: activity.userName ? activity.userName.split(' ')[0] : 'Unknown',
+            lastName: activity.userName ? activity.userName.split(' ').slice(1).join(' ') : 'User',
+            email: '',
+            role: 'user',
+            avatar: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          createdAt: activity.timestamp || activity.createdAt || new Date().toISOString(),
+        }));
+        
+        setActivities(transformedData);
       } catch (error) {
         console.warn('API not available, using mock data for recent activities:', error);
         // Use mock data if API fails
@@ -127,7 +149,29 @@ const RecentActivities: React.FC = () => {
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '20px' }}>
-        <Spin />
+        <Spin size="large" style={{ color: '#009944' }} />
+        <div style={{ color: '#ffffff', marginTop: '16px' }}>Loading recent activities...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px' }}>
+        <div style={{ color: '#ff4d4f', marginBottom: '16px' }}>Error: {error}</div>
+        <button 
+          onClick={() => window.location.reload()} 
+          style={{
+            background: '#009944',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -164,11 +208,11 @@ const RecentActivities: React.FC = () => {
             description={
               <div>
                 <Text type="secondary">
-                  by {activity.user.firstName} {activity.user.lastName}
+                  by {activity.user?.firstName || 'Unknown'} {activity.user?.lastName || 'User'}
                 </Text>
                 <br />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {dayjs(activity.createdAt).fromNow()}
+                  {activity.createdAt ? dayjs(activity.createdAt).fromNow() : 'Just now'}
                 </Text>
               </div>
             }

@@ -35,34 +35,18 @@ const Dashboard: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        // Try to fetch data, but don't fail if backend is not available
-        try {
-          const [statsData, projectData, taskData, costData] = await Promise.all([
-            dashboardService.getStats(),
-            dashboardService.getProjectProgress(),
-            dashboardService.getTaskProgress(),
-            dashboardService.getCostVariance(),
-          ]);
+        // Fetch real data from API
+        const [statsData, projectData, taskData, costData] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getProjectProgress(),
+          dashboardService.getTaskProgress(),
+          dashboardService.getCostVariance(),
+        ]);
 
-          setStats(statsData);
-          setProjectProgress(projectData);
-          setTaskProgress(taskData);
-          setCostVariance(costData);
-        } catch (apiError) {
-          // If API fails, use mock data for demo purposes
-          console.warn('API not available, using mock data:', apiError);
-          setStats({
-            totalProjects: 12,
-            activeProjects: 8,
-            completedTasks: 156,
-            totalBudget: 2500000,
-            costVariance: -5.2,
-            scheduleVariance: 2.1,
-          });
-          setProjectProgress([]);
-          setTaskProgress([]);
-          setCostVariance([]);
-        }
+        setStats(statsData);
+        setProjectProgress(projectData);
+        setTaskProgress(taskData);
+        setCostVariance(costData);
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {
@@ -158,8 +142,8 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#ffffff', fontWeight: '500' }}>Total Projects</span>}
               value={stats?.totalProjects || 0}
-              prefix={<ProjectOutlined style={{ color: '#00cc66' }} />}
-              valueStyle={{ color: '#00cc66', fontSize: '24px', fontWeight: '700' }}
+              prefix={<ProjectOutlined style={{ color: '#009944' }} />}
+              valueStyle={{ color: '#009944', fontSize: '24px', fontWeight: '700' }}
             />
           </Card>
         </Col>
@@ -186,8 +170,8 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#ffffff', fontWeight: '500' }}>Active Projects</span>}
               value={stats?.activeProjects || 0}
-              prefix={<CheckCircleOutlined style={{ color: '#00cc66' }} />}
-              valueStyle={{ color: '#00cc66', fontSize: '24px', fontWeight: '700' }}
+              prefix={<CheckCircleOutlined style={{ color: '#009944' }} />}
+              valueStyle={{ color: '#009944', fontSize: '24px', fontWeight: '700' }}
             />
           </Card>
         </Col>
@@ -214,8 +198,8 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#ffffff', fontWeight: '500' }}>Completed Tasks</span>}
               value={stats?.completedTasks || 0}
-              prefix={<ClockCircleOutlined style={{ color: '#00cc66' }} />}
-              valueStyle={{ color: '#00cc66', fontSize: '24px', fontWeight: '700' }}
+              prefix={<ClockCircleOutlined style={{ color: '#009944' }} />}
+              valueStyle={{ color: '#009944', fontSize: '24px', fontWeight: '700' }}
             />
           </Card>
         </Col>
@@ -242,9 +226,9 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#ffffff', fontWeight: '500' }}>Total Budget</span>}
               value={stats?.totalBudget || 0}
-              prefix={<DollarOutlined style={{ color: '#00cc66' }} />}
+              prefix={<DollarOutlined style={{ color: '#009944' }} />}
               precision={2}
-              valueStyle={{ color: '#00cc66', fontSize: '24px', fontWeight: '700' }}
+              valueStyle={{ color: '#009944', fontSize: '24px', fontWeight: '700' }}
             />
           </Card>
         </Col>
@@ -272,14 +256,14 @@ const Dashboard: React.FC = () => {
                 stats?.costVariance && stats.costVariance > 0 ? (
                   <RiseOutlined style={{ color: '#ff4d4f' }} />
                 ) : (
-                  <FallOutlined style={{ color: '#00cc66' }} />
+                  <FallOutlined style={{ color: '#009944' }} />
                 )
               }
               valueStyle={{
                 color:
                   stats?.costVariance && stats.costVariance > 0
                     ? '#ff4d4f'
-                    : '#00cc66',
+                    : '#009944',
                 fontSize: '20px',
                 fontWeight: '700',
               }}
@@ -312,14 +296,14 @@ const Dashboard: React.FC = () => {
                 stats?.scheduleVariance && stats.scheduleVariance > 0 ? (
                   <RiseOutlined style={{ color: '#ff4d4f' }} />
                 ) : (
-                  <FallOutlined style={{ color: '#00cc66' }} />
+                  <FallOutlined style={{ color: '#009944' }} />
                 )
               }
               valueStyle={{
                 color:
                   stats?.scheduleVariance && stats.scheduleVariance > 0
                     ? '#ff4d4f'
-                    : '#00cc66',
+                    : '#009944',
                 fontSize: '20px',
                 fontWeight: '700',
               }}

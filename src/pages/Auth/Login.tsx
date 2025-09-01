@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Space, Divider } from 'antd';
 import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginRequest } from '../../types';
+import { testApiConnection, testLoginEndpoint } from '../../utils/apiTest';
 
 const { Title, Text } = Typography;
 
@@ -14,11 +15,34 @@ const Login: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
+  // Test API connection on component mount
+  useEffect(() => {
+    const runTests = async () => {
+      console.log('🔍 Running API connection tests...');
+      const apiConnected = await testApiConnection();
+      const loginEndpointExists = await testLoginEndpoint();
+      
+      if (!apiConnected) {
+        console.error('❌ Backend API is not accessible at http://localhost:5000/api');
+        console.error('Please make sure your backend server is running');
+      } else if (!loginEndpointExists) {
+        console.error('❌ Login endpoint not found at /api/auth/login');
+      } else {
+        console.log('✅ API connection tests passed');
+      }
+    };
+    
+    runTests();
+  }, []);
+
   const onFinish = async (values: LoginRequest) => {
     try {
+      console.log('🚀 Login form submitted with values:', { email: values.email });
       await login(values);
+      console.log('✅ Login successful, navigating to:', from);
       navigate(from, { replace: true });
     } catch (error) {
+      console.error('❌ Login failed:', error);
       // Error is handled by the auth context
     }
   };
@@ -90,7 +114,7 @@ const Login: React.FC = () => {
             style={{
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+              background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
               borderRadius: '20px',
               margin: '0 auto 20px',
               display: 'flex',
@@ -136,7 +160,7 @@ const Login: React.FC = () => {
             ]}
           >
             <Input 
-              prefix={<UserOutlined style={{ color: '#00cc66' }} />} 
+              prefix={<UserOutlined style={{ color: '#009944' }} />} 
               placeholder="Enter your email"
               style={{
                 background: 'rgba(13, 13, 13, 0.8)',
@@ -155,7 +179,7 @@ const Login: React.FC = () => {
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: '#00cc66' }} />}
+              prefix={<LockOutlined style={{ color: '#009944' }} />}
               placeholder="Enter your password"
               style={{
                 background: 'rgba(13, 13, 13, 0.8)',
@@ -176,7 +200,7 @@ const Login: React.FC = () => {
               style={{
                 width: '100%',
                 height: '52px',
-                background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+                background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
                 border: 'none',
                 borderRadius: '12px',
                 color: '#000000',
@@ -208,7 +232,7 @@ const Login: React.FC = () => {
             <Link to="/forgot-password">
               <Text 
                 style={{ 
-                  color: '#00cc66', 
+                  color: '#009944', 
                   fontSize: '14px',
                   textDecoration: 'none',
                 }}
@@ -258,13 +282,13 @@ const Login: React.FC = () => {
           
           .ant-input:focus,
           .ant-input-focused {
-            border-color: #00cc66 !important;
+            border-color: #009944 !important;
             box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
           
           .ant-input-password:focus,
           .ant-input-password-focused {
-            border-color: #00cc66 !important;
+            border-color: #009944 !important;
             box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
         `}

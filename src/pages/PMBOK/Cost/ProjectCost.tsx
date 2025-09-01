@@ -71,7 +71,7 @@ const ProjectCost: React.FC = () => {
       dataIndex: 'variance',
       key: 'variance',
       render: (value: number) => (
-        <Text style={{ color: value < 0 ? '#52c41a' : '#ff4d4f' }}>
+        <Text style={{ color: value < 0 ? '#009944' : '#ff4d4f' }}>
           {value < 0 ? <FallOutlined /> : <RiseOutlined />}$
           {Math.abs(value).toLocaleString()}
         </Text>
@@ -122,7 +122,7 @@ const ProjectCost: React.FC = () => {
               title="Actual Cost"
               value={totalActual}
               prefix={<DollarOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#009944' }}
               formatter={value => `$${Number(value).toLocaleString()}`}
             />
           </Card>
@@ -139,7 +139,7 @@ const ProjectCost: React.FC = () => {
                   <RiseOutlined />
                 )
               }
-              valueStyle={{ color: totalVariance < 0 ? '#52c41a' : '#ff4d4f' }}
+              valueStyle={{ color: totalVariance < 0 ? '#009944' : '#ff4d4f' }}
               formatter={value =>
                 `$${Math.abs(Number(value)).toLocaleString()}`
               }
@@ -177,7 +177,7 @@ const ProjectCost: React.FC = () => {
                     <Text
                       strong
                       style={{
-                        color: totalVariance < 0 ? '#52c41a' : '#ff4d4f',
+                        color: totalVariance < 0 ? '#009944' : '#ff4d4f',
                       }}
                     >
                       {totalVariance < 0 ? (

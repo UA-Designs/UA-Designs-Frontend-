@@ -23,7 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             success: {
               duration: 3000,
               iconTheme: {
-                primary: '#52c41a',
+                primary: '#009944',
                 secondary: '#fff',
               },
             },

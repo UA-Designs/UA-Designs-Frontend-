@@ -51,7 +51,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #00cc66; /* Neon green on hover */
+  background: #009944; /* Darker green on hover */
 }
 
 /* Ant Design customizations - Dark theme */
@@ -81,13 +81,13 @@ body {
 }
 
 .ant-menu-dark .ant-menu-item-selected {
-  background-color: #00cc66;
+  background-color: #009944;
   color: #000000;
 }
 
 .ant-menu-dark .ant-menu-item:hover {
-  background-color: rgba(0, 255, 0, 0.1);
-  color: #00cc66;
+  background-color: rgba(0, 153, 68, 0.1);
+  color: #009944;
 }
 
 .ant-card {
@@ -112,17 +112,17 @@ body {
 }
 
 .ant-btn-primary {
-  background: #00cc66;
-  border-color: #00cc66;
+  background: #009944;
+  border-color: #009944;
   color: #000000;
-  box-shadow: 0 4px 16px rgba(0, 255, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 153, 68, 0.3);
 }
 
 .ant-btn-primary:hover {
-  background: #00cc00;
-  border-color: #00cc00;
+  background: #007733;
+  border-color: #007733;
   color: #000000;
-  box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 153, 68, 0.4);
 }
 
 .ant-input,
@@ -135,8 +135,8 @@ body {
 
 .ant-input:focus,
 .ant-select-focused .ant-select-selector {
-  border-color: #00cc66;
-  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
+  border-color: #009944;
+  box-shadow: 0 0 0 2px rgba(0, 153, 68, 0.2);
 }
 
 .ant-table {
@@ -157,7 +157,7 @@ body {
 }
 
 .ant-table-tbody > tr:hover > td {
-  background: rgba(0, 255, 0, 0.05);
+  background: rgba(0, 153, 68, 0.05);
 }
 
 .ant-form-item-label > label {
@@ -402,12 +402,12 @@ body {
   height: 8px;
   border-radius: 50%;
   margin-right: 8px;
-  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  box-shadow: 0 0 8px rgba(0, 153, 68, 0.3);
 }
 
 .status-indicator.active {
-  background-color: #00cc66;
-  box-shadow: 0 0 12px rgba(0, 255, 0, 0.5);
+  background-color: #009944;
+  box-shadow: 0 0 12px rgba(0, 153, 68, 0.5);
 }
 
 .status-indicator.inactive {
@@ -432,8 +432,8 @@ body {
 }
 
 .priority-low {
-  color: #00cc66;
-  text-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  color: #009944;
+  text-shadow: 0 0 8px rgba(0, 153, 68, 0.3);
 }
 
 /* Progress indicators */

@@ -161,7 +161,7 @@ const Profile: React.FC = () => {
                   <br />
                   <Text
                     type="secondary"
-                    style={{ color: user?.isActive ? '#52c41a' : '#ff4d4f' }}
+                    style={{ color: user?.isActive ? '#009944' : '#ff4d4f' }}
                   >
                     {user?.isActive ? 'Active' : 'Inactive'}
                   </Text>

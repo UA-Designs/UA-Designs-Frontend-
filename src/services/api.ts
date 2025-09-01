@@ -1,6 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-// import { config } from '../env.config';
-import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 
 class ApiService {
@@ -8,7 +6,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.DEV ? '/api' : 'http://localhost:5000/api',
+      baseURL: 'http://localhost:5000/api',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -22,7 +20,7 @@ class ApiService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       config => {
-        const token = useAuthStore.getState().token;
+        const token = localStorage.getItem('ua_designs_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -33,33 +31,21 @@ class ApiService {
       }
     );
 
-    // Response interceptor to handle errors and token refresh
+    // Response interceptor to handle errors
     this.api.interceptors.response.use(
       (response: AxiosResponse) => {
         return response;
       },
       async error => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-
-          try {
-            await useAuthStore.getState().refreshToken();
-            const newToken = useAuthStore.getState().token;
-            if (newToken) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              return this.api(originalRequest);
-            }
-          } catch (refreshError) {
-            useAuthStore.getState().logout();
-            window.location.href = '/login';
-            return Promise.reject(refreshError);
-          }
-        }
-
         // Handle different error types
-        if (error.response?.status === 403) {
+        if (error.response?.status === 401) {
+          // Clear invalid token and redirect to login
+          localStorage.removeItem('ua_designs_token');
+          localStorage.removeItem('ua_designs_user');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        } else if (error.response?.status === 403) {
           toast.error('You do not have permission to perform this action');
         } else if (error.response?.status === 404) {
           toast.error('Resource not found');
@@ -158,7 +144,7 @@ class ApiService {
 
   // Get base URL
   getBaseURL(): string {
-    return import.meta.env.DEV ? '/api' : 'http://localhost:5000/api';
+    return 'http://localhost:5000/api';
   }
 }
 

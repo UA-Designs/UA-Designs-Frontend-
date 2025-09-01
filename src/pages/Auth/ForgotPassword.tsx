@@ -50,7 +50,7 @@ const ForgotPassword: React.FC = () => {
         >
           <div style={{ marginBottom: 32 }}>
             <BankOutlined
-              style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }}
+              style={{ fontSize: 48, color: '#009944', marginBottom: 16 }}
             />
             <Title level={2} style={{ margin: 0, color: '#262626' }}>
               Check Your Email

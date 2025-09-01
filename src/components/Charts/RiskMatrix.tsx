@@ -86,7 +86,7 @@ const RiskMatrix: React.FC = () => {
 
     if (riskScore >= 16) return '#ff4d4f'; // High risk - red
     if (riskScore >= 9) return '#faad14'; // Medium risk - orange
-    return '#52c41a'; // Low risk - green
+    return '#009944'; // Low risk - darker green
   };
 
   const getRiskLevel = (probability: RiskProbability, impact: RiskImpact) => {

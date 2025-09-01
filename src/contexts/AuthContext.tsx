@@ -40,28 +40,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         console.log('Initializing authentication...');
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        const storedToken = authService.getToken();
+        const storedUser = authService.getUser();
 
         console.log('Stored token exists:', !!storedToken);
         console.log('Stored user exists:', !!storedUser);
 
         if (storedToken && storedUser) {
           setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          setUser(storedUser);
           setIsAuthenticated(true);
 
-          // For now, we'll trust the stored token
-          // In production, you might want to verify with backend
-          console.log('Using stored authentication - user authenticated');
+          // Verify token with backend
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setUser(currentUser);
+            console.log('Token verified with backend - user authenticated');
+          } catch (error) {
+            console.warn('Token verification failed, clearing auth data');
+            authService.removeToken();
+            authService.removeUser();
+            setToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         } else {
           console.log('No stored authentication found');
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         // Clear invalid auth data
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        authService.removeToken();
+        authService.removeUser();
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         console.log('Auth initialization complete, setting loading to false');
         // Add a small delay to ensure loading state is visible
@@ -83,13 +96,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(response.data.token);
       setIsAuthenticated(true);
 
-      // Store in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
       toast.success('Login successful!');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.message || 'Login failed';
       toast.error(message);
       throw error;
     } finally {
@@ -106,13 +115,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(response.data.token);
       setIsAuthenticated(true);
 
-      // Store in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
       toast.success('Registration successful!');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed';
+      const message = error.message || 'Registration failed';
       toast.error(message);
       throw error;
     } finally {
@@ -120,29 +125,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    setIsAuthenticated(false);
-
-    // Clear localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn('Logout request failed:', error);
+    } finally {
+      setUser(null);
+      setToken(null);
+      setIsAuthenticated(false);
+      toast.success('Logged out successfully');
+    }
   };
 
   const refreshToken = async () => {
     try {
-      const response = await authService.refreshToken();
-
-      setToken(response.data.token);
-      localStorage.setItem('token', response.data.token);
-
-      if (response.data.user) {
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
+      const newToken = await authService.refreshToken();
+      setToken(newToken);
     } catch (error) {
       // Refresh failed, logout user
       logout();

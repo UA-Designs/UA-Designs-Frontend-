@@ -15,12 +15,12 @@ interface CostVarianceChartProps {
 }
 
 const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
-  // Use mock data if no data provided
-  const chartData = data.length > 0 ? data.map(item => ({
-    name: item.projectName,
-    planned: item.plannedCost,
-    actual: item.actualCost,
-    variance: item.variance,
+  // Use mock data if no data provided or data is invalid
+  const chartData = data && Array.isArray(data) && data.length > 0 ? data.map(item => ({
+    name: item.projectName || 'Unnamed Project',
+    planned: item.plannedCost || 0,
+    actual: item.actualCost || 0,
+    variance: item.variance || 0,
   })) : [
     { name: 'Project A', planned: 100000, actual: 95000, variance: -5 },
     { name: 'Project B', planned: 150000, actual: 160000, variance: 6.7 },
@@ -63,9 +63,9 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
         <Line
           type="monotone"
           dataKey="planned"
-          stroke="#00cc66"
+          stroke="#009944"
           strokeWidth={2}
-          dot={{ fill: '#00cc66', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#009944', strokeWidth: 2, r: 4 }}
         />
         <Line
           type="monotone"

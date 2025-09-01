@@ -81,7 +81,7 @@ const Layout: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          <Spin size="large" style={{ color: '#00cc66', marginBottom: '20px' }} />
+          <Spin size="large" style={{ color: '#009944', marginBottom: '20px' }} />
           <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500' }}>
             Loading UA Designs PMS...
           </div>
@@ -298,7 +298,7 @@ const Layout: React.FC = () => {
                 fontSize: '16px', 
                 width: 48, 
                 height: 48,
-                color: '#00cc66',
+                color: '#009944',
                 borderRadius: '8px',
                 transition: 'all 0.3s ease',
                 flexShrink: 0,
@@ -325,13 +325,13 @@ const Layout: React.FC = () => {
               placement="bottomRight"
               trigger={['click']}
             >
-              <Badge count={unreadCount} size="small" color="#00cc66">
+              <Badge count={unreadCount} size="small" color="#009944">
                 <Button
                   type="text"
                   icon={<BellOutlined />}
                   style={{ 
                     fontSize: '16px',
-                    color: '#00cc66',
+                    color: '#009944',
                     borderRadius: '8px',
                     width: 40,
                     height: 40,
@@ -377,7 +377,7 @@ const Layout: React.FC = () => {
                   icon={<UserOutlined />}
                   size="small"
                   style={{ 
-                    backgroundColor: '#00cc66',
+                    backgroundColor: '#009944',
                     border: '2px solid rgba(0, 204, 102, 0.3)',
                     boxShadow: '0 2px 8px rgba(0, 204, 102, 0.3)',
                     flexShrink: 0,
@@ -396,7 +396,7 @@ const Layout: React.FC = () => {
                       {user?.firstName} {user?.lastName}
                     </div>
                     <div style={{ 
-                      color: '#00cc66', 
+                      color: '#009944', 
                       fontSize: '11px', 
                       fontWeight: '500',
                       whiteSpace: 'nowrap',

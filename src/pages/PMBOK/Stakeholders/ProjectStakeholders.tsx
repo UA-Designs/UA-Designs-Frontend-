@@ -143,13 +143,13 @@ const ProjectStakeholders: React.FC = () => {
           <Card>
             <div style={{ textAlign: 'center' }}>
               <StarOutlined
-                style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }}
+                style={{ fontSize: 48, color: '#009944', marginBottom: 16 }}
               />
               <div
                 style={{
                   fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#52c41a',
+                  color: '#009944',
                 }}
               >
                 8

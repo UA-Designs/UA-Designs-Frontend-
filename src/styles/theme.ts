@@ -3,8 +3,8 @@ import type { ThemeConfig } from 'antd';
 export const theme: ThemeConfig = {
   token: {
     // Primary colors - Matching UA Designs logo
-    colorPrimary: '#00cc66', // Darker, more sophisticated green
-    colorSuccess: '#00cc66', // Darker green for success states
+    colorPrimary: '#009944', // Darker, more sophisticated green
+    colorSuccess: '#009944', // Darker green for success states
     colorWarning: '#ffaa00', // Orange for warnings
     colorError: '#ff0040', // Red for errors
     colorInfo: '#00aaff', // Blue for info
@@ -78,11 +78,11 @@ export const theme: ThemeConfig = {
     },
     Menu: {
       itemBg: 'transparent',
-      itemSelectedBg: '#00ff00', // Neon green selection
+      itemSelectedBg: '#009944', // Darker green selection
       itemSelectedColor: '#000000', // Black text on green
-      itemHoverBg: 'rgba(0, 255, 0, 0.1)', // Subtle green hover
-      itemHoverColor: '#00ff00', // Neon green hover text
-      itemActiveBg: '#00ff00', // Neon green active
+      itemHoverBg: 'rgba(0, 153, 68, 0.1)', // Subtle green hover
+      itemHoverColor: '#009944', // Darker green hover text
+      itemActiveBg: '#009944', // Darker green active
       itemActiveColor: '#000000', // Black text on green
       itemColor: '#ffffff', // White text
       subMenuItemBg: 'transparent',
@@ -110,13 +110,13 @@ export const theme: ThemeConfig = {
       borderRadius: 6,
       headerBg: '#2a2a2a', // Dark table header
       headerColor: '#ffffff', // White header text
-      rowHoverBg: 'rgba(0, 255, 0, 0.05)', // Subtle green hover
+      rowHoverBg: 'rgba(0, 153, 68, 0.05)', // Subtle green hover
       borderColor: '#333333', // Dark borders
     },
     Form: {
       labelColor: '#ffffff', // White labels
       labelFontSize: 14,
-      labelRequiredMarkColor: '#00ff00', // Neon green for required
+      labelRequiredMarkColor: '#009944', // Darker green for required
     },
     Input: {
       borderRadius: 4, // Sharp edges

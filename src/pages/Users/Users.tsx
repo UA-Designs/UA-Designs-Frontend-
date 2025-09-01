@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Typography,
@@ -10,6 +10,8 @@ import {
   Tag,
   Avatar,
   Dropdown,
+  Spin,
+  message,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,46 +21,66 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import { User, UserRole } from '../../types';
+import { authService } from '../../services/authService';
 
 const { Title, Text } = Typography;
 
 const Users: React.FC = () => {
-  // Mock users data
-  const usersData: User[] = [
-    {
-      id: '1',
-      email: 'john.doe@uadesigns.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      role: UserRole.PROJECT_MANAGER,
-      avatar: '',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-15T00:00:00Z',
-    },
-    {
-      id: '2',
-      email: 'jane.smith@uadesigns.com',
-      firstName: 'Jane',
-      lastName: 'Smith',
-      role: UserRole.TEAM_LEAD,
-      avatar: '',
-      isActive: true,
-      createdAt: '2024-01-02T00:00:00Z',
-      updatedAt: '2024-01-15T00:00:00Z',
-    },
-    {
-      id: '3',
-      email: 'mike.johnson@uadesigns.com',
-      firstName: 'Mike',
-      lastName: 'Johnson',
-      role: UserRole.CONTRACTOR,
-      avatar: '',
-      isActive: false,
-      createdAt: '2024-01-03T00:00:00Z',
-      updatedAt: '2024-01-15T00:00:00Z',
-    },
-  ];
+  const [usersData, setUsersData] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const users = await authService.getUsers();
+      
+      // Ensure users is an array
+      if (Array.isArray(users)) {
+        setUsersData(users);
+      } else {
+        console.warn('API returned non-array data:', users);
+        // Use mock data as fallback while debugging
+        setUsersData([
+          {
+            id: '1',
+            firstName: 'Admin',
+            lastName: 'User',
+            email: 'admin@uadesigns.com',
+            role: 'ADMIN' as any,
+            isActive: true,
+            avatar: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '2',
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@uadesigns.com',
+            role: 'PROJECT_MANAGER' as any,
+            isActive: true,
+            avatar: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        ]);
+        setError('Using mock data - check console for API response details');
+      }
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      setError(err.message || 'Failed to fetch users');
+      setUsersData([]); // Set empty array on error
+      message.error(err.message || 'Failed to fetch users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getRoleColor = (role: UserRole) => {
     switch (role) {
@@ -149,6 +171,26 @@ const Users: React.FC = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" style={{ color: '#009944' }} />
+        <div style={{ color: '#ffffff', marginTop: '16px' }}>Loading users...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <div style={{ color: '#ff4d4f', marginBottom: '16px' }}>Error: {error}</div>
+        <Button type="primary" onClick={fetchUsers}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -168,7 +210,7 @@ const Users: React.FC = () => {
           >
             <Table
               columns={columns}
-              dataSource={usersData}
+              dataSource={Array.isArray(usersData) ? usersData : []}
               rowKey="id"
               pagination={{
                 pageSize: 10,
@@ -195,7 +237,7 @@ const Users: React.FC = () => {
                       color: '#1890ff',
                     }}
                   >
-                    {usersData.length}
+                    {Array.isArray(usersData) ? usersData.length : 0}
                   </div>
                   <Text type="secondary">Total Users</Text>
                 </div>
@@ -206,10 +248,10 @@ const Users: React.FC = () => {
                     style={{
                       fontSize: '24px',
                       fontWeight: 'bold',
-                      color: '#52c41a',
+                      color: '#009944',
                     }}
                   >
-                    {usersData.filter(u => u.isActive).length}
+                    {Array.isArray(usersData) ? usersData.filter(u => u.isActive).length : 0}
                   </div>
                   <Text type="secondary">Active Users</Text>
                 </div>
@@ -222,7 +264,7 @@ const Users: React.FC = () => {
           <Card title="Role Distribution">
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
               {Object.values(UserRole).map(role => {
-                const count = usersData.filter(u => u.role === role).length;
+                const count = Array.isArray(usersData) ? usersData.filter(u => u.role === role).length : 0;
                 return (
                   <div
                     key={role}

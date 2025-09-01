@@ -207,7 +207,7 @@ const Settings: React.FC = () => {
                 <div>
                   <Text strong>Server Status</Text>
                   <br />
-                  <Text type="secondary" style={{ color: '#52c41a' }}>
+                  <Text type="secondary" style={{ color: '#009944' }}>
                     Online
                   </Text>
                 </div>

@@ -15,14 +15,13 @@ interface ProjectGanttChartProps {
 }
 
 const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
-  // Use mock data if no data provided
-  const chartData = data.length > 0 ? data.map(item => ({
-    name:
-      item.projectName.length > 15
-        ? item.projectName.substring(0, 15) + '...'
-        : item.projectName,
-    progress: item.progress,
-    status: item.status,
+  // Use mock data if no data provided or data is invalid
+  const chartData = data && Array.isArray(data) && data.length > 0 ? data.map(item => ({
+    name: item.projectName && item.projectName.length > 15
+      ? item.projectName.substring(0, 15) + '...'
+      : item.projectName || 'Unnamed Project',
+    progress: item.progress || 0,
+    status: item.status || 'Unknown',
   })) : [
     { name: 'Website Redesign', progress: 75, status: 'In Progress' },
     { name: 'Mobile App', progress: 45, status: 'In Progress' },
@@ -60,7 +59,7 @@ const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
         />
         <Bar 
           dataKey="progress" 
-          fill="#00cc66" 
+          fill="#009944" 
           radius={[0, 4, 4, 0]}
           stroke="#00aa55"
           strokeWidth={1}

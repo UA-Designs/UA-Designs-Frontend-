@@ -38,7 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             textAlign: 'center',
           }}
         >
-          <Spin size="large" style={{ color: '#00cc66', marginBottom: '20px' }} />
+          <Spin size="large" style={{ color: '#009944', marginBottom: '20px' }} />
           <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500' }}>
             Loading UA Designs PMS...
           </div>

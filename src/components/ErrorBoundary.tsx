@@ -85,7 +85,7 @@ class ErrorBoundary extends Component<Props, State> {
                   icon={<ReloadOutlined />}
                   onClick={this.handleReload}
                   style={{
-                    background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+                    background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
                     border: 'none',
                     borderRadius: '8px',
                     height: '40px',
@@ -100,7 +100,7 @@ class ErrorBoundary extends Component<Props, State> {
                   onClick={this.handleGoHome}
                   style={{
                     border: '1px solid rgba(0, 204, 102, 0.3)',
-                    color: '#00cc66',
+                    color: '#009944',
                     borderRadius: '8px',
                     height: '40px',
                   }}

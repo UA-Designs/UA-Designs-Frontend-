@@ -92,7 +92,7 @@ const Register: React.FC = () => {
             background: 'rgba(26, 26, 26, 0.8)',
             border: '1px solid rgba(0, 204, 102, 0.3)',
             borderRadius: '12px',
-            color: '#00cc66',
+            color: '#009944',
             fontSize: '16px',
             fontWeight: '600',
             height: '44px',
@@ -103,7 +103,7 @@ const Register: React.FC = () => {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
-            e.currentTarget.style.borderColor = '#00cc66';
+            e.currentTarget.style.borderColor = '#009944';
             e.currentTarget.style.transform = 'translateX(-2px)';
             e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 204, 102, 0.2)';
           }}
@@ -140,7 +140,7 @@ const Register: React.FC = () => {
             style={{
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+              background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
               borderRadius: '20px',
               display: 'flex',
               alignItems: 'center',
@@ -177,7 +177,7 @@ const Register: React.FC = () => {
             ]}
           >
             <Input
-              prefix={<UserOutlined style={{ color: '#00cc66' }} />}
+              prefix={<UserOutlined style={{ color: '#009944' }} />}
               placeholder="Enter your first name"
               style={{
                 background: 'rgba(26, 26, 26, 0.8)',
@@ -197,7 +197,7 @@ const Register: React.FC = () => {
             ]}
           >
             <Input
-              prefix={<UserOutlined style={{ color: '#00cc66' }} />}
+              prefix={<UserOutlined style={{ color: '#009944' }} />}
               placeholder="Enter your last name"
               style={{
                 background: 'rgba(26, 26, 26, 0.8)',
@@ -218,7 +218,7 @@ const Register: React.FC = () => {
             ]}
           >
             <Input 
-              prefix={<MailOutlined style={{ color: '#00cc66' }} />} 
+              prefix={<MailOutlined style={{ color: '#009944' }} />} 
               placeholder="Enter your email"
               style={{
                 background: 'rgba(26, 26, 26, 0.8)',
@@ -261,7 +261,7 @@ const Register: React.FC = () => {
             ]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: '#00cc66' }} />}
+              prefix={<LockOutlined style={{ color: '#009944' }} />}
               placeholder="Enter your password"
               style={{
                 background: 'rgba(26, 26, 26, 0.8)',
@@ -290,7 +290,7 @@ const Register: React.FC = () => {
             ]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: '#00cc66' }} />}
+              prefix={<LockOutlined style={{ color: '#009944' }} />}
               placeholder="Confirm your password"
               style={{
                 background: 'rgba(26, 26, 26, 0.8)',
@@ -310,7 +310,7 @@ const Register: React.FC = () => {
               style={{ 
                 width: '100%', 
                 height: 52,
-                background: 'linear-gradient(135deg, #00cc66 0%, #00aa55 100%)',
+                background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '16px',
@@ -338,7 +338,7 @@ const Register: React.FC = () => {
           <Text style={{ color: '#b3b3b3', fontSize: '14px' }}>
             Already have an account?{' '}
             <Link to="/login">
-              <Text style={{ color: '#00cc66', fontWeight: '600', textDecoration: 'none' }}>
+              <Text style={{ color: '#009944', fontWeight: '600', textDecoration: 'none' }}>
                 Sign in here
               </Text>
             </Link>
@@ -360,19 +360,19 @@ const Register: React.FC = () => {
 
           .ant-input:focus,
           .ant-input-focused {
-            border-color: #00cc66 !important;
+            border-color: #009944 !important;
             box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
 
           .ant-input-password:focus,
           .ant-input-password-focused {
-            border-color: #00cc66 !important;
+            border-color: #009944 !important;
             box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
 
           .ant-select:focus,
           .ant-select-focused {
-            border-color: #00cc66 !important;
+            border-color: #009944 !important;
             box-shadow: 0 0 0 2px rgba(0, 204, 102, 0.25) !important;
           }
 
