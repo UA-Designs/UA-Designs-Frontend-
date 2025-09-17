@@ -1,16 +1,24 @@
-import React from 'react';
-import { Card, Typography, Row, Col, Button, Space, Table, Tag } from 'antd';
+import React, { useState } from 'react';
+import { Card, Typography, Row, Col, Button, Space, Table, Tag, Alert } from 'antd';
 import {
   PlusOutlined,
   ExclamationCircleOutlined,
   WarningOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import ProjectSelector from '../../../components/common/ProjectSelector';
+import { Project } from '../../../types';
 
 const { Title, Text } = Typography;
 
 const ProjectRisk: React.FC = () => {
-  // Mock risk data
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const handleProjectChange = (project: Project | null) => {
+    setSelectedProject(project);
+  };
+
+  // Mock risk data - in real app, this would be filtered by selectedProject
   const riskData = [
     {
       key: '1',
@@ -125,6 +133,18 @@ const ProjectRisk: React.FC = () => {
           Identify, analyze, and manage project risks
         </Text>
       </div>
+
+      <ProjectSelector onProjectChange={handleProjectChange} />
+
+      {!selectedProject && (
+        <Alert
+          message="No Project Selected"
+          description="Please select a project from the dropdown above to manage its risks, mitigation strategies, and contingency plans."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>

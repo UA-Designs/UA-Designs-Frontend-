@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Typography,
@@ -9,6 +9,7 @@ import {
   Table,
   Tag,
   Avatar,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -16,11 +17,19 @@ import {
   MessageOutlined,
   StarOutlined,
 } from '@ant-design/icons';
+import ProjectSelector from '../../../components/common/ProjectSelector';
+import { Project } from '../../../types';
 
 const { Title, Text } = Typography;
 
 const ProjectStakeholders: React.FC = () => {
-  // Mock stakeholder data
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const handleProjectChange = (project: Project | null) => {
+    setSelectedProject(project);
+  };
+
+  // Mock stakeholder data - in real app, this would be filtered by selectedProject
   const stakeholderData = [
     {
       key: '1',
@@ -118,6 +127,18 @@ const ProjectStakeholders: React.FC = () => {
           Identify, analyze, and engage project stakeholders
         </Text>
       </div>
+
+      <ProjectSelector onProjectChange={handleProjectChange} />
+
+      {!selectedProject && (
+        <Alert
+          message="No Project Selected"
+          description="Please select a project from the dropdown above to manage its stakeholders, communication preferences, and engagement strategies."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>

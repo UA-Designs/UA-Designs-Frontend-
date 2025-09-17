@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Typography,
@@ -9,6 +9,7 @@ import {
   Table,
   Tag,
   Progress,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -16,11 +17,19 @@ import {
   ToolOutlined,
   ShoppingOutlined,
 } from '@ant-design/icons';
+import ProjectSelector from '../../../components/common/ProjectSelector';
+import { Project } from '../../../types';
 
 const { Title, Text } = Typography;
 
 const ProjectResources: React.FC = () => {
-  // Mock resource data
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const handleProjectChange = (project: Project | null) => {
+    setSelectedProject(project);
+  };
+
+  // Mock resource data - in real app, this would be filtered by selectedProject
   const resourceData = [
     {
       key: '1',
@@ -105,6 +114,18 @@ const ProjectResources: React.FC = () => {
           Plan, acquire, and manage project resources
         </Text>
       </div>
+
+      <ProjectSelector onProjectChange={handleProjectChange} />
+
+      {!selectedProject && (
+        <Alert
+          message="No Project Selected"
+          description="Please select a project from the dropdown above to manage its resources, team members, and equipment."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>

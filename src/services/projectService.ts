@@ -33,10 +33,39 @@ export interface ProjectStatsResponse {
 class ProjectService {
   async getProjects(): Promise<Project[]> {
     try {
-      const response = await apiService.get<ProjectsResponse>('/projects');
-      return response.data.success ? response.data.data : [];
+      console.log('ProjectService - Fetching projects from backend...');
+      const response = await apiService.get<any>('/projects');
+      console.log('ProjectService - Full response object:', response);
+      console.log('ProjectService - Response status:', response.status);
+      console.log('ProjectService - Response data:', response.data);
+      console.log('ProjectService - Data type:', typeof response.data);
+      console.log('ProjectService - Is array:', Array.isArray(response.data));
+      
+      // Handle both wrapped and direct response formats
+      if (response.data.success && Array.isArray(response.data.data)) {
+        console.log('ProjectService - Using wrapped response format, found', response.data.data.length, 'projects');
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        console.log('ProjectService - Using direct response format, found', response.data.length, 'projects');
+        return response.data;
+      } else {
+        console.log('ProjectService - Unexpected response format:', response.data);
+        console.log('ProjectService - Returning empty array');
+        return [];
+      }
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch projects');
+      console.error('ProjectService - Error fetching projects:', error);
+      console.error('ProjectService - Error response:', error.response);
+      console.error('ProjectService - Error message:', error.message);
+      
+      // Handle authentication errors specifically
+      if (error.response?.data?.message === 'Access token required') {
+        console.error('ProjectService - Authentication failed - no valid token');
+        // Don't throw error, just return empty array for now
+        return [];
+      }
+      
+      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch projects');
     }
   }
 
@@ -56,15 +85,21 @@ class ProjectService {
 
   async createProject(projectData: any): Promise<Project> {
     try {
-      const response = await apiService.post<ProjectResponse>('/projects', projectData);
+      console.log('ProjectService - Sending data:', projectData);
+      const response = await apiService.post<any>('/projects', projectData);
       
-      if (response.data.success) {
+      // Handle both wrapped and direct response formats
+      if (response.data.success && response.data.data) {
         return response.data.data;
+      } else if (response.data.id) {
+        // Direct response format
+        return response.data;
       }
       
       throw new Error('Failed to create project');
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create project');
+      console.error('ProjectService - Error details:', error.response?.data);
+      throw new Error(error.response?.data?.message || error.response?.data?.error || 'Failed to create project');
     }
   }
 

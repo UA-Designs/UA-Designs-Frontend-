@@ -18,7 +18,6 @@ import {
   TeamOutlined,
   CalendarOutlined,
   DollarOutlined,
-  CheckCircleOutlined,
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
@@ -27,13 +26,9 @@ import {
   MenuUnfoldOutlined,
   BarChartOutlined,
   FileTextOutlined,
-  ShoppingCartOutlined,
-  MessageOutlined,
   ExclamationCircleOutlined,
   UsergroupAddOutlined,
   ToolOutlined,
-  BankOutlined,
-  GlobalOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -107,16 +102,6 @@ const Layout: React.FC = () => {
       label: 'PMBOK Knowledge Areas',
       children: [
         {
-          key: '/pmbok/integration',
-          icon: <GlobalOutlined />,
-          label: 'Integration Management',
-        },
-        {
-          key: '/pmbok/scope',
-          icon: <FileTextOutlined />,
-          label: 'Scope Management',
-        },
-        {
           key: '/pmbok/schedule',
           icon: <CalendarOutlined />,
           label: 'Schedule Management',
@@ -127,29 +112,14 @@ const Layout: React.FC = () => {
           label: 'Cost Management',
         },
         {
-          key: '/pmbok/quality',
-          icon: <CheckCircleOutlined />,
-          label: 'Quality Management',
-        },
-        {
           key: '/pmbok/resources',
           icon: <ToolOutlined />,
           label: 'Resource Management',
         },
         {
-          key: '/pmbok/communications',
-          icon: <MessageOutlined />,
-          label: 'Communications Management',
-        },
-        {
           key: '/pmbok/risk',
           icon: <ExclamationCircleOutlined />,
           label: 'Risk Management',
-        },
-        {
-          key: '/pmbok/procurement',
-          icon: <ShoppingCartOutlined />,
-          label: 'Procurement Management',
         },
         {
           key: '/pmbok/stakeholders',

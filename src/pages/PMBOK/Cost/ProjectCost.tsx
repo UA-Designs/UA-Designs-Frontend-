@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Typography,
@@ -9,6 +9,7 @@ import {
   Table,
   Statistic,
   Progress,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -16,11 +17,19 @@ import {
   RiseOutlined,
   FallOutlined,
 } from '@ant-design/icons';
+import ProjectSelector from '../../../components/common/ProjectSelector';
+import { Project } from '../../../types';
 
 const { Title, Text } = Typography;
 
 const ProjectCost: React.FC = () => {
-  // Mock cost data
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const handleProjectChange = (project: Project | null) => {
+    setSelectedProject(project);
+  };
+
+  // Mock cost data - in real app, this would be filtered by selectedProject
   const costData = [
     {
       key: '1',
@@ -103,6 +112,18 @@ const ProjectCost: React.FC = () => {
           Plan, estimate, budget, and control project costs
         </Text>
       </div>
+
+      <ProjectSelector onProjectChange={handleProjectChange} />
+
+      {!selectedProject && (
+        <Alert
+          message="No Project Selected"
+          description="Please select a project from the dropdown above to manage its costs, budget, and financial tracking."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Typography,
@@ -9,6 +9,7 @@ import {
   Table,
   Tag,
   Progress,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -16,12 +17,20 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
+import ProjectSelector from '../../../components/common/ProjectSelector';
+import { Project } from '../../../types';
 // import GanttChart from '../../components/Schedule/GanttChart';
 
 const { Title, Text } = Typography;
 
 const ProjectSchedule: React.FC = () => {
-  // Mock task data
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const handleProjectChange = (project: Project | null) => {
+    setSelectedProject(project);
+  };
+
+  // Mock task data - in real app, this would be filtered by selectedProject
   const taskData = [
     {
       key: '1',
@@ -127,6 +136,18 @@ const ProjectSchedule: React.FC = () => {
           Plan, develop, and control the project schedule
         </Text>
       </div>
+
+      <ProjectSelector onProjectChange={handleProjectChange} />
+
+      {!selectedProject && (
+        <Alert
+          message="No Project Selected"
+          description="Please select a project from the dropdown above to manage its schedule, tasks, and milestones."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24}>

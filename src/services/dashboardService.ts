@@ -129,12 +129,4 @@ export const dashboardService = {
     }
   },
 
-  async getQualityMetrics(): Promise<any[]> {
-    try {
-      const response = await apiService.get('/dashboard/quality-metrics');
-      return response.data.success ? response.data.data : [];
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch quality metrics');
-    }
-  },
 };

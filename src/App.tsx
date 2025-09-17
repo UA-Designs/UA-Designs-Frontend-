@@ -19,16 +19,11 @@ import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import Users from './pages/Users/Users';
 
-// PMBOK Knowledge Areas
-import ProjectIntegration from './pages/PMBOK/Integration/ProjectIntegration';
-import ProjectScope from './pages/PMBOK/Scope/ProjectScope';
+// PMBOK Knowledge Areas (Core 5)
 import ProjectSchedule from './pages/PMBOK/Schedule/ProjectSchedule';
 import ProjectCost from './pages/PMBOK/Cost/ProjectCost';
-import ProjectQuality from './pages/PMBOK/Quality/ProjectQuality';
 import ProjectResources from './pages/PMBOK/Resources/ProjectResources';
-import ProjectCommunications from './pages/PMBOK/Communications/ProjectCommunications';
 import ProjectRisk from './pages/PMBOK/Risk/ProjectRisk';
-import ProjectProcurement from './pages/PMBOK/Procurement/ProjectProcurement';
 import ProjectStakeholders from './pages/PMBOK/Stakeholders/ProjectStakeholders';
 
 function App() {
@@ -60,33 +55,19 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="users" element={<Users />} />
 
-              {/* PMBOK Knowledge Areas */}
-              <Route
-                path="pmbok/integration"
-                element={<ProjectIntegration />}
-              />
-              <Route path="pmbok/scope" element={<ProjectScope />} />
+              {/* PMBOK Knowledge Areas (Core 5) */}
               <Route path="pmbok/schedule" element={<ProjectSchedule />} />
               <Route path="pmbok/cost" element={<ProjectCost />} />
-              <Route path="pmbok/quality" element={<ProjectQuality />} />
               <Route path="pmbok/resources" element={<ProjectResources />} />
-              <Route
-                path="pmbok/communications"
-                element={<ProjectCommunications />}
-              />
               <Route path="pmbok/risk" element={<ProjectRisk />} />
-              <Route
-                path="pmbok/procurement"
-                element={<ProjectProcurement />}
-              />
               <Route
                 path="pmbok/stakeholders"
                 element={<ProjectStakeholders />}
               />
+              
+              {/* Catch all route for protected routes */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
-
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </NotificationProvider>
         </ProjectProvider>
