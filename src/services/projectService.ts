@@ -41,11 +41,19 @@ class ProjectService {
       console.log('ProjectService - Data type:', typeof response.data);
       console.log('ProjectService - Is array:', Array.isArray(response.data));
       
-      // Handle both wrapped and direct response formats
-      if (response.data.success && Array.isArray(response.data.data)) {
+      // Handle various response formats from the backend
+      // Format 1: { success: true, data: { projects: [...], pagination: {...} } }
+      if (response.data.success && response.data.data?.projects && Array.isArray(response.data.data.projects)) {
+        console.log('ProjectService - Using paginated response format, found', response.data.data.projects.length, 'projects');
+        return response.data.data.projects;
+      }
+      // Format 2: { success: true, data: [...] }
+      else if (response.data.success && Array.isArray(response.data.data)) {
         console.log('ProjectService - Using wrapped response format, found', response.data.data.length, 'projects');
         return response.data.data;
-      } else if (Array.isArray(response.data)) {
+      } 
+      // Format 3: Direct array response
+      else if (Array.isArray(response.data)) {
         console.log('ProjectService - Using direct response format, found', response.data.length, 'projects');
         return response.data;
       } else {

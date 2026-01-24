@@ -5,19 +5,53 @@ export interface User {
   firstName: string;
   lastName: string;
   role: UserRole;
-  avatar?: string;
+  avatar?: string | null;
+  phone?: string;
+  department?: string;
+  employeeId?: string;
+  hireDate?: string;
+  lastLogin?: string;
+  permissions?: Record<string, string[]>;
+  approvalLevel?: string;
   isActive: boolean;
+  isDeleted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export enum UserRole {
-  ADMIN = 'admin',
-  PROJECT_MANAGER = 'project_manager',
-  TEAM_LEAD = 'team_lead',
-  CONTRACTOR = 'contractor',
-  CLIENT = 'client',
-  VIEWER = 'viewer',
+  ADMIN = 'ADMIN',
+  PROJECT_MANAGER = 'PROJECT_MANAGER',
+  CIVIL_ENGINEER = 'CIVIL_ENGINEER',
+  ARCHITECT = 'ARCHITECT',
+  SITE_ENGINEER = 'SITE_ENGINEER',
+  JUNIOR_ARCHITECT = 'JUNIOR_ARCHITECT',
+  APPRENTICE_ARCHITECT = 'APPRENTICE_ARCHITECT',
+  BOOKKEEPER = 'BOOKKEEPER',
+  SECRETARY = 'SECRETARY',
+  TEAM_LEAD = 'TEAM_LEAD',
+  CONTRACTOR = 'CONTRACTOR',
+  CLIENT = 'CLIENT',
+  VIEWER = 'VIEWER',
+}
+
+export interface UserFilters {
+  page?: number;
+  limit?: number;
+  role?: UserRole | string;
+  department?: string;
+  isActive?: boolean;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface UserStats {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  roleBreakdown: Record<string, number>;
+  recentUsers?: User[];
 }
 
 export interface AuthState {

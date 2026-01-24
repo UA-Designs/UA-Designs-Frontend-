@@ -57,6 +57,10 @@ class AuthService {
   private readonly TOKEN_KEY = 'ua_designs_token';
   private readonly USER_KEY = 'ua_designs_user';
 
+  private normalizeRole(role?: string | UserRole): string | undefined {
+    return role ? String(role).toUpperCase() : undefined;
+  }
+
   // Token management
   setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
@@ -280,14 +284,16 @@ class AuthService {
     return !!this.getToken();
   }
 
-  hasRole(role: UserRole): boolean {
+  hasRole(role: UserRole | string): boolean {
     const user = this.getUser();
-    return user?.role === role;
+    return this.normalizeRole(user?.role) === this.normalizeRole(role);
   }
 
-  hasAnyRole(roles: UserRole[]): boolean {
+  hasAnyRole(roles: Array<UserRole | string>): boolean {
     const user = this.getUser();
-    return user ? roles.includes(user.role) : false;
+    const normalizedUserRole = this.normalizeRole(user?.role);
+    const normalizedRoles = roles.map(role => this.normalizeRole(role));
+    return normalizedUserRole ? normalizedRoles.includes(normalizedUserRole) : false;
   }
 
   isAdmin(): boolean {

@@ -133,11 +133,11 @@ const Layout: React.FC = () => {
       icon: <FileTextOutlined />,
       label: 'Reports',
     },
-    {
+    ...(user?.role?.toUpperCase() === 'ADMIN' ? [{
       key: '/users',
       icon: <TeamOutlined />,
       label: 'Users',
-    },
+    }] : []),
     {
       key: '/settings',
       icon: <SettingOutlined />,
