@@ -1,158 +1,165 @@
 import React from 'react';
-import { Card, Row, Col, Typography, Tag, Empty } from 'antd';
-import { Risk, RiskProbability, RiskImpact } from '../../types';
+import { Card, Row, Col, Typography, Tag, Empty, Table } from 'antd';
 
 const { Title, Text } = Typography;
 
-const RiskMatrix: React.FC = () => {
-  // Mock data for demonstration
-  const risks: Risk[] = [
-    {
-      id: '1',
-      title: 'Weather Delays',
-      description: 'Adverse weather conditions affecting construction',
-      category: 'EXTERNAL' as any,
-      probability: RiskProbability.MEDIUM,
-      impact: RiskImpact.HIGH,
-      priority: 'HIGH' as any,
-      status: 'IDENTIFIED' as any,
-      mitigationStrategy: 'Monitor weather forecasts and adjust schedules',
-      contingencyPlan: 'Indoor work during bad weather',
-      ownerId: '1',
-      projectId: '1',
-      identifiedDate: '2024-01-15',
-      targetDate: '2024-02-15',
-      createdAt: '2024-01-15T00:00:00Z',
-      updatedAt: '2024-01-15T00:00:00Z',
-    },
-    {
-      id: '2',
-      title: 'Material Shortage',
-      description: 'Shortage of construction materials',
-      category: 'RESOURCE' as any,
-      probability: RiskProbability.LOW,
-      impact: RiskImpact.MEDIUM,
-      priority: 'MEDIUM' as any,
-      status: 'ANALYZED' as any,
-      mitigationStrategy: 'Secure multiple suppliers',
-      contingencyPlan: 'Alternative material sources',
-      ownerId: '1',
-      projectId: '1',
-      identifiedDate: '2024-01-10',
-      targetDate: '2024-01-25',
-      createdAt: '2024-01-10T00:00:00Z',
-      updatedAt: '2024-01-10T00:00:00Z',
-    },
-  ];
+interface MatrixCell {
+  probability: number;
+  impact: number;
+  count: number;
+  risks: any[];
+}
 
-  const getProbabilityValue = (probability: RiskProbability) => {
-    switch (probability) {
-      case RiskProbability.VERY_LOW:
-        return 1;
-      case RiskProbability.LOW:
-        return 2;
-      case RiskProbability.MEDIUM:
-        return 3;
-      case RiskProbability.HIGH:
-        return 4;
-      case RiskProbability.VERY_HIGH:
-        return 5;
-      default:
-        return 0;
-    }
+interface RiskMatrixData {
+  projectId: string;
+  matrix: MatrixCell[][];
+  summary: {
+    totalRisks: number;
+    bySeverity: {
+      LOW: number;
+      MEDIUM: number;
+      HIGH: number;
+      CRITICAL: number;
+    };
+  };
+}
+
+interface RiskMatrixProps {
+  data: RiskMatrixData;
+}
+
+const RiskMatrix: React.FC<RiskMatrixProps> = ({ data }) => {
+  const getCellColor = (score: number) => {
+    if (score >= 15) return '#ff4d4f'; // Critical - red
+    if (score >= 9) return '#faad14'; // High - orange  
+    if (score >= 4) return '#fadb14'; // Medium - yellow
+    return '#52c41a'; // Low - green
   };
 
-  const getImpactValue = (impact: RiskImpact) => {
-    switch (impact) {
-      case RiskImpact.VERY_LOW:
-        return 1;
-      case RiskImpact.LOW:
-        return 2;
-      case RiskImpact.MEDIUM:
-        return 3;
-      case RiskImpact.HIGH:
-        return 4;
-      case RiskImpact.VERY_HIGH:
-        return 5;
-      default:
-        return 0;
-    }
-  };
-
-  const getRiskColor = (probability: RiskProbability, impact: RiskImpact) => {
-    const probValue = getProbabilityValue(probability);
-    const impactValue = getImpactValue(impact);
-    const riskScore = probValue * impactValue;
-
-    if (riskScore >= 16) return '#ff4d4f'; // High risk - red
-    if (riskScore >= 9) return '#faad14'; // Medium risk - orange
-    return '#009944'; // Low risk - darker green
-  };
-
-  const getRiskLevel = (probability: RiskProbability, impact: RiskImpact) => {
-    const probValue = getProbabilityValue(probability);
-    const impactValue = getImpactValue(impact);
-    const riskScore = probValue * impactValue;
-
-    if (riskScore >= 16) return 'High';
-    if (riskScore >= 9) return 'Medium';
+  const getCellText = (score: number) => {
+    if (score >= 15) return 'Critical';
+    if (score >= 9) return 'High';
+    if (score >= 4) return 'Medium';
     return 'Low';
   };
 
-  if (risks.length === 0) {
+  if (!data || !data.matrix || !data.summary || data.summary.totalRisks === 0) {
     return (
       <Empty
-        description="No risks identified"
+        description="No risk matrix data available"
         image={Empty.PRESENTED_IMAGE_SIMPLE}
       />
     );
   }
 
+  // Create 5x5 matrix display
+  const probabilityLabels = ['Very High', 'High', 'Medium', 'Low', 'Very Low'];
+  const impactLabels = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Title level={5}>Risk Assessment Matrix</Title>
-        <Text type="secondary">Probability × Impact = Risk Level</Text>
+        <Title level={5}>Risk Assessment Matrix (5×5)</Title>
+        <Text type="secondary">
+          Total Risks: {data.summary?.totalRisks ?? 0} | 
+          Critical: {data.summary?.bySeverity?.CRITICAL ?? 0} | 
+          High: {data.summary?.bySeverity?.HIGH ?? 0} | 
+          Medium: {data.summary?.bySeverity?.MEDIUM ?? 0} | 
+          Low: {data.summary?.bySeverity?.LOW ?? 0}
+        </Text>
       </div>
 
-      <Row gutter={[8, 8]}>
-        {risks.map(risk => (
-          <Col span={24} key={risk.id}>
-            <Card
-              size="small"
-              style={{
-                borderLeft: `4px solid ${getRiskColor(risk.probability, risk.impact)}`,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Text strong>{risk.title}</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {risk.description}
-                  </Text>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Tag color={getRiskColor(risk.probability, risk.impact)}>
-                    {getRiskLevel(risk.probability, risk.impact)}
-                  </Tag>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>
-                    P: {risk.probability.replace('_', ' ')} | I:{' '}
-                    {risk.impact.replace('_', ' ')}
-                  </Text>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ 
+                border: '1px solid #d9d9d9', 
+                padding: '8px',
+                backgroundColor: '#fafafa',
+                textAlign: 'center'
+              }}>
+                <Text strong>Probability ↓ Impact →</Text>
+              </th>
+              {impactLabels.map((label, idx) => (
+                <th key={idx} style={{ 
+                  border: '1px solid #d9d9d9', 
+                  padding: '8px',
+                  backgroundColor: '#fafafa',
+                  textAlign: 'center',
+                  minWidth: '100px'
+                }}>
+                  <Text strong>{label}</Text>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {probabilityLabels.map((probLabel, probIdx) => (
+              <tr key={probIdx}>
+                <td style={{ 
+                  border: '1px solid #d9d9d9', 
+                  padding: '8px',
+                  backgroundColor: '#fafafa',
+                  textAlign: 'center',
+                  fontWeight: 'bold'
+                }}>
+                  {probLabel}
+                </td>
+                {impactLabels.map((impLabel, impIdx) => {
+                  const probability = 5 - probIdx; // Reverse for display (5 = Very High at top)
+                  const impact = impIdx + 1; // 1 = Very Low at left
+                  const score = probability * impact;
+                  
+                  // Find matching cell in data
+                  const cell = data.matrix
+                    .flat()
+                    .find(c => c.probability === probability && c.impact === impact);
+                  
+                  return (
+                    <td
+                      key={impIdx}
+                      style={{
+                        border: '1px solid #d9d9d9',
+                        padding: '12px',
+                        textAlign: 'center',
+                        backgroundColor: getCellColor(score),
+                        color: score >= 9 ? '#fff' : '#000',
+                        cursor: cell && cell.count > 0 ? 'pointer' : 'default',
+                      }}
+                      title={cell && cell.count > 0 ? `${cell.count} risk(s)` : 'No risks'}
+                    >
+                      <div>
+                        <Text strong style={{ color: score >= 9 ? '#fff' : '#000' }}>
+                          {getCellText(score)}
+                        </Text>
+                        <br />
+                        <Text style={{ fontSize: '11px', color: score >= 9 ? '#fff' : '#666' }}>
+                          Score: {score}
+                        </Text>
+                        {cell && cell.count > 0 && (
+                          <>
+                            <br />
+                            <Tag color={score >= 15 ? 'red' : score >= 9 ? 'orange' : 'blue'} style={{ marginTop: 4 }}>
+                              {cell.count} risk{cell.count > 1 ? 's' : ''}
+                            </Tag>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Text type="secondary">
+          <strong>Legend:</strong> Risk Score = Probability × Impact
+        </Text>
+      </div>
     </div>
   );
 };
