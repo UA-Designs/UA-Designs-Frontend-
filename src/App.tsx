@@ -14,10 +14,14 @@ import ForgotPassword from './pages/Auth/ForgotPassword';
 // Main Pages
 import Dashboard from './pages/Dashboard/Dashboard';
 import Analytics from './pages/Analytics/Analytics';
+import ProjectAnalyticsPage from './pages/Analytics/ProjectAnalyticsPage';
 import Profile from './pages/Profile/Profile';
 import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import Users from './pages/Users/Users';
+import Projects from './pages/Projects/Projects';
+import AuditLog from './pages/AuditLog/AuditLog';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 
 // PMBOK Knowledge Areas (Core 5)
 import ProjectSchedule from './pages/PMBOK/Schedule/ProjectSchedule';
@@ -37,6 +41,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Protected Routes */}
             <Route
@@ -49,11 +54,13 @@ function App() {
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="projects" element={<Projects />} />
               <Route path="analytics" element={<Analytics />} />
+              <Route path="projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
               <Route path="profile" element={<Profile />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="users" element={<Users />} />
+              <Route path="expenses" element={<Navigate to="/pmbok/cost" replace />} />
 
               {/* PMBOK Knowledge Areas (Core 5) */}
               <Route path="pmbok/schedule" element={<ProjectSchedule />} />
@@ -64,7 +71,25 @@ function App() {
                 path="pmbok/stakeholders"
                 element={<ProjectStakeholders />}
               />
-              
+
+              {/* Admin-only routes */}
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute access="ADMIN_ONLY">
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="audit-log"
+                element={
+                  <ProtectedRoute access="ADMIN_ONLY">
+                    <AuditLog />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Catch all route for protected routes */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>

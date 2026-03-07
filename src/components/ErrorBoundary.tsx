@@ -110,7 +110,7 @@ class ErrorBoundary extends Component<Props, State> {
               ]}
             />
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {(import.meta as any).env?.DEV && this.state.error && (
               <div
                 style={{
                   marginTop: '20px',

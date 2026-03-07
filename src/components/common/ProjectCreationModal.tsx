@@ -43,16 +43,15 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
         clientName: values.clientName,
         description: values.description || '',
         startDate: values.startDate?.format('YYYY-MM-DD') || null,
-        plannedEndDate: values.endDate?.format('YYYY-MM-DD') || null,
+        endDate: values.endDate?.format('YYYY-MM-DD') || null,
         budget: values.budget || 0,
         clientEmail: values.clientEmail || '',
         clientPhone: values.clientPhone || '',
-        projectLocation: values.location || '',
+        location: values.location || '',
         projectType: values.projectType || 'residential',
         priority: values.priority || 'medium'
       };
 
-      console.log('Sending project data to backend:', projectData);
       const newProject = await projectService.createProject(projectData);
       
       // Update the projects list in context
@@ -143,7 +142,6 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
                 <Option value={ProjectType.INDUSTRIAL}>Industrial</Option>
                 <Option value={ProjectType.INFRASTRUCTURE}>Infrastructure</Option>
                 <Option value={ProjectType.RENOVATION}>Renovation</Option>
-                <Option value={ProjectType.MAINTENANCE}>Maintenance</Option>
               </Select>
             </Form.Item>
           </Col>
@@ -235,8 +233,8 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               border: '1px solid rgba(0, 204, 102, 0.3)',
             }}
             placeholder="Enter budget amount"
-            formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            formatter={value => `₱ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={(value): any => Number(value!.replace(/₱\s?|(,*)/g, '')) || 0}
             min={0}
           />
         </Form.Item>

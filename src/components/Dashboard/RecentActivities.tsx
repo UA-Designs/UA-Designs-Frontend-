@@ -8,7 +8,7 @@ import {
   CommentOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { RecentActivity, ActivityType } from '../../types';
+import { RecentActivity, ActivityType, UserRole } from '../../types';
 import { dashboardService } from '../../services/dashboardService';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -30,26 +30,26 @@ const RecentActivities: React.FC = () => {
         const data = await dashboardService.getRecentActivities(10);
         
         // Transform API data to match component expectations
-        const transformedData = data.map(activity => ({
+        const transformedData: RecentActivity[] = data.map((activity: any) => ({
           id: activity.id?.toString() || Math.random().toString(),
           type: activity.type || ActivityType.PROJECT_CREATED,
-          description: activity.message || activity.description || 'Activity',
-          user: {
+          description: activity.description || activity.message || 'Activity',
+          user: activity.user || {
             id: activity.userId || 'unknown',
             firstName: activity.userName ? activity.userName.split(' ')[0] : 'Unknown',
-            lastName: activity.userName ? activity.userName.split(' ').slice(1).join(' ') : 'User',
-            email: '',
-            role: 'user',
-            avatar: null,
+            lastName: activity.userName ? (activity.userName.split(' ').slice(1).join(' ') || '') : 'User',
+            email: activity.userEmail || '',
+            role: UserRole.STAFF,
+            avatar: undefined,
+            isActive: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
-          createdAt: activity.timestamp || activity.createdAt || new Date().toISOString(),
+          createdAt: activity.createdAt || activity.timestamp || new Date().toISOString(),
         }));
         
         setActivities(transformedData);
       } catch (error) {
-        console.warn('API not available, using mock data for recent activities:', error);
         // Use mock data if API fails
         setActivities([
           {
@@ -61,8 +61,8 @@ const RecentActivities: React.FC = () => {
               firstName: 'John',
               lastName: 'Doe',
               email: 'john.doe@uadesigns.com',
-              role: 'project_manager',
-              avatar: null,
+              role: UserRole.PROJECT_MANAGER,
+              isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },
@@ -77,8 +77,8 @@ const RecentActivities: React.FC = () => {
               firstName: 'Jane',
               lastName: 'Smith',
               email: 'jane.smith@uadesigns.com',
-              role: 'team_lead',
-              avatar: null,
+              role: UserRole.ENGINEER,
+              isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },
@@ -93,8 +93,8 @@ const RecentActivities: React.FC = () => {
               firstName: 'John',
               lastName: 'Doe',
               email: 'john.doe@uadesigns.com',
-              role: 'project_manager',
-              avatar: null,
+              role: UserRole.PROJECT_MANAGER,
+              isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },

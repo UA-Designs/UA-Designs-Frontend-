@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Layout as AntLayout,
@@ -7,7 +7,6 @@ import {
   Dropdown,
   Badge,
   Button,
-  Space,
   Typography,
   theme,
   Spin,
@@ -29,24 +28,32 @@ import {
   ExclamationCircleOutlined,
   UsergroupAddOutlined,
   ToolOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useProject } from '../../contexts/ProjectContext';
 import Logo from '../Logo/Logo';
+import { TierBadge } from '../ui/TierBadge';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
 
 const Layout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, can } = useAuth();
   const { notifications, unreadCount } = useNotification();
+  const { projects, loadProjects } = useProject();
+
+  // Re-trigger project load after auth confirms (fixes login→navigate race condition)
+  useEffect(() => {
+    if (!isLoading && user && projects.length === 0) {
+      loadProjects();
+    }
+  }, [isLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
-
-  // Add debugging
-  console.log('Layout rendering - isLoading:', isLoading, 'user:', user);
 
   // Show loading state if still loading or no user
   if (isLoading || !user) {
@@ -92,52 +99,57 @@ const Layout: React.FC = () => {
       label: 'Dashboard',
     },
     {
+      key: '/projects',
+      icon: <ProjectOutlined />,
+      label: 'Projects',
+    },
+    {
       key: '/analytics',
       icon: <BarChartOutlined />,
       label: 'Analytics',
     },
     {
-      key: 'pmbok',
-      icon: <ProjectOutlined />,
-      label: 'PMBOK Knowledge Areas',
-      children: [
-        {
-          key: '/pmbok/schedule',
-          icon: <CalendarOutlined />,
-          label: 'Schedule Management',
-        },
-        {
-          key: '/pmbok/cost',
-          icon: <DollarOutlined />,
-          label: 'Cost Management',
-        },
-        {
-          key: '/pmbok/resources',
-          icon: <ToolOutlined />,
-          label: 'Resource Management',
-        },
-        {
-          key: '/pmbok/risk',
-          icon: <ExclamationCircleOutlined />,
-          label: 'Risk Management',
-        },
-        {
-          key: '/pmbok/stakeholders',
-          icon: <UsergroupAddOutlined />,
-          label: 'Stakeholder Management',
-        },
-      ],
+      key: '/pmbok/schedule',
+      icon: <CalendarOutlined />,
+      label: 'Schedule',
+    },
+    {
+      key: '/pmbok/cost',
+      icon: <DollarOutlined />,
+      label: 'Cost Management',
+    },
+    {
+      key: '/pmbok/resources',
+      icon: <ToolOutlined />,
+      label: 'Resources',
+    },
+    {
+      key: '/pmbok/risk',
+      icon: <ExclamationCircleOutlined />,
+      label: 'Risk Management',
+    },
+    {
+      key: '/pmbok/stakeholders',
+      icon: <UsergroupAddOutlined />,
+      label: 'Stakeholders',
     },
     {
       key: '/reports',
       icon: <FileTextOutlined />,
       label: 'Reports',
     },
-    {
-      key: '/users',
-      icon: <TeamOutlined />,
-      label: 'Users',
-    },
+    ...(can('ADMIN_ONLY') ? [
+      {
+        key: '/users',
+        icon: <TeamOutlined />,
+        label: 'Users',
+      },
+      {
+        key: '/audit-log',
+        icon: <AuditOutlined />,
+        label: 'Audit Log',
+      },
+    ] : []),
     {
       key: '/settings',
       icon: <SettingOutlined />,
@@ -203,6 +215,8 @@ const Layout: React.FC = () => {
         trigger={null}
         collapsible
         collapsed={collapsed}
+        width={256}
+        collapsedWidth={64}
         style={{
           background: 'rgba(13, 13, 13, 0.95)',
           borderRight: '1px solid rgba(0, 204, 102, 0.2)',
@@ -365,16 +379,7 @@ const Layout: React.FC = () => {
                     }}>
                       {user?.firstName} {user?.lastName}
                     </div>
-                    <div style={{ 
-                      color: '#009944', 
-                      fontSize: '11px', 
-                      fontWeight: '500',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {user?.role?.replace('_', ' ').toUpperCase()}
-                    </div>
+                    <TierBadge role={user?.role} style={{ marginTop: 2 }} />
                   </div>
                 )}
               </div>
