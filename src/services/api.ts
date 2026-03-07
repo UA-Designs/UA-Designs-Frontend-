@@ -6,11 +6,8 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: 'http://localhost:5000/api',
+      baseURL: '/api',
       timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
     });
 
     this.setupInterceptors();
@@ -20,21 +17,10 @@ class ApiService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       config => {
-        // Try multiple possible token keys
-        const token = localStorage.getItem('ua_designs_token') || 
-                     localStorage.getItem('token') || 
-                     localStorage.getItem('authToken') ||
-                     localStorage.getItem('accessToken');
-        
-        console.log('API Request - Token found:', !!token, 'Token value:', token ? token.substring(0, 20) + '...' : 'null', 'URL:', config.url);
-        console.log('API Request - All localStorage keys:', Object.keys(localStorage));
-        
+        const token = localStorage.getItem('ua_designs_token');
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-          console.log('API Request - Authorization header set:', config.headers.Authorization ? 'Yes' : 'No');
-        } else {
-          console.warn('API Request - No token found in localStorage!');
-          console.warn('API Request - Available keys:', Object.keys(localStorage));
         }
         return config;
       },
@@ -58,7 +44,9 @@ class ApiService {
             window.location.href = '/login';
           }
         } else if (error.response?.status === 403) {
-          toast.error('You do not have permission to perform this action');
+          toast.error(
+            error.response?.data?.message || 'You do not have permission to perform this action.'
+          );
         } else if (error.response?.status === 404) {
           toast.error('Resource not found');
         } else if (error.response?.status === 500) {
@@ -156,7 +144,7 @@ class ApiService {
 
   // Get base URL
   getBaseURL(): string {
-    return 'http://localhost:5000/api';
+    return '/api';
   }
 }
 

@@ -1,5 +1,39 @@
 import { apiService } from './api';
-import { Project, ProjectStatus, ProjectPhase } from '../types';
+import { Project, ProjectStatus, ProjectPhase, ProjectType } from '../types';
+
+export interface ProjectFilters {
+  page?: number;
+  limit?: number;
+  status?: string;
+  projectType?: string;
+  phase?: string;
+  projectManagerId?: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface ProjectsPagedResponse {
+  projects: Project[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface ProjectDashboardData {
+  project: Project;
+  taskCount: number;
+  completedTasks: number;
+  budgetCount: number;
+  riskCount: number;
+  stakeholderCount: number;
+  recentTasks?: any[];
+  recentRisks?: any[];
+  [key: string]: any;
+}
 
 export interface ProjectResponse {
   success: boolean;
@@ -33,38 +67,26 @@ export interface ProjectStatsResponse {
 class ProjectService {
   async getProjects(): Promise<Project[]> {
     try {
-      console.log('ProjectService - Fetching projects from backend...');
       const response = await apiService.get<any>('/projects');
-      console.log('ProjectService - Full response object:', response);
-      console.log('ProjectService - Response status:', response.status);
-      console.log('ProjectService - Response data:', response.data);
-      console.log('ProjectService - Data type:', typeof response.data);
-      console.log('ProjectService - Is array:', Array.isArray(response.data));
-      
-      // Handle both wrapped and direct response formats
-      if (response.data.success && Array.isArray(response.data.data)) {
-        console.log('ProjectService - Using wrapped response format, found', response.data.data.length, 'projects');
-        return response.data.data;
-      } else if (Array.isArray(response.data)) {
-        console.log('ProjectService - Using direct response format, found', response.data.length, 'projects');
-        return response.data;
-      } else {
-        console.log('ProjectService - Unexpected response format:', response.data);
-        console.log('ProjectService - Returning empty array');
-        return [];
+      const d = response.data;
+
+      // Paginated format: { success, data: { projects: [...], pagination: {...} } }
+      if (d.success && d.data?.projects && Array.isArray(d.data.projects)) {
+        return d.data.projects;
       }
+      // Flat array format: { success, data: Project[] }
+      if (d.success && Array.isArray(d.data)) {
+        return d.data;
+      }
+      // Raw array
+      if (Array.isArray(d)) {
+        return d;
+      }
+      return [];
     } catch (error: any) {
-      console.error('ProjectService - Error fetching projects:', error);
-      console.error('ProjectService - Error response:', error.response);
-      console.error('ProjectService - Error message:', error.message);
-      
-      // Handle authentication errors specifically
       if (error.response?.data?.message === 'Access token required') {
-        console.error('ProjectService - Authentication failed - no valid token');
-        // Don't throw error, just return empty array for now
         return [];
       }
-      
       throw new Error(error.response?.data?.message || error.message || 'Failed to fetch projects');
     }
   }
@@ -85,7 +107,6 @@ class ProjectService {
 
   async createProject(projectData: any): Promise<Project> {
     try {
-      console.log('ProjectService - Sending data:', projectData);
       const response = await apiService.post<any>('/projects', projectData);
       
       // Handle both wrapped and direct response formats
@@ -98,7 +119,6 @@ class ProjectService {
       
       throw new Error('Failed to create project');
     } catch (error: any) {
-      console.error('ProjectService - Error details:', error.response?.data);
       throw new Error(error.response?.data?.message || error.response?.data?.error || 'Failed to create project');
     }
   }
@@ -127,7 +147,7 @@ class ProjectService {
 
   async getProjectStats(): Promise<ProjectStatsResponse['data']> {
     try {
-      const response = await apiService.get<ProjectStatsResponse>('/projects/stats');
+      const response = await apiService.get<ProjectStatsResponse>('/projects/stats/overview');
       return response.data.success ? response.data.data : {
         totalProjects: 0,
         activeProjects: 0,
@@ -144,6 +164,89 @@ class ProjectService {
       throw new Error(error.response?.data?.message || 'Failed to fetch project statistics');
     }
   }
+
+  async getProjectsFiltered(filters: ProjectFilters = {}): Promise<ProjectsPagedResponse> {
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') params.append(k, String(v));
+      });
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const response = await apiService.get<any>(`/projects${query}`);
+      const d = response.data;
+      // API may return { success, data: { projects, pagination } } or { success, data: Project[] }
+      if (d.success && d.data?.projects) {
+        return d.data as ProjectsPagedResponse;
+      } else if (d.success && Array.isArray(d.data)) {
+        return { projects: d.data, pagination: { total: d.data.length, page: 1, limit: d.data.length, totalPages: 1 } };
+      } else if (Array.isArray(d)) {
+        return { projects: d, pagination: { total: d.length, page: 1, limit: d.length, totalPages: 1 } };
+      }
+      return { projects: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch projects');
+    }
+  }
+
+  async getProjectsByStatus(status: string): Promise<Project[]> {
+    try {
+      const response = await apiService.get<any>(`/projects/status/${status}`);
+      const d = response.data;
+      if (d.success && Array.isArray(d.data)) return d.data;
+      if (Array.isArray(d)) return d;
+      return [];
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch projects by status');
+    }
+  }
+
+  async getProjectsByType(type: string): Promise<Project[]> {
+    try {
+      const response = await apiService.get<any>(`/projects/type/${type}`);
+      const d = response.data;
+      if (d.success && Array.isArray(d.data)) return d.data;
+      if (Array.isArray(d)) return d;
+      return [];
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch projects by type');
+    }
+  }
+
+  async updateProjectStatus(id: string, data: { status?: string; phase?: string; actualEndDate?: string }): Promise<Project> {
+    try {
+      const response = await apiService.patch<any>(`/projects/${id}/status`, data);
+      const d = response.data;
+      if (d.success && d.data?.project) return d.data.project;
+      if (d.success && d.data) return d.data;
+      throw new Error('Failed to update project status');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update project status');
+    }
+  }
+
+  async assignProjectManager(id: string, projectManagerId: string): Promise<Project> {
+    try {
+      const response = await apiService.patch<any>(`/projects/${id}/assign-manager`, { projectManagerId });
+      const d = response.data;
+      if (d.success && d.data?.project) return d.data.project;
+      if (d.success && d.data) return d.data;
+      throw new Error('Failed to assign project manager');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to assign project manager');
+    }
+  }
+
+  async getProjectDashboard(id: string): Promise<ProjectDashboardData> {
+    try {
+      const response = await apiService.get<any>(`/projects/${id}/dashboard`);
+      const d = response.data;
+      if (d.success && d.data) return d.data;
+      throw new Error('Failed to fetch project dashboard');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch project dashboard');
+    }
+  }
 }
 
 export const projectService = new ProjectService();
+export { ProjectStatus, ProjectPhase, ProjectType };

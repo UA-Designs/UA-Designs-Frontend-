@@ -235,28 +235,7 @@ class RiskService {
       const response = await apiService.get('/risk/health');
       return response.data;
     } catch (error: any) {
-      console.warn('Risk service health check failed:', error);
       return null;
-    }
-  }
-
-  // Risk Categories
-  async getCategories(): Promise<RiskCategory[]> {
-    try {
-      const response = await apiService.get<ApiResponse<RiskCategory[]>>('/risk/categories');
-      return response.data.success ? response.data.data : [];
-    } catch (error: any) {
-      console.error('Failed to fetch risk categories:', error);
-      return [];
-    }
-  }
-
-  async createCategory(categoryData: Partial<RiskCategory>): Promise<RiskCategory | null> {
-    try {
-      const response = await apiService.post<ApiResponse<RiskCategory>>('/risk/categories', categoryData);
-      return response.data.success ? response.data.data : null;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create category');
     }
   }
 
@@ -277,7 +256,6 @@ class RiskService {
       }
       return { risks: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     } catch (error: any) {
-      console.error('Failed to fetch risks:', error);
       return { risks: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     }
   }
@@ -287,7 +265,6 @@ class RiskService {
       const response = await apiService.get<ApiResponse<Risk>>(`/risk/risks/${riskId}`);
       return response.data.success ? response.data.data : null;
     } catch (error: any) {
-      console.error('Failed to fetch risk:', error);
       return null;
     }
   }
@@ -346,6 +323,19 @@ class RiskService {
     }
   }
 
+  // PATCH /api/risk/risks/:id/status
+  async updateRiskStatus(riskId: string, status: RiskStatus): Promise<Risk> {
+    try {
+      const response = await apiService.patch<ApiResponse<Risk>>(`/risk/risks/${riskId}/status`, { status });
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error('Failed to update risk status');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update risk status');
+    }
+  }
+
   async deleteRisk(riskId: string): Promise<void> {
     try {
       await apiService.delete(`/risk/risks/${riskId}`);
@@ -360,7 +350,6 @@ class RiskService {
       const response = await apiService.get<ApiResponse<RiskMatrix>>(`/risk/matrix/${projectId}`);
       return response.data.success ? response.data.data : null;
     } catch (error: any) {
-      console.error('Failed to fetch risk matrix:', error);
       return null;
     }
   }
@@ -371,7 +360,6 @@ class RiskService {
       const response = await apiService.get<ApiResponse<RiskMonitoring>>(`/risk/monitoring/${projectId}`);
       return response.data.success ? response.data.data : null;
     } catch (error: any) {
-      console.error('Failed to fetch risk monitoring:', error);
       return null;
     }
   }
@@ -382,7 +370,6 @@ class RiskService {
       const response = await apiService.get<ApiResponse<RiskReport>>(`/risk/report/${projectId}`);
       return response.data.success ? response.data.data : null;
     } catch (error: any) {
-      console.error('Failed to fetch risk report:', error);
       return null;
     }
   }
@@ -404,7 +391,6 @@ class RiskService {
       }
       return { mitigations: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     } catch (error: any) {
-      console.error('Failed to fetch mitigations:', error);
       return { mitigations: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     }
   }

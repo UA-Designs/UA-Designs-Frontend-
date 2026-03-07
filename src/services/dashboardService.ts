@@ -51,8 +51,12 @@ export const dashboardService = {
       return response.data.success ? response.data.data : {
         totalProjects: 0,
         activeProjects: 0,
+        completedProjects: 0,
+        totalTasks: 0,
         completedTasks: 0,
+        overdueTasks: 0,
         totalBudget: 0,
+        actualCost: 0,
         costVariance: 0,
         scheduleVariance: 0,
       };
@@ -92,8 +96,9 @@ export const dashboardService = {
     try {
       const response = await apiService.get<RiskMatrixResponse>('/dashboard/risk-matrix');
       return response.data.success ? response.data.data : {
-        risks: [],
-        matrix: []
+        highImpact: [],
+        mediumImpact: [],
+        lowImpact: [],
       };
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch risk matrix');
@@ -108,24 +113,6 @@ export const dashboardService = {
       return response.data.success ? response.data.data : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch recent activities');
-    }
-  },
-
-  async getProjectTimeline(projectId: string): Promise<any[]> {
-    try {
-      const response = await apiService.get(`/dashboard/project-timeline/${projectId}`);
-      return response.data.success ? response.data.data : [];
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch project timeline');
-    }
-  },
-
-  async getResourceUtilization(): Promise<any[]> {
-    try {
-      const response = await apiService.get('/dashboard/resource-utilization');
-      return response.data.success ? response.data.data : [];
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch resource utilization');
     }
   },
 

@@ -11,7 +11,7 @@ export interface RegisterRequest {
   lastName: string;
   email: string;
   password: string;
-  role?: UserRole;
+  role: UserRole;
 }
 
 export interface LoginResponse {
@@ -57,6 +57,11 @@ class AuthService {
   private readonly TOKEN_KEY = 'ua_designs_token';
   private readonly USER_KEY = 'ua_designs_user';
 
+  /** Normalize backend user — handles both `id` and `_id` fields */
+  private normalizeUser(u: any): User {
+    return { ...u, id: u.id ?? u._id ?? u.userId };
+  }
+
   // Token management
   setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
@@ -87,20 +92,17 @@ class AuthService {
   // Authentication methods
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('Attempting login with credentials:', { email: credentials.email });
       const response = await apiService.post<LoginResponse>('/auth/login', credentials);
-      console.log('Login response:', response.data);
       
       if (response.data.success) {
+        const normalizedUser = this.normalizeUser(response.data.data.user);
         this.setToken(response.data.data.token);
-        this.setUser(response.data.data.user);
-        console.log('Login successful, token and user stored');
+        this.setUser(normalizedUser);
+        response.data.data.user = normalizedUser;
       }
       
       return response.data;
     } catch (error: any) {
-      console.error('Login error:', error);
-      console.error('Error response:', error.response?.data);
       throw new Error(error.response?.data?.message || error.message || 'Login failed');
     }
   }
@@ -110,8 +112,10 @@ class AuthService {
       const response = await apiService.post<RegisterResponse>('/auth/register', userData);
       
       if (response.data.success) {
+        const normalizedUser = this.normalizeUser(response.data.data.user);
         this.setToken(response.data.data.token);
-        this.setUser(response.data.data.user);
+        this.setUser(normalizedUser);
+        response.data.data.user = normalizedUser;
       }
       
       return response.data;
@@ -125,7 +129,6 @@ class AuthService {
       await apiService.post('/auth/logout');
     } catch (error) {
       // Even if logout fails on server, clear local data
-      console.warn('Logout request failed:', error);
     } finally {
       this.removeToken();
       this.removeUser();
@@ -137,8 +140,9 @@ class AuthService {
       const response = await apiService.get<UserResponse>('/auth/me');
       
       if (response.data.success) {
-        this.setUser(response.data.data);
-        return response.data.data;
+        const normalizedUser = this.normalizeUser(response.data.data);
+        this.setUser(normalizedUser);
+        return normalizedUser;
       }
       
       throw new Error('Failed to get current user');
@@ -150,20 +154,11 @@ class AuthService {
     }
   }
 
-  async refreshToken(): Promise<string> {
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
-      const response = await apiService.post<{ success: boolean; data: { token: string } }>('/auth/refresh');
-      
-      if (response.data.success) {
-        this.setToken(response.data.data.token);
-        return response.data.data.token;
-      }
-      
-      throw new Error('Token refresh failed');
+      await apiService.post('/auth/change-password', { currentPassword, newPassword });
     } catch (error: any) {
-      this.removeToken();
-      this.removeUser();
-      throw new Error(error.response?.data?.message || 'Token refresh failed');
+      throw new Error(error.response?.data?.message || 'Failed to change password');
     }
   }
 
@@ -171,34 +166,23 @@ class AuthService {
   async getUsers(): Promise<User[]> {
     try {
       const response = await apiService.get<UsersResponse>('/users');
-      console.log('getUsers API response:', response.data);
-      console.log('Response success:', response.data.success);
-      console.log('Response data:', response.data.data);
-      console.log('Data type:', typeof response.data.data);
-      console.log('Is array:', Array.isArray(response.data.data));
       
       if (response.data.success) {
         const data = response.data.data;
         if (Array.isArray(data)) {
           return data;
         } else if (data && typeof data === 'object') {
-          // Handle case where data might be wrapped in another object
-          console.warn('Data is object, checking for users array inside:', data);
-          if (Array.isArray(data.users)) {
-            return data.users;
-          } else if (Array.isArray(data.data)) {
-            return data.data;
+          if (Array.isArray((data as any).users)) {
+            return (data as any).users;
+          } else if (Array.isArray((data as any).data)) {
+            return (data as any).data;
           }
         }
-        console.error('API returned non-array data:', data);
         return [];
       } else {
-        console.warn('API returned success: false');
         return [];
       }
     } catch (error: any) {
-      console.error('getUsers error:', error);
-      console.error('Error response:', error.response?.data);
       throw new Error(error.response?.data?.message || 'Failed to fetch users');
     }
   }
@@ -232,11 +216,17 @@ class AuthService {
   }
 
   async updateUser(id: string, userData: Partial<User>): Promise<User> {
+    if (!id || id === 'undefined') {
+      throw new Error('Cannot update user: user ID is missing. Please log out and log back in.');
+    }
     try {
       const response = await apiService.put<UserResponse>(`/users/${id}`, userData);
       
       if (response.data.success) {
-        return response.data.data;
+        const raw = response.data.data;
+        // Backend may return minimal/null data — always preserve the known id
+        const normalized = this.normalizeUser(raw ?? { id });
+        return { ...normalized, id: normalized.id ?? id };
       }
       
       throw new Error('Failed to update user');
@@ -264,7 +254,7 @@ class AuthService {
 
   async getUserStats(): Promise<UserStatsResponse['data']> {
     try {
-      const response = await apiService.get<UserStatsResponse>('/users/stats');
+      const response = await apiService.get<UserStatsResponse>('/users/stats/overview');
       return response.data.success ? response.data.data : {
         totalUsers: 0,
         activeUsers: 0,
@@ -272,6 +262,39 @@ class AuthService {
       };
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch user statistics');
+    }
+  }
+
+  async activateUser(id: string): Promise<void> {
+    try {
+      await apiService.patch(`/users/${id}/activate`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to activate user');
+    }
+  }
+
+  async deactivateUser(id: string): Promise<void> {
+    try {
+      await apiService.patch(`/users/${id}/deactivate`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to deactivate user');
+    }
+  }
+
+  async getUserPermissions(id: string): Promise<any> {
+    try {
+      const response = await apiService.get<{ success: boolean; data: any }>(`/users/${id}/permissions`);
+      return response.data.success ? response.data.data : {};
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch permissions');
+    }
+  }
+
+  async updateUserPermissions(id: string, permissions: Record<string, any>, approvalLevel?: number): Promise<void> {
+    try {
+      await apiService.put(`/users/${id}/permissions`, { permissions, approvalLevel });
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update permissions');
     }
   }
 
