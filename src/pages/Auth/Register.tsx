@@ -18,9 +18,11 @@ const Register: React.FC = () => {
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  const onFinish = async (values: RegisterRequest) => {
+  const onFinish = async (values: RegisterRequest & { confirmPassword?: string }) => {
     try {
-      await register(values);
+      // Strip confirmPassword before sending to API — backend rejects unknown fields
+      const { confirmPassword, ...registrationData } = values;
+      await register(registrationData);
       navigate('/dashboard');
     } catch (error) {
       // Error is handled by the auth context
@@ -245,10 +247,8 @@ const Register: React.FC = () => {
               }}
             >
               <Option value={UserRole.PROJECT_MANAGER}>Project Manager</Option>
-              <Option value={UserRole.TEAM_LEAD}>Team Lead</Option>
-              <Option value={UserRole.CONTRACTOR}>Contractor</Option>
-              <Option value={UserRole.CLIENT}>Client</Option>
-              <Option value={UserRole.VIEWER}>Viewer</Option>
+              <Option value={UserRole.ENGINEER}>Engineer</Option>
+              <Option value={UserRole.STAFF}>Staff</Option>
             </Select>
           </Form.Item>
 

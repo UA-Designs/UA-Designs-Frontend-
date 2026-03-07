@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Space, Divider } from 'antd';
 import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginRequest } from '../../types';
-import { testApiConnection, testLoginEndpoint } from '../../utils/apiTest';
 
 const { Title, Text } = Typography;
 
@@ -15,34 +14,11 @@ const Login: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  // Test API connection on component mount
-  useEffect(() => {
-    const runTests = async () => {
-      console.log('🔍 Running API connection tests...');
-      const apiConnected = await testApiConnection();
-      const loginEndpointExists = await testLoginEndpoint();
-      
-      if (!apiConnected) {
-        console.error('❌ Backend API is not accessible at http://localhost:5000/api');
-        console.error('Please make sure your backend server is running');
-      } else if (!loginEndpointExists) {
-        console.error('❌ Login endpoint not found at /api/auth/login');
-      } else {
-        console.log('✅ API connection tests passed');
-      }
-    };
-    
-    runTests();
-  }, []);
-
   const onFinish = async (values: LoginRequest) => {
     try {
-      console.log('🚀 Login form submitted with values:', { email: values.email });
       await login(values);
-      console.log('✅ Login successful, navigating to:', from);
       navigate(from, { replace: true });
     } catch (error) {
-      console.error('❌ Login failed:', error);
       // Error is handled by the auth context
     }
   };
@@ -249,28 +225,6 @@ const Login: React.FC = () => {
           </Space>
         </div>
 
-        {/* Demo credentials */}
-        <div
-          style={{
-            background: 'rgba(0, 255, 0, 0.05)',
-            border: '1px solid rgba(0, 204, 102, 0.25)',
-            borderRadius: '12px',
-            padding: '16px',
-            marginTop: '20px',
-          }}
-        >
-          <Text style={{ color: '#00ff00', fontSize: '12px', fontWeight: '500' }}>
-            Demo Credentials:
-          </Text>
-          <div style={{ marginTop: '8px' }}>
-            <Text style={{ color: '#b3b3b3', fontSize: '12px', display: 'block' }}>
-              Email: john.doe@uadesigns.com
-            </Text>
-            <Text style={{ color: '#b3b3b3', fontSize: '12px', display: 'block' }}>
-              Password: password123
-            </Text>
-          </div>
-        </div>
       </Card>
 
       <style>
