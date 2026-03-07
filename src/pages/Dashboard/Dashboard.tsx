@@ -4,7 +4,6 @@ import {
   ProjectOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  DollarOutlined,
   RiseOutlined,
   FallOutlined,
 } from '@ant-design/icons';
@@ -13,6 +12,7 @@ import {
   ProjectProgress,
   TaskProgress,
   CostVariance,
+  RiskMatrix as RiskMatrixType,
 } from '../../types';
 import { dashboardService } from '../../services/dashboardService';
 import QuickActions from '../../components/Dashboard/QuickActions';
@@ -26,6 +26,7 @@ const Dashboard: React.FC = () => {
   const [projectProgress, setProjectProgress] = useState<ProjectProgress[]>([]);
   const [, setTaskProgress] = useState<TaskProgress[]>([]);
   const [costVariance, setCostVariance] = useState<CostVariance[]>([]);
+  const [riskMatrix, setRiskMatrix] = useState<RiskMatrixType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,17 +37,19 @@ const Dashboard: React.FC = () => {
         setError(null);
 
         // Fetch real data from API
-        const [statsData, projectData, taskData, costData] = await Promise.all([
+        const [statsData, projectData, taskData, costData, riskMatrixData] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getProjectProgress(),
           dashboardService.getTaskProgress(),
           dashboardService.getCostVariance(),
+          dashboardService.getRiskMatrix(),
         ]);
 
         setStats(statsData);
         setProjectProgress(projectData);
         setTaskProgress(taskData);
         setCostVariance(costData);
+        setRiskMatrix(riskMatrixData);
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {
@@ -226,7 +229,7 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#ffffff', fontWeight: '500' }}>Total Budget</span>}
               value={stats?.totalBudget || 0}
-              prefix={<DollarOutlined style={{ color: '#009944' }} />}
+              prefix={<span style={{ color: '#009944', fontWeight: 700 }}>₱</span>}
               precision={2}
               valueStyle={{ color: '#009944', fontSize: '24px', fontWeight: '700' }}
             />
@@ -330,7 +333,7 @@ const Dashboard: React.FC = () => {
               boxShadow: '0 8px 32px rgba(0, 204, 102, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <RiskMatrix />
+            <RiskMatrix data={riskMatrix as any} />
           </Card>
         </Col>
 
