@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -8,19 +9,19 @@ import React, {
 import { User, LoginRequest, RegisterRequest, AuthState } from '../types';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
+import { AccessLevel, hasAccess } from '../lib/rbac';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
-  refreshToken: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   changePassword: (
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  /** Check if the current user meets a given access level. */
+  can: (level: AccessLevel) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,12 +40,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log('Initializing authentication...');
         const storedToken = authService.getToken();
         const storedUser = authService.getUser();
-
-        console.log('Stored token exists:', !!storedToken);
-        console.log('Stored user exists:', !!storedUser);
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -55,29 +52,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             const currentUser = await authService.getCurrentUser();
             setUser(currentUser);
-            console.log('Token verified with backend - user authenticated');
           } catch (error) {
-            console.warn('Token verification failed, clearing auth data');
             authService.removeToken();
             authService.removeUser();
             setToken(null);
             setUser(null);
             setIsAuthenticated(false);
           }
-        } else {
-          console.log('No stored authentication found');
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
-        // Clear invalid auth data
         authService.removeToken();
         authService.removeUser();
         setToken(null);
         setUser(null);
         setIsAuthenticated(false);
       } finally {
-        console.log('Auth initialization complete, setting loading to false');
-        // Add a small delay to ensure loading state is visible
         setTimeout(() => {
           setIsLoading(false);
         }, 100);
@@ -129,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authService.logout();
     } catch (error) {
-      console.warn('Logout request failed:', error);
+      // ignore logout errors
     } finally {
       setUser(null);
       setToken(null);
@@ -138,26 +127,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const refreshToken = async () => {
-    try {
-      const newToken = await authService.refreshToken();
-      setToken(newToken);
-    } catch (error) {
-      // Refresh failed, logout user
-      logout();
-      throw error;
-    }
-  };
-
   const updateProfile = async (data: Partial<User>) => {
     try {
-      const response = await authService.updateProfile(data);
-      setUser(response.data);
-      localStorage.setItem('user', JSON.stringify(response.data));
+      if (!user) throw new Error('No authenticated user');
+      // Normalize: handle backends that return _id instead of id
+      const userId = user.id ?? (user as any)._id;
+      if (!userId) throw new Error('User ID is missing — please log out and log in again.');
+      const updatedUser = await authService.updateUser(userId, data);
+      // Merge: preserve all existing fields, overlay the submitted changes,
+      // then overlay whatever the backend returned — always keep the known id.
+      const mergedUser = { ...user, ...data, ...updatedUser, id: updatedUser.id ?? userId };
+      setUser(mergedUser);
+      authService.setUser(mergedUser);
       toast.success('Profile updated successfully!');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Profile update failed';
-      toast.error(message);
+      const msg = error.response?.data?.message || error.message || 'Profile update failed';
+      toast.error(msg);
       throw error;
     }
   };
@@ -170,34 +155,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.changePassword(currentPassword, newPassword);
       toast.success('Password changed successfully!');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Password change failed';
-      toast.error(message);
+      const msg = error.response?.data?.message || error.message || 'Password change failed';
+      toast.error(msg);
       throw error;
     }
   };
 
-  const forgotPassword = async (email: string) => {
-    try {
-      await authService.forgotPassword(email);
-      toast.success('Password reset email sent!');
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || 'Failed to send reset email';
-      toast.error(message);
-      throw error;
-    }
-  };
-
-  const resetPassword = async (token: string, newPassword: string) => {
-    try {
-      await authService.resetPassword(token, newPassword);
-      toast.success('Password reset successfully!');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Password reset failed';
-      toast.error(message);
-      throw error;
-    }
-  };
+  const can = useCallback(
+    (level: AccessLevel): boolean => hasAccess(user?.role, level),
+    [user?.role],
+  );
 
   const value: AuthContextType = {
     user,
@@ -207,11 +174,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    refreshToken,
     updateProfile,
     changePassword,
-    forgotPassword,
-    resetPassword,
+    can,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

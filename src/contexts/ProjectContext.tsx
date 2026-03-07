@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Project, ProjectStatus, ProjectPriority } from '../types';
+import { projectService } from '../services/projectService';
+
+const STORAGE_KEY = 'pms_selected_project_id';
 
 interface ProjectContextType {
   selectedProject: Project | null;
@@ -8,6 +11,7 @@ interface ProjectContextType {
   setProjects: (projects: Project[]) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  loadProjects: () => Promise<void>;
   filterStatus: ProjectStatus | 'all';
   setFilterStatus: (status: ProjectStatus | 'all') => void;
   filterPriority: ProjectPriority | 'all';
@@ -25,16 +29,49 @@ interface ProjectProviderProps {
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   children,
 }) => {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProjectState] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<ProjectStatus | 'all'>(
-    'all'
-  );
-  const [filterPriority, setFilterPriority] = useState<ProjectPriority | 'all'>(
-    'all'
-  );
+  const [isLoading, setIsLoading] = useState(true); // true until first load completes
+  const [filterStatus, setFilterStatus] = useState<ProjectStatus | 'all'>('all');
+  const [filterPriority, setFilterPriority] = useState<ProjectPriority | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Persist selection to localStorage
+  const setSelectedProject = useCallback((project: Project | null) => {
+    setSelectedProjectState(project);
+    if (project) {
+      localStorage.setItem(STORAGE_KEY, project.id);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  // Load projects from API; restore or auto-select after load
+  const loadProjects = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetched = await projectService.getProjects();
+      const list: Project[] = Array.isArray(fetched) ? fetched : [];
+      setProjects(list);
+
+      if (list.length > 0) {
+        const storedId = localStorage.getItem(STORAGE_KEY);
+        const restore = storedId ? list.find(p => p.id === storedId) : null;
+        // Restore last-used project, or auto-select the first one
+        setSelectedProjectState(restore ?? list[0]);
+        localStorage.setItem(STORAGE_KEY, (restore ?? list[0]).id);
+      }
+    } catch {
+      // silently fail — pages handle their own error states
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load projects once on mount
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const value: ProjectContextType = {
     selectedProject,
@@ -43,6 +80,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
     setProjects,
     isLoading,
     setIsLoading,
+    loadProjects,
     filterStatus,
     setFilterStatus,
     filterPriority,

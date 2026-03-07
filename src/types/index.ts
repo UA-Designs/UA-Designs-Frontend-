@@ -9,15 +9,20 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Optional profile fields (accepted by PUT /api/users/:id)
+  phone?: string;
+  department?: string;
+  employeeId?: string;
+  costCenter?: string;
+  officeLocation?: string;
+  hireDate?: string;
 }
 
 export enum UserRole {
-  ADMIN = 'admin',
-  PROJECT_MANAGER = 'project_manager',
-  TEAM_LEAD = 'team_lead',
-  CONTRACTOR = 'contractor',
-  CLIENT = 'client',
-  VIEWER = 'viewer',
+  ADMIN = 'ADMIN',
+  PROJECT_MANAGER = 'PROJECT_MANAGER',
+  ENGINEER = 'ENGINEER',
+  STAFF = 'STAFF',
 }
 
 export interface AuthState {
@@ -44,29 +49,56 @@ export interface RegisterRequest {
 export interface Project {
   id: string;
   name: string;
+  projectNumber?: string;
   description: string;
   status: ProjectStatus;
+  phase?: ProjectPhase;
   priority: ProjectPriority;
-  startDate: string;
-  endDate: string;
+  projectType?: ProjectType;
+  startDate?: string;
+  endDate?: string;
+  plannedEndDate?: string;
+  actualEndDate?: string;
   budget: number;
-  actualCost: number;
+  actualCost?: number;
   progress: number;
-  projectManagerId: string;
+  projectManagerId?: string;
   projectManager?: User;
-  clientId: string;
-  client?: User;
-  teamMembers: ProjectTeamMember[];
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  location?: string;
+  isActive?: boolean;
+  teamMembers?: ProjectTeamMember[];
   createdAt: string;
   updatedAt: string;
 }
 
 export enum ProjectStatus {
   PLANNING = 'planning',
+  ACTIVE = 'active',
   IN_PROGRESS = 'in_progress',
   ON_HOLD = 'on_hold',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+}
+
+export enum ProjectPhase {
+  INITIATION = 'initiation',
+  PLANNING = 'planning',
+  DESIGN = 'design',
+  CONSTRUCTION = 'construction',
+  EXECUTION = 'execution',
+  MONITORING = 'monitoring',
+  CLOSING = 'closing',
+}
+
+export enum ProjectType {
+  RESIDENTIAL = 'residential',
+  COMMERCIAL = 'commercial',
+  INDUSTRIAL = 'industrial',
+  INFRASTRUCTURE = 'infrastructure',
+  RENOVATION = 'renovation',
 }
 
 export enum ProjectPriority {
@@ -419,14 +451,6 @@ export enum NotificationType {
   RISK_ALERT = 'risk_alert',
 }
 
-// File Upload Types
-export interface FileUpload {
-  file: File;
-  progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
-  url?: string;
-  error?: string;
-}
 
 // Chart Data Types
 export interface ChartData {
@@ -474,429 +498,78 @@ export enum ActivityType {
   COMMENT_ADDED = 'comment_added',
 }
 
-// Integration Management Types
-export interface ProjectCharter {
+// ── Audit Log Types ──────────────────────────────────────────────────────────
+
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'STATUS_CHANGE'
+  | 'LOGIN'
+  | 'LOGOUT'
+  | 'REGISTER'
+  | 'PASSWORD_CHANGE'
+  | 'APPROVE'
+  | 'REJECT'
+  | 'ESCALATE';
+
+export type AuditEntity =
+  | 'PROJECT'
+  | 'TASK'
+  | 'BUDGET'
+  | 'EXPENSE'
+  | 'COST'
+  | 'RISK'
+  | 'MITIGATION'
+  | 'STAKEHOLDER'
+  | 'COMMUNICATION'
+  | 'USER'
+  | 'MATERIAL'
+  | 'LABOR'
+  | 'EQUIPMENT'
+  | 'TEAM_MEMBER'
+  | 'ALLOCATION'
+  | 'DEPENDENCY';
+
+export interface AuditLogUser {
   id: string;
-  charterNumber: string;
-  projectTitle: string;
-  projectType: ProjectType;
-  projectDescription: string;
-  businessJustification: string;
-  objectives: string[];
-  successCriteria: string[];
-  scope: {
-    included: string[];
-    excluded: string[];
-    assumptions: string[];
-    constraints: string[];
-  };
-  deliverables: string[];
-  milestones: ProjectMilestone[];
-  budget: {
-    estimated: number;
-    approved: number;
-    currency: string;
-  };
-  timeline: {
-    startDate: string;
-    endDate: string;
-    phases: ProjectPhase[];
-  };
-  team: {
-    sponsor: string;
-    projectManager: string;
-    teamMembers: ProjectTeamMember[];
-    stakeholders: Stakeholder[];
-  };
-  risks: Risk[];
-  approvalStatus: ApprovalStatus;
-  approvalWorkflow: ApprovalWorkflow[];
-  template: CharterTemplate;
-  attachments: CharterAttachment[];
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  approvedBy?: string;
-  approvedAt?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
-export enum ProjectType {
-  RESIDENTIAL = 'residential',
-  COMMERCIAL = 'commercial',
-  INDUSTRIAL = 'industrial',
-  INFRASTRUCTURE = 'infrastructure',
-  RENOVATION = 'renovation',
-  MAINTENANCE = 'maintenance',
-}
-
-export interface ProjectMilestone {
+export interface AuditLogEntry {
   id: string;
-  name: string;
+  userId: string | null;
+  action: AuditAction;
+  entity: AuditEntity;
+  entityId: string | null;
   description: string;
-  targetDate: string;
-  dependencies: string[];
-  deliverables: string[];
-  status: MilestoneStatus;
-  completedAt?: string;
-}
-
-export enum MilestoneStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  DELAYED = 'delayed',
-  CANCELLED = 'cancelled',
-}
-
-export interface ProjectPhase {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  deliverables: string[];
-  team: string[];
-  status: PhaseStatus;
-}
-
-export enum PhaseStatus {
-  NOT_STARTED = 'not_started',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  ON_HOLD = 'on_hold',
-  CANCELLED = 'cancelled',
-}
-
-export interface CharterTemplate {
-  id: string;
-  name: string;
-  type: ProjectType;
-  description: string;
-  sections: TemplateSection[];
-  isDefault: boolean;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  path: string;
+  statusCode: number;
   createdAt: string;
-  createdBy: string;
+  user: AuditLogUser | null;
 }
 
-export interface TemplateSection {
-  id: string;
-  title: string;
-  description: string;
-  fields: TemplateField[];
-  isRequired: boolean;
-  order: number;
+export interface AuditLogMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
-export interface TemplateField {
-  id: string;
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'multiselect' | 'file';
-  required: boolean;
-  placeholder?: string;
-  options?: { label: string; value: string }[];
-  validation?: any;
-  order: number;
+export interface AuditLogFilters {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  action?: AuditAction;
+  entity?: AuditEntity;
+  startDate?: string;
+  endDate?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
-export interface CharterAttachment {
-  id: string;
-  charterId: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
-  uploadedAt: string;
-  uploadedBy: string;
-}
 
-export interface ChangeRequest {
-  id: string;
-  title: string;
-  description: string;
-  changeType: ChangeType;
-  priority: ChangePriority;
-  impactLevel: ImpactLevel;
-  businessJustification: string;
-  projectId: string;
-  project?: Project;
-  requestedBy: string;
-  requestedByUser?: User;
-  requestedAt: string;
-  status: ChangeRequestStatus;
-  approvalWorkflow: ChangeApprovalWorkflow[];
-  impactAnalysis?: ChangeImpactAnalysis;
-  implementationPlan?: ImplementationPlan;
-  attachments: ChangeRequestAttachment[];
-  comments: ChangeRequestComment[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum ChangeType {
-  SCOPE = 'scope',
-  SCHEDULE = 'schedule',
-  COST = 'cost',
-  QUALITY = 'quality',
-  RESOURCE = 'resource',
-  TECHNICAL = 'technical',
-  REGULATORY = 'regulatory',
-  ENVIRONMENTAL = 'environmental',
-}
-
-export enum ChangePriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
-
-export enum ImpactLevel {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
-
-export enum ChangeRequestStatus {
-  DRAFT = 'draft',
-  SUBMITTED = 'submitted',
-  UNDER_REVIEW = 'under_review',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  IMPLEMENTED = 'implemented',
-  CANCELLED = 'cancelled',
-}
-
-export interface ChangeApprovalWorkflow {
-  id: string;
-  changeRequestId: string;
-  approver: string;
-  approverUser?: User;
-  role: ApprovalRole;
-  status: ApprovalStatus;
-  comments?: string;
-  approvedAt?: string;
-  dueDate: string;
-  order: number;
-}
-
-export enum ApprovalRole {
-  CLIENT = 'client',
-  ARCHITECT = 'architect',
-  ENGINEER = 'engineer',
-  CONTRACTOR = 'contractor',
-  PROJECT_MANAGER = 'project_manager',
-  SPONSOR = 'sponsor',
-  STAKEHOLDER = 'stakeholder',
-}
-
-export enum ApprovalStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  DELEGATED = 'delegated',
-}
-
-export interface ApprovalWorkflow {
-  id: string;
-  entityType: 'charter' | 'change_request' | 'workflow';
-  entityId: string;
-  approver: string;
-  approverUser?: User;
-  role: ApprovalRole;
-  status: ApprovalStatus;
-  comments?: string;
-  approvedAt?: string;
-  dueDate: string;
-  order: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ChangeImpactAnalysis {
-  id: string;
-  changeRequestId: string;
-  costImpact: {
-    additionalCost: number;
-    costVariance: number;
-    budgetImplications: string[];
-    mitigationOptions: string[];
-  };
-  scheduleImpact: {
-    delayDays: number;
-    criticalPathAffected: boolean;
-    dependencies: string[];
-    mitigationOptions: string[];
-  };
-  scopeImpact: {
-    scopeChange: string;
-    deliverablesAffected: string[];
-    qualityImplications: string[];
-    mitigationOptions: string[];
-  };
-  resourceImpact: {
-    additionalResources: string[];
-    skillGaps: string[];
-    capacityImplications: string[];
-    mitigationOptions: string[];
-  };
-  qualityImpact: {
-    qualityRisks: string[];
-    testingImplications: string[];
-    complianceIssues: string[];
-    mitigationOptions: string[];
-  };
-  riskImpact: {
-    newRisks: string[];
-    riskMitigation: string[];
-    contingencyPlans: string[];
-  };
-  overallRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  recommendations: string[];
-  analyzedBy: string;
-  analyzedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ImplementationPlan {
-  id: string;
-  changeRequestId: string;
-  phases: ImplementationPhase[];
-  resources: ImplementationResource[];
-  timeline: {
-    startDate: string;
-    endDate: string;
-    milestones: ImplementationMilestone[];
-  };
-  risks: ImplementationRisk[];
-  successCriteria: string[];
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ImplementationPhase {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  deliverables: string[];
-  team: string[];
-  status: PhaseStatus;
-}
-
-export interface ImplementationResource {
-  id: string;
-  type: 'human' | 'material' | 'equipment' | 'financial';
-  name: string;
-  quantity: number;
-  cost: number;
-  availability: string;
-  assignedTo?: string;
-}
-
-export interface ImplementationMilestone {
-  id: string;
-  name: string;
-  targetDate: string;
-  dependencies: string[];
-  deliverables: string[];
-  status: MilestoneStatus;
-  completedAt?: string;
-}
-
-export interface ImplementationRisk {
-  id: string;
-  description: string;
-  probability: RiskProbability;
-  impact: RiskImpact;
-  mitigation: string;
-  owner: string;
-}
-
-export interface ChangeRequestAttachment {
-  id: string;
-  changeRequestId: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
-  uploadedAt: string;
-  uploadedBy: string;
-}
-
-export interface ChangeRequestComment {
-  id: string;
-  changeRequestId: string;
-  content: string;
-  author: string;
-  authorUser?: User;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface IntegrationDashboard {
-  id: string;
-  summary: {
-    totalProjects: number;
-    activeProjects: number;
-    projectsAtRisk: number;
-    pendingApprovals: number;
-    criticalIssues: number;
-    changeRequests: number;
-    approvedCharters: number;
-  };
-  recentActivity: {
-    id: string;
-    type: 'CHANGE_REQUEST' | 'WORKFLOW_APPROVAL' | 'MILESTONE_ACHIEVED' | 'RISK_IDENTIFIED' | 'CHARTER_APPROVED';
-    description: string;
-    projectId: string;
-    projectName: string;
-    timestamp: string;
-    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  }[];
-  projectHealth: {
-    projectId: string;
-    projectName: string;
-    overallHealth: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
-    scheduleHealth: number;
-    costHealth: number;
-    qualityHealth: number;
-    resourceHealth: number;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  }[];
-  pendingActions: {
-    id: string;
-    type: 'APPROVAL' | 'REVIEW' | 'MITIGATION' | 'ESCALATION';
-    description: string;
-    projectId: string;
-    projectName: string;
-    assignee: string;
-    dueDate: string;
-    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  }[];
-  dependencies: {
-    id: string;
-    fromProject: string;
-    toProject: string;
-    type: 'FINISH_TO_START' | 'START_TO_START' | 'FINISH_TO_FINISH' | 'START_TO_FINISH';
-    status: 'ACTIVE' | 'COMPLETED' | 'BLOCKED';
-    impact: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  }[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Export Types
-export interface ExportOptions {
-  format: 'pdf' | 'excel' | 'csv';
-  includeCharts?: boolean;
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-  filters?: Record<string, any>;
-}

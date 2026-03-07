@@ -83,7 +83,7 @@ export const theme: ThemeConfig = {
       itemHoverBg: 'rgba(0, 153, 68, 0.1)', // Subtle green hover
       itemHoverColor: '#009944', // Darker green hover text
       itemActiveBg: '#009944', // Darker green active
-      itemActiveColor: '#000000', // Black text on green
+      // itemActiveColor removed - not a valid token in this AntD version
       itemColor: '#ffffff', // White text
       subMenuItemBg: 'transparent',
       darkItemBg: 'transparent',
@@ -91,8 +91,6 @@ export const theme: ThemeConfig = {
       darkItemSelectedColor: '#000000',
       darkItemHoverBg: 'rgba(0, 255, 0, 0.1)',
       darkItemHoverColor: '#00ff00',
-      darkItemActiveBg: '#00ff00',
-      darkItemActiveColor: '#000000',
       darkItemColor: '#ffffff',
     },
     Button: {
@@ -277,18 +275,12 @@ export const theme: ThemeConfig = {
     QRCode: {
       borderRadius: 4,
     },
-    Watermark: {
-      borderRadius: 4,
-    },
     Tour: {
       borderRadius: 6,
       colorBgElevated: '#1a1a1a',
       colorText: '#ffffff',
     },
     App: {
-      borderRadius: 4,
-    },
-    ConfigProvider: {
       borderRadius: 4,
     },
     Space: {
@@ -301,12 +293,6 @@ export const theme: ThemeConfig = {
       borderRadius: 4,
     },
     Grid: {
-      borderRadius: 4,
-    },
-    Row: {
-      borderRadius: 4,
-    },
-    Col: {
       borderRadius: 4,
     },
     Statistic: {
@@ -322,10 +308,6 @@ export const theme: ThemeConfig = {
       colorText: '#b3b3b3',
     },
     Result: {
-      borderRadius: 6,
-      colorText: '#ffffff',
-    },
-    PageHeader: {
       borderRadius: 6,
       colorText: '#ffffff',
     },
@@ -346,10 +328,6 @@ export const theme: ThemeConfig = {
       colorText: '#ffffff',
     },
     Cascader: {
-      borderRadius: 4,
-      colorText: '#ffffff',
-    },
-    AutoComplete: {
       borderRadius: 4,
       colorText: '#ffffff',
     },
