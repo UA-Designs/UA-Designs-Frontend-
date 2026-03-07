@@ -17,7 +17,6 @@ import {
   InputNumber,
   message,
   Spin,
-  Tabs,
   Statistic,
   Progress,
   Badge,
@@ -36,7 +35,8 @@ import {
   SafetyOutlined,
 } from '@ant-design/icons';
 import ProjectSelector from '../../../components/common/ProjectSelector';
-import { Project } from '../../../types';
+import { useProject } from '../../../contexts/ProjectContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   riskService,
   Risk,
@@ -57,10 +57,10 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
 const ProjectRisk: React.FC = () => {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const { selectedProject, isLoading: projectsLoading } = useProject();
+  const { can } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('risks');
 
@@ -91,24 +91,28 @@ const ProjectRisk: React.FC = () => {
 
   useEffect(() => {
     if (selectedProject) {
-      loadRiskData();
-    }
-  }, [selectedProject]);
-
-  const handleProjectChange = (project: Project | null) => {
-    setSelectedProject(project);
-    if (!project) {
-      // Reset data
+      // Clear stale data when switching projects
       setRisks([]);
       setMitigations([]);
       setRiskMatrix(null);
       setMonitoring(null);
+      loadRiskData();
     }
-  };
+  }, [selectedProject]);
 
-  const loadCategories = async () => {
-    const categoriesData = await riskService.getCategories();
-    setCategories(categoriesData);
+
+
+  const loadCategories = () => {
+    // No /api/risk/categories endpoint exists — use hardcoded categories
+    setCategories([
+      { id: 'technical', name: 'Technical', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'schedule', name: 'Schedule', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'cost', name: 'Cost', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'resource', name: 'Resource', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'stakeholder', name: 'Stakeholder', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'external', name: 'External', isActive: true, createdAt: '', updatedAt: '' },
+      { id: 'organizational', name: 'Organizational', isActive: true, createdAt: '', updatedAt: '' },
+    ]);
   };
 
   const loadRiskData = async () => {
@@ -410,45 +414,55 @@ const ProjectRisk: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Risk) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditRisk(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleAssessRisk(record)}
-          >
-            Assess
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleAddMitigation(record)}
-          >
-            Mitigate
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            onClick={() => handleEscalateRisk(record)}
-          >
-            Escalate
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDeleteRisk(record.id)}
-          >
-            Delete
-          </Button>
+          {can('ENGINEER_AND_ABOVE') && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditRisk(record)}
+            >
+              Edit
+            </Button>
+          )}
+          {can('MANAGER_AND_ABOVE') && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleAssessRisk(record)}
+            >
+              Assess
+            </Button>
+          )}
+          {can('MANAGER_AND_ABOVE') && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleAddMitigation(record)}
+            >
+              Mitigate
+            </Button>
+          )}
+          {can('MANAGER_AND_ABOVE') && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              onClick={() => handleEscalateRisk(record)}
+            >
+              Escalate
+            </Button>
+          )}
+          {can('MANAGER_AND_ABOVE') && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteRisk(record.id)}
+            >
+              Delete
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -516,262 +530,246 @@ const ProjectRisk: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       render: (_: any, record: Mitigation) => (
-        <Button
-          type="link"
-          danger
-          size="small"
-          onClick={() => handleDeleteMitigation(record.id)}
-        >
-          Delete
-        </Button>
+        can('MANAGER_AND_ABOVE') ? (
+          <Button
+            type="link"
+            danger
+            size="small"
+            onClick={() => handleDeleteMitigation(record.id)}
+          >
+            Delete
+          </Button>
+        ) : null
       ),
     },
   ];
 
+  const riskTabItems = [
+    { key: 'risks',       icon: <SafetyOutlined />,     label: 'Risks'       },
+    { key: 'mitigations', icon: <CheckCircleOutlined />, label: 'Mitigations' },
+    { key: 'matrix',      icon: <DashboardOutlined />,   label: 'Risk Matrix' },
+    { key: 'overview',    icon: <FileTextOutlined />,    label: 'Overview'    },
+  ];
+
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>Project Risk Management</Title>
-        <Text type="secondary">
-          Identify, analyze, and manage project risks
-        </Text>
-      </div>
+    <>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
-      <ProjectSelector onProjectChange={handleProjectChange} />
+        {/* ── Main column ── */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      {!selectedProject && (
-        <Alert
-          message="No Project Selected"
-          description="Please select a project from the dropdown above to manage its risks, mitigation strategies, and contingency plans."
-          type="info"
-          showIcon
-          style={{ marginBottom: 24 }}
-        />
-      )}
+          <div>
+            <Title level={2} style={{ marginBottom: 4 }}>Project Risk Management</Title>
+            <Text type="secondary">Identify, analyze, and manage project risks</Text>
+          </div>
 
-      {selectedProject && (
-        <Spin spinning={loading}>
-          {/* Summary Statistics */}
-          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="Total Risks"
-                  value={safeRisks.length}
-                  prefix={<ExclamationCircleOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="Critical/High"
-                  value={criticalRisks + highRisks}
-                  prefix={<WarningOutlined />}
-                  valueStyle={{ color: '#ff4d4f' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="Active Risks"
-                  value={activeRisks}
-                  prefix={<RiseOutlined />}
-                  valueStyle={{ color: '#faad14' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card>
-                <Statistic
-                  title="Mitigated"
-                  value={mitigatedRisks}
-                  prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-          </Row>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Title level={4} style={{ margin: 0 }}>Risk Management</Title>
+            <Button
+              icon={<ReloadOutlined style={{ color: '#009944' }} />}
+              onClick={handleRefresh}
+              style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
+            >
+              Refresh
+            </Button>
+          </div>
 
-          {/* Monitoring Summary */}
-          {monitoring && monitoring.summary && (
-            <Card title="Risk Monitoring Summary" style={{ marginBottom: 16 }}>
-              <Row gutter={[16, 16]}>
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title="Average Risk Score"
-                    value={monitoring.summary.averageRiskScore?.toFixed(2) ?? '0.00'}
-                    valueStyle={{
-                      color: (monitoring.summary.averageRiskScore ?? 0) >= 15 ? '#ff4d4f' :
-                             (monitoring.summary.averageRiskScore ?? 0) >= 9 ? '#faad14' : '#52c41a'
-                    }}
-                  />
-                </Col>
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title="Trend"
-                    value={monitoring.summary.trendDirection ?? 'STABLE'}
-                    valueStyle={{
-                      color: monitoring.summary.trendDirection === 'INCREASING' ? '#ff4d4f' :
-                             monitoring.summary.trendDirection === 'DECREASING' ? '#52c41a' : '#1890ff'
-                    }}
-                  />
-                </Col>
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title="Mitigation Progress"
-                    value={`${monitoring.mitigationProgress?.completed ?? 0}/${monitoring.mitigationProgress?.total ?? 0}`}
-                  />
-                </Col>
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title="Effectiveness Rate"
-                    value={monitoring.mitigationProgress?.effectivenessRate ?? 0}
-                    suffix="%"
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Col>
-              </Row>
-            </Card>
+          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: 16 }}>
+            <ProjectSelector />
+          </div>
+
+          {!selectedProject && !projectsLoading && (
+            <Alert
+              message={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>No Project Selected</span>}
+              description={<span style={{ color: '#94a3b8' }}>Please select a project from the dropdown above to manage its risks, mitigation strategies, and contingency plans.</span>}
+              type="info"
+              showIcon
+              style={{
+                background: 'rgba(59,130,246,0.08)',
+                border: '1px solid rgba(59,130,246,0.25)',
+                borderRadius: 8,
+              }}
+            />
           )}
 
-          {/* Tabs */}
-          <Card>
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              type="card"
-              tabBarStyle={{
-                cursor: 'pointer',
-                userSelect: 'none'
-              }}
-              tabBarExtraContent={
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleRefresh}
-                >
-                  Refresh
-                </Button>
-              }
-            >
-              <TabPane
-                tab={
-                  <span>
-                    <SafetyOutlined />
-                    Risks
-                  </span>
-                }
-                key="risks"
-              >
-                <div style={{ marginBottom: 16 }}>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddRisk}
-                  >
-                    Add Risk
-                  </Button>
+          {selectedProject && (
+            <Spin spinning={loading}>
+
+              {/* Monitoring Summary Card */}
+              {monitoring && monitoring.summary && (
+                <Card title="Risk Monitoring Summary" style={{ marginBottom: 16 }}>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12} md={6}>
+                      <Statistic
+                        title="Average Risk Score"
+                        value={monitoring.summary.averageRiskScore?.toFixed(2) ?? '0.00'}
+                        valueStyle={{
+                          color: (monitoring.summary.averageRiskScore ?? 0) >= 15 ? '#ff4d4f' :
+                                 (monitoring.summary.averageRiskScore ?? 0) >= 9 ? '#faad14' : '#52c41a'
+                        }}
+                      />
+                    </Col>
+                    <Col xs={12} md={6}>
+                      <Statistic
+                        title="Trend"
+                        value={monitoring.summary.trendDirection ?? 'STABLE'}
+                        valueStyle={{
+                          color: monitoring.summary.trendDirection === 'INCREASING' ? '#ff4d4f' :
+                                 monitoring.summary.trendDirection === 'DECREASING' ? '#52c41a' : '#1890ff'
+                        }}
+                      />
+                    </Col>
+                    <Col xs={12} md={6}>
+                      <Statistic
+                        title="Mitigation Progress"
+                        value={`${monitoring.mitigationProgress?.completed ?? 0}/${monitoring.mitigationProgress?.total ?? 0}`}
+                      />
+                    </Col>
+                    <Col xs={12} md={6}>
+                      <Statistic
+                        title="Effectiveness Rate"
+                        value={monitoring.mitigationProgress?.effectivenessRate ?? 0}
+                        suffix="%"
+                        valueStyle={{ color: '#52c41a' }}
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              )}
+
+              {/* Custom tab nav */}
+              <div style={{ borderBottom: '1px solid #333333' }}>
+                <div style={{ display: 'flex' }}>
+                  {riskTabItems.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '14px 4px', marginRight: 28,
+                        background: 'transparent', border: 'none',
+                        borderBottom: activeTab === tab.key ? '2px solid #009944' : '2px solid transparent',
+                        color: activeTab === tab.key ? '#009944' : '#9ca3af',
+                        fontFamily: 'inherit', fontSize: 14, fontWeight: 500,
+                        cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', marginBottom: -1,
+                      }}
+                    >
+                      {tab.icon} {tab.label}
+                    </button>
+                  ))}
                 </div>
-                <Table
-                  columns={riskColumns}
-                  dataSource={safeRisks}
-                  rowKey="id"
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 1400 }}
-                />
-              </TabPane>
+              </div>
 
-              <TabPane
-                tab={
-                  <span>
-                    <CheckCircleOutlined />
-                    Mitigations
-                  </span>
-                }
-                key="mitigations"
-              >
-                <div style={{ marginBottom: 16 }}>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => handleAddMitigation()}
-                  >
-                    Add Mitigation
-                  </Button>
-                </div>
-                <Table
-                  columns={mitigationColumns}
-                  dataSource={safeMitigations}
-                  rowKey="id"
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 1000 }}
-                />
-              </TabPane>
+              {/* Tab content panel */}
+              <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderTop: 'none', borderRadius: '0 0 6px 6px', overflow: 'hidden' }}>
 
-              <TabPane
-                tab={
-                  <span>
-                    <DashboardOutlined />
-                    Risk Matrix
-                  </span>
-                }
-                key="matrix"
-              >
-                {riskMatrix && <RiskMatrix data={riskMatrix} />}
-                {!riskMatrix && <Alert message="No risk matrix data available" type="info" />}
-              </TabPane>
-
-              <TabPane
-                tab={
-                  <span>
-                    <FileTextOutlined />
-                    Overview
-                  </span>
-                }
-                key="overview"
-              >
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} lg={12}>
-                    <Card title="Risk Distribution by Severity">
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        {riskMatrix && riskMatrix.summary && Object.entries(riskMatrix.summary.bySeverity || {}).map(([severity, count]) => (
-                          <div key={severity}>
-                            <Text>{severity}: {count}</Text>
-                            <Progress
-                              percent={riskMatrix.summary.totalRisks > 0 ? (count / riskMatrix.summary.totalRisks) * 100 : 0}
-                              strokeColor={getSeverityColor(severity as RiskSeverity)}
-                              showInfo={false}
-                            />
-                          </div>
-                        ))}
-                      </Space>
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={12}>
-                    <Card title="Top Risks">
-                      {monitoring?.topRisks && monitoring.topRisks.length > 0 ? (
-                        monitoring.topRisks.map((risk, index) => (
-                          <div key={risk.id} style={{ marginBottom: 12 }}>
-                            <Badge count={index + 1} style={{ marginRight: 8 }} />
-                            <Text strong>{risk.title}</Text>
-                            <Tag color={getSeverityColor(risk.severity)} style={{ marginLeft: 8 }}>
-                              Score: {risk.riskScore}
-                            </Tag>
-                          </div>
-                        ))
-                      ) : (
-                        <Text type="secondary">No high-risk items</Text>
+                {/* Risks */}
+                {activeTab === 'risks' && (
+                  <>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                      {can('ENGINEER_AND_ABOVE') && (
+                        <Button icon={<PlusOutlined />} onClick={handleAddRisk}
+                          style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
+                          Add Risk
+                        </Button>
                       )}
-                    </Card>
-                  </Col>
-                </Row>
-              </TabPane>
-            </Tabs>
-          </Card>
-        </Spin>
-      )}
+                    </div>
+                    <Table columns={riskColumns} dataSource={safeRisks} rowKey="id" pagination={{ pageSize: 10 }} scroll={{ x: 1400 }} />
+                  </>
+                )}
+
+                {/* Mitigations */}
+                {activeTab === 'mitigations' && (
+                  <>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                      {can('MANAGER_AND_ABOVE') && (
+                        <Button icon={<PlusOutlined />} onClick={() => handleAddMitigation()}
+                          style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
+                          Add Mitigation
+                        </Button>
+                      )}
+                    </div>
+                    <Table columns={mitigationColumns} dataSource={safeMitigations} rowKey="id" pagination={{ pageSize: 10 }} scroll={{ x: 1000 }} />
+                  </>
+                )}
+
+                {/* Risk Matrix */}
+                {activeTab === 'matrix' && (
+                  <div style={{ padding: 16 }}>
+                    {riskMatrix && <RiskMatrix data={riskMatrix} />}
+                    {!riskMatrix && <Alert message="No risk matrix data available" type="info" />}
+                  </div>
+                )}
+
+                {/* Overview */}
+                {activeTab === 'overview' && (
+                  <div style={{ padding: 16 }}>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} lg={12}>
+                        <Card title="Risk Distribution by Severity">
+                          <Space direction="vertical" style={{ width: '100%' }}>
+                            {riskMatrix && riskMatrix.summary && Object.entries(riskMatrix.summary.bySeverity || {}).map(([severity, count]) => (
+                              <div key={severity}>
+                                <Text>{severity}: {count}</Text>
+                                <Progress
+                                  percent={riskMatrix.summary.totalRisks > 0 ? (count / riskMatrix.summary.totalRisks) * 100 : 0}
+                                  strokeColor={getSeverityColor(severity as RiskSeverity)}
+                                  showInfo={false}
+                                />
+                              </div>
+                            ))}
+                          </Space>
+                        </Card>
+                      </Col>
+                      <Col xs={24} lg={12}>
+                        <Card title="Top Risks">
+                          {monitoring?.topRisks && monitoring.topRisks.length > 0 ? (
+                            monitoring.topRisks.map((risk, index) => (
+                              <div key={risk.id} style={{ marginBottom: 12 }}>
+                                <Badge count={index + 1} style={{ marginRight: 8 }} />
+                                <Text strong>{risk.title}</Text>
+                                <Tag color={getSeverityColor(risk.severity)} style={{ marginLeft: 8 }}>
+                                  Score: {risk.riskScore}
+                                </Tag>
+                              </div>
+                            ))
+                          ) : (
+                            <Text type="secondary">No high-risk items</Text>
+                          )}
+                        </Card>
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+
+              </div>
+            </Spin>
+          )}
+        </div>
+
+        {/* ── Quick Stats sidebar ── */}
+          <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: 88 }}>
+            <Text style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Quick Stats
+            </Text>
+            {[
+              { icon: <ExclamationCircleOutlined />, iconBg: 'rgba(0,170,255,0.12)',  iconColor: '#00aaff', label: 'Total Risks',    value: safeRisks.length,          valueColor: '#00aaff' },
+              { icon: <WarningOutlined />,           iconBg: 'rgba(255,0,64,0.12)',   iconColor: '#ff0040', label: 'Critical/High',  value: criticalRisks + highRisks, valueColor: '#ff0040' },
+              { icon: <RiseOutlined />,              iconBg: 'rgba(255,170,0,0.12)',  iconColor: '#ffaa00', label: 'Active Risks',   value: activeRisks,               valueColor: '#ffaa00' },
+              { icon: <CheckCircleOutlined />,       iconBg: 'rgba(0,153,68,0.12)',   iconColor: '#009944', label: 'Mitigated',      value: mitigatedRisks,            valueColor: '#009944' },
+            ].map((stat, i) => (
+              <div key={i} style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: stat.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.iconColor, fontSize: 20, flexShrink: 0 }}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 2 }}>{stat.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: stat.valueColor, lineHeight: 1 }}>{stat.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+      </div>
 
       {/* Risk Modal */}
       <Modal
@@ -1047,7 +1045,7 @@ const ProjectRisk: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 };
 
