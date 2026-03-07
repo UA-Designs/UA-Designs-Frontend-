@@ -12,6 +12,13 @@ import {
   Dropdown,
   Spin,
   message,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Popconfirm,
+  Statistic,
+  InputNumber,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,100 +26,229 @@ import {
   UserOutlined,
   EditOutlined,
   DeleteOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  LockOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { User, UserRole } from '../../types';
 import { authService } from '../../services/authService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
+
+const ROLES: { value: UserRole; label: string; color: string }[] = [
+  { value: UserRole.ADMIN,            label: 'Admin',            color: 'red'    },
+  { value: UserRole.PROJECT_MANAGER,  label: 'Project Manager',  color: 'blue'   },
+  { value: UserRole.ENGINEER,         label: 'Engineer',          color: 'green'  },
+  { value: UserRole.STAFF,            label: 'Staff',             color: 'default'},
+
+];
+
+const roleColor = (role: string) =>
+  ROLES.find(r => r.value === role)?.color ?? 'default';
 
 const Users: React.FC = () => {
-  const [usersData, setUsersData] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
+
+  const [usersData, setUsersData]   = useState<User[]>([]);
+  const [stats, setStats]           = useState<any>(null);
+  const [isLoading, setIsLoading]   = useState(true);
+
+  // User create/edit modal
+  const [userModalVisible, setUserModalVisible]   = useState(false);
+  const [editingUser, setEditingUser]             = useState<User | null>(null);
+  const [userModalLoading, setUserModalLoading]   = useState(false);
+  const [userForm] = Form.useForm();
+
+  // Permissions modal
+  const [permModalVisible, setPermModalVisible]     = useState(false);
+  const [permUser, setPermUser]                     = useState<User | null>(null);
+  const [permLoading, setPermLoading]               = useState(false);
+  const [permSaving, setPermSaving]                 = useState(false);
+  const [permForm] = Form.useForm();
 
   useEffect(() => {
-    fetchUsers();
+    loadAll();
   }, []);
 
-  const fetchUsers = async () => {
+  const loadAll = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      const users = await authService.getUsers();
-      
-      // Ensure users is an array
-      if (Array.isArray(users)) {
-        setUsersData(users);
-      } else {
-        console.warn('API returned non-array data:', users);
-        // Use mock data as fallback while debugging
-        setUsersData([
-          {
-            id: '1',
-            firstName: 'Admin',
-            lastName: 'User',
-            email: 'admin@uadesigns.com',
-            role: 'ADMIN' as any,
-            isActive: true,
-            avatar: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@uadesigns.com',
-            role: 'PROJECT_MANAGER' as any,
-            isActive: true,
-            avatar: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ]);
-        setError('Using mock data - check console for API response details');
-      }
-    } catch (err: any) {
-      console.error('Error fetching users:', err);
-      setError(err.message || 'Failed to fetch users');
-      setUsersData([]); // Set empty array on error
-      message.error(err.message || 'Failed to fetch users');
+      const [usersResult, statsResult] = await Promise.allSettled([
+        authService.getUsers(),
+        authService.getUserStats(),
+      ]);
+      if (usersResult.status === 'fulfilled') setUsersData(usersResult.value);
+      else message.error('Failed to load users');
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getRoleColor = (role: UserRole) => {
-    switch (role) {
-      case UserRole.ADMIN:
-        return 'red';
-      case UserRole.PROJECT_MANAGER:
-        return 'blue';
-      case UserRole.TEAM_LEAD:
-        return 'green';
-      case UserRole.CONTRACTOR:
-        return 'orange';
-      case UserRole.CLIENT:
-        return 'purple';
-      default:
-        return 'default';
+  // ---- User CRUD ----
+
+  const openAddModal = () => {
+    setEditingUser(null);
+    userForm.resetFields();
+    setUserModalVisible(true);
+  };
+
+  const openEditModal = async (record: User) => {
+    setEditingUser(record);
+    userForm.resetFields();
+    userForm.setFieldsValue({
+      firstName:  record.firstName,
+      lastName:   record.lastName,
+      email:      record.email,
+      role:       record.role,
+    });
+    setUserModalVisible(true);
+  };
+
+  const handleUserSubmit = async () => {
+    setUserModalLoading(true);
+    try {
+      const values = await userForm.validateFields();
+      if (editingUser) {
+        await authService.updateUser(editingUser.id, values);
+        message.success('User updated');
+      } else {
+        await authService.createUser(values);
+        message.success('User created');
+      }
+      setUserModalVisible(false);
+      loadAll();
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save user');
+    } finally {
+      setUserModalLoading(false);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await authService.deleteUser(id);
+      message.success('User deleted');
+      loadAll();
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete user');
+    }
+  };
+
+  const handleToggleActive = async (record: User) => {
+    try {
+      if (record.isActive) {
+        await authService.deactivateUser(record.id);
+        message.success(`${record.firstName} deactivated`);
+      } else {
+        await authService.activateUser(record.id);
+        message.success(`${record.firstName} activated`);
+      }
+      loadAll();
+    } catch (error: any) {
+      message.error(error.message || 'Failed to update user status');
+    }
+  };
+
+  // ---- Permissions ----
+
+  const openPermModal = async (record: User) => {
+    setPermUser(record);
+    setPermModalVisible(true);
+    setPermLoading(true);
+    try {
+      const perms = await authService.getUserPermissions(record.id);
+      permForm.setFieldsValue({
+        approvalLevel:   perms?.approvalLevel ?? 0,
+        permissionsJson: JSON.stringify(perms?.permissions ?? perms ?? {}, null, 2),
+      });
+    } catch (error: any) {
+      message.error(error.message || 'Failed to load permissions');
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  const handlePermSave = async () => {
+    if (!permUser) return;
+    setPermSaving(true);
+    try {
+      const values = await permForm.validateFields();
+      let parsed: Record<string, any> = {};
+      try {
+        parsed = JSON.parse(values.permissionsJson || '{}');
+      } catch {
+        message.error('Invalid JSON in permissions field');
+        return;
+      }
+      await authService.updateUserPermissions(permUser.id, parsed, values.approvalLevel);
+      message.success('Permissions updated');
+      setPermModalVisible(false);
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save permissions');
+    } finally {
+      setPermSaving(false);
+    }
+  };
+
+  // ---- Table ----
+
+  const buildActionMenu = (record: User) => ({
+    items: [
+      {
+        key: 'edit',
+        label: 'Edit',
+        icon: <EditOutlined />,
+        onClick: () => openEditModal(record),
+      },
+      ...(isAdmin ? [
+        {
+          key: 'toggle',
+          label: record.isActive ? 'Deactivate' : 'Activate',
+          icon: record.isActive ? <StopOutlined /> : <CheckCircleOutlined />,
+          onClick: () => handleToggleActive(record),
+        },
+        {
+          key: 'permissions',
+          label: 'Permissions',
+          icon: <LockOutlined />,
+          onClick: () => openPermModal(record),
+        },
+        {
+          key: 'delete',
+          label: 'Delete',
+          icon: <DeleteOutlined />,
+          danger: true,
+          onClick: () => {
+            Modal.confirm({
+              title: `Delete ${record.firstName} ${record.lastName}?`,
+              content: 'This action cannot be undone.',
+              okText: 'Delete',
+              okType: 'danger',
+              onOk: () => handleDelete(record.id),
+            });
+          },
+        },
+      ] : []),
+    ],
+  });
 
   const columns = [
     {
       title: 'User',
       key: 'user',
-      render: (record: User) => (
+      render: (_: any, record: User) => (
         <Space>
-          <Avatar src={record.avatar} icon={<UserOutlined />} />
+          <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#009944' }}>
+            {record.firstName?.charAt(0)?.toUpperCase()}
+          </Avatar>
           <div>
-            <div>
-              {record.firstName} {record.lastName}
-            </div>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {record.email}
-            </Text>
+            <div>{record.firstName} {record.lastName}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{record.email}</Text>
           </div>
         </Space>
       ),
@@ -121,10 +257,8 @@ const Users: React.FC = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role: UserRole) => (
-        <Tag color={getRoleColor(role)}>
-          {role.replace('_', ' ').toUpperCase()}
-        </Tag>
+      render: (role: string) => (
+        <Tag color={roleColor(role)}>{role?.replace(/_/g, ' ')}</Tag>
       ),
     },
     {
@@ -132,64 +266,25 @@ const Users: React.FC = () => {
       dataIndex: 'isActive',
       key: 'isActive',
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? 'ACTIVE' : 'INACTIVE'}
-        </Tag>
+        <Tag color={isActive ? 'green' : 'red'}>{isActive ? 'ACTIVE' : 'INACTIVE'}</Tag>
       ),
     },
     {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleDateString(),
+      render: (date: string) => date ? new Date(date).toLocaleDateString() : '—',
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
-        <Dropdown
-          menu={{
-            items: [
-              {
-                key: 'edit',
-                label: 'Edit User',
-                icon: <EditOutlined />,
-              },
-              {
-                key: 'delete',
-                label: 'Delete User',
-                icon: <DeleteOutlined />,
-                danger: true,
-              },
-            ],
-          }}
-          trigger={['click']}
-        >
+      render: (_: any, record: User) => (
+        <Dropdown menu={buildActionMenu(record)} trigger={['click']}>
           <Button type="text" icon={<MoreOutlined />} />
         </Dropdown>
       ),
     },
   ];
-
-  if (isLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" style={{ color: '#009944' }} />
-        <div style={{ color: '#ffffff', marginTop: '16px' }}>Loading users...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <div style={{ color: '#ff4d4f', marginBottom: '16px' }}>Error: {error}</div>
-        <Button type="primary" onClick={fetchUsers}>
-          Retry
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -198,105 +293,145 @@ const Users: React.FC = () => {
         <Text type="secondary">Manage system users and their permissions</Text>
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <Card
-            title="Users"
-            extra={
-              <Button type="primary" icon={<PlusOutlined />}>
-                Add User
-              </Button>
-            }
-          >
-            <Table
-              columns={columns}
-              dataSource={Array.isArray(usersData) ? usersData : []}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} of ${total} users`,
-              }}
+      {/* Stats row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={6}>
+          <Card>
+            <Statistic title="Total Users" value={stats?.totalUsers ?? usersData.length} prefix={<UserOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card>
+            <Statistic
+              title="Active Users"
+              value={stats?.activeUsers ?? usersData.filter(u => u.isActive).length}
+              valueStyle={{ color: '#009944' }}
+              prefix={<CheckCircleOutlined />}
             />
           </Card>
         </Col>
+        {ROLES.map(r => {
+          const count = stats?.usersByRole?.[r.value] ?? usersData.filter(u => u.role === r.value).length;
+          return (
+            <Col xs={12} sm={3} key={r.value}>
+              <Card size="small">
+                <Statistic title={r.label} value={count} valueStyle={{ fontSize: 18 }} />
+              </Card>
+            </Col>
+          );
+        })}
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={8}>
-          <Card title="User Statistics">
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <div style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 'bold',
-                      color: '#1890ff',
-                    }}
-                  >
-                    {Array.isArray(usersData) ? usersData.length : 0}
-                  </div>
-                  <Text type="secondary">Total Users</Text>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 'bold',
-                      color: '#009944',
-                    }}
-                  >
-                    {Array.isArray(usersData) ? usersData.filter(u => u.isActive).length : 0}
-                  </div>
-                  <Text type="secondary">Active Users</Text>
-                </div>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
+      <Card
+        title="Users"
+        extra={
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={loadAll}>Refresh</Button>
+            {isAdmin && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal}>
+                Add User
+              </Button>
+            )}
+          </Space>
+        }
+      >
+        <Spin spinning={isLoading}>
+          <Table
+            columns={columns}
+            dataSource={usersData}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
+            }}
+          />
+        </Spin>
+      </Card>
 
-        <Col xs={24} lg={8}>
-          <Card title="Role Distribution">
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              {Object.values(UserRole).map(role => {
-                const count = Array.isArray(usersData) ? usersData.filter(u => u.role === role).length : 0;
-                return (
-                  <div
-                    key={role}
-                    style={{ display: 'flex', justifyContent: 'space-between' }}
-                  >
-                    <Text>{role.replace('_', ' ').toUpperCase()}</Text>
-                    <Tag color={getRoleColor(role)}>{count}</Tag>
-                  </div>
-                );
-              })}
-            </Space>
-          </Card>
-        </Col>
+      {/* Create / Edit User Modal */}
+      <Modal
+        title={editingUser ? 'Edit User' : 'Add User'}
+        open={userModalVisible}
+        onOk={handleUserSubmit}
+        onCancel={() => setUserModalVisible(false)}
+        confirmLoading={userModalLoading}
+        width={560}
+      >
+        <Form form={userForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
+            <Input />
+          </Form.Item>
+          {!editingUser && (
+            <Form.Item name="password" label="Password" rules={[{ required: true, min: 6 }]}>
+              <Input.Password />
+            </Form.Item>
+          )}
+          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+            <Select placeholder="Select role">
+              {ROLES.map(r => (
+                <Option key={r.value} value={r.value}>{r.label}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="department" label="Department"><Input /></Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="employeeId" label="Employee ID"><Input /></Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="costCenter" label="Cost Center"><Input /></Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="officeLocation" label="Office Location"><Input /></Form.Item>
+        </Form>
+      </Modal>
 
-        <Col xs={24} lg={8}>
-          <Card title="Quick Actions">
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              <Button type="default" icon={<PlusOutlined />} block>
-                Invite New User
-              </Button>
-              <Button type="default" icon={<UserOutlined />} block>
-                Bulk Import Users
-              </Button>
-              <Button type="default" icon={<EditOutlined />} block>
-                Manage Permissions
-              </Button>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+      {/* Permissions Modal */}
+      <Modal
+        title={permUser ? `Permissions — ${permUser.firstName} ${permUser.lastName}` : 'Permissions'}
+        open={permModalVisible}
+        onOk={handlePermSave}
+        onCancel={() => setPermModalVisible(false)}
+        confirmLoading={permSaving}
+      >
+        <Spin spinning={permLoading}>
+          <Form form={permForm} layout="vertical">
+            <Form.Item name="approvalLevel" label="Approval Level">
+              <InputNumber min={0} max={10} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item
+              name="permissionsJson"
+              label="Permissions (JSON)"
+              extra="Edit the raw permissions JSON object for this user."
+            >
+              <Input.TextArea rows={8} style={{ fontFamily: 'monospace', fontSize: 12 }} />
+            </Form.Item>
+          </Form>
+        </Spin>
+      </Modal>
     </div>
   );
 };
 
 export default Users;
+
