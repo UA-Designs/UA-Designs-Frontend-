@@ -2,13 +2,22 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
+import type { AccessLevel } from '../lib/rbac';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Named access level — if set, users below this tier are redirected to /unauthorized. */
+  access?: AccessLevel;
+  /** Redirect destination when access is denied (defaults to /unauthorized). */
+  redirectTo?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  access,
+  redirectTo = '/unauthorized',
+}) => {
+  const { isAuthenticated, isLoading, can } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -50,6 +59,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!isAuthenticated) {
     // Redirect to login page with return url
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Role-based access check (only if an access level is specified)
+  if (access && !can(access)) {
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;
