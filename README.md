@@ -1,355 +1,228 @@
 # UA Designs PMS Frontend
 
-A modern React-based Project Management System frontend built with TypeScript, Vite, and Ant Design.
+A modern React-based Project Management System frontend built with TypeScript, Vite, and Ant Design. Implements PMBOK knowledge areas with role-based access control, real-time analytics, and a dark-themed UI.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js** (v16 or higher)
-- **npm** (v8 or higher)
+- **Node.js** v18+
+- **npm** v9+
+- **Backend API** running at `http://localhost:5000` (see [Backend Setup](#backend-api))
 
-### Installation
+### Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/UA-Designs/UA-Designs-Frontend-.git
-   cd UA-Designs-Frontend-
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:5173`
-
-## 🔐 Login Credentials
-
-### Admin Access
-- **Email**: `admin@uadesigns.com`
-- **Password**: `admin123`
-- **Role**: System Administrator with full access
-
-> **Note**: This application now connects to a real API. Contact your system administrator for additional user accounts and credentials.
-
-## 📁 Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-│   ├── Charts/         # Chart components (Gantt, Risk Matrix, etc.)
-│   ├── Dashboard/      # Dashboard-specific components
-│   ├── Layout/         # Layout components
-│   └── Schedule/       # Schedule-related components
-├── contexts/           # React contexts for state management
-├── pages/              # Page components
-│   ├── Analytics/      # Analytics dashboard
-│   ├── Auth/           # Authentication pages
-│   ├── Dashboard/      # Main dashboard
-│   ├── PMBOK/          # PMBOK knowledge areas
-│   ├── Profile/        # User profile
-│   ├── Reports/        # Reports section
-│   ├── Settings/       # Application settings
-│   └── Users/          # User management
-├── services/           # API service layer
-├── stores/             # Zustand state stores
-├── styles/             # Global styles and themes
-└── types/              # TypeScript type definitions
-```
-
-## 🛠️ Available Scripts
-
-### Development
 ```bash
-npm run dev          # Start development server
-npm run start        # Alias for dev command
+# 1. Clone the repository
+git clone https://github.com/UA-Designs/UA-Designs-Frontend-.git
+cd UA-Designs-Frontend-
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment (optional — defaults work for local dev)
+cp .env.example .env   # if you have one, otherwise defaults point to localhost:5000
+
+# 4. Start dev server
+npm run dev
 ```
 
-### Building
-```bash
-npm run build        # Build for production (optimized)
-npm run build:check  # Build with TypeScript validation
-npm run preview      # Preview production build locally
-```
-
-### Code Quality
-```bash
-npm run lint         # Check for linting errors
-npm run lint:fix     # Fix auto-fixable linting errors
-npm run format       # Format code with Prettier
-npm run format:check # Check code formatting
-npm run type-check   # Run TypeScript type checking
-npm run check-all    # Run all checks (type, lint, format)
-```
-
-## 🔧 Environment Configuration
+The app will be available at **http://localhost:5173**.
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Configure via `.env` file in the project root. All variables are prefixed with `VITE_`:
 
-```env
-# API Configuration
-VITE_API_BASE_URL=http://localhost:5000/api
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:5000/api` | Backend API base URL |
+| `VITE_APP_NAME` | `UA Designs PMS` | Application display name |
+| `VITE_APP_VERSION` | `1.0.0` | Application version |
+| `VITE_PUSHER_KEY` | *(empty)* | Pusher key for real-time features |
+| `VITE_PUSHER_CLUSTER` | `us2` | Pusher cluster region |
 
-# Application Settings
-VITE_APP_NAME=UA Designs PMS
-VITE_APP_VERSION=1.0.0
-
-# Development Settings
-VITE_DEBUG=true
-```
-
-### Environment Files Priority
-1. `.env.local` (highest priority, ignored by git)
+Vite loads env files in this priority order:
+1. `.env.local` (highest — git-ignored)
 2. `.env.development.local`
 3. `.env.development`
-4. `.env` (lowest priority)
+4. `.env` (lowest)
 
-## 🎨 Tech Stack
+### Backend API
 
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **UI Library**: Ant Design
-- **State Management**: Zustand
-- **Routing**: React Router DOM
-- **Charts**: Recharts
-- **Forms**: React Hook Form + Yup validation
-- **HTTP Client**: Axios
-- **Styling**: CSS + Ant Design themes
-- **Code Quality**: ESLint + Prettier
+The dev server proxies `/api` requests to `http://localhost:5000`. Make sure the backend is running before using the app. Contact the backend team for API access and credentials.
 
-## 🏷️ Brand Identity
+## Available Scripts
 
-### Logo & Design System
-- **Logo**: Custom UA Designs logo with 3D block letters and neon green accents
-- **Color Palette**: 
-  - Primary: Neon Green (`#00ff00`)
-  - Background: Dark (`#0d0d0d`, `#1a1a1a`)
-  - Text: White (`#ffffff`)
-- **Typography**: Inter & SF Pro Display fonts
-- **Theme**: Dark mode with futuristic, tech-forward aesthetic
-- **Design Language**: Geometric, sharp-edged components with glowing effects
+```bash
+# Development
+npm run dev             # Start Vite dev server on port 5173
+npm start               # Alias for dev
 
-### Logo Usage
-The UA Designs logo appears in:
-- Browser tab (favicon)
-- Sidebar navigation
-- Header bar
-- All branded components
+# Building
+npm run build           # Production build (output: dist/)
+npm run build:check     # TypeScript check + production build
+npm run preview         # Preview the production build locally
 
-The logo features:
-- 3D isometric "UA" block letters
-- Neon green hexagonal outline
-- Cursive "designs" script text
-- Glowing animations and hover effects
+# Code Quality
+npm run lint            # ESLint check
+npm run lint:fix        # ESLint auto-fix
+npm run format          # Prettier format
+npm run format:check    # Prettier check
+npm run type-check      # TypeScript type checking (no emit)
+npm run check-all       # Run type-check + lint + format:check
+```
 
-## 📦 Key Dependencies
+## Project Structure
 
-### Core Dependencies
-- `react` & `react-dom` - React framework
-- `react-router-dom` - Client-side routing
-- `antd` - UI component library
-- `zustand` - State management
-- `axios` - HTTP client
-- `react-hook-form` - Form handling
-- `yup` - Schema validation
-- `recharts` - Chart library
+```
+src/
+├── components/
+│   ├── Charts/            # CostVarianceChart, ProjectGanttChart, RiskMatrix
+│   ├── common/            # ProjectCreationModal, ProjectSelector
+│   ├── Dashboard/         # QuickActions, RecentActivities
+│   ├── Layout/            # App shell with sidebar navigation
+│   ├── Logo/              # Branding component
+│   ├── rbac/              # <Can> permission gate component
+│   ├── Schedule/          # GanttChart
+│   └── ui/                # TierBadge, shared UI primitives
+├── contexts/
+│   ├── AuthContext.tsx     # Auth state, login/logout, token management
+│   ├── NotificationContext.tsx
+│   └── ProjectContext.tsx  # Active project selection & data
+├── hooks/
+│   └── usePermissions.ts  # RBAC permission hook
+├── lib/
+│   └── rbac.ts            # Role/permission definitions
+├── pages/
+│   ├── Analytics/         # Overview + per-project analytics with KPIs
+│   ├── AuditLog/          # System audit trail
+│   ├── Auth/              # Login, Register, ForgotPassword
+│   ├── Dashboard/         # Main dashboard
+│   ├── PMBOK/
+│   │   ├── Cost/          # Budget & expense tracking
+│   │   ├── Resources/     # Team & resource allocation
+│   │   ├── Risk/          # Risk register & matrix
+│   │   ├── Schedule/      # Gantt chart & milestones
+│   │   └── Stakeholders/  # Stakeholder management
+│   ├── Profile/           # User profile
+│   ├── Projects/          # Project listing & CRUD
+│   ├── Reports/           # Export & reporting
+│   ├── Settings/          # App settings
+│   └── Users/             # User management (admin)
+├── services/              # Axios API service layer
+│   ├── api.ts             # Base Axios instance & interceptors
+│   ├── analyticsService.ts
+│   ├── auditService.ts
+│   ├── authService.ts
+│   ├── costService.ts
+│   ├── dashboardService.ts
+│   ├── projectService.ts
+│   ├── resourceService.ts
+│   ├── riskService.ts
+│   ├── scheduleService.ts
+│   └── stakeholderService.ts
+├── styles/
+│   ├── global.css         # Global styles
+│   └── theme.ts           # Ant Design theme config
+├── types/
+│   ├── index.ts           # Core type definitions
+│   └── analytics.ts       # Analytics-specific types
+└── utils/
+    └── formatCurrency.ts  # Currency formatting helpers
+```
 
-### Development Dependencies
-- `typescript` - Type safety
-- `vite` - Build tool and dev server
-- `eslint` - Code linting
-- `prettier` - Code formatting
-- `@typescript-eslint/*` - TypeScript ESLint rules
+## Tech Stack
 
-## 🏗️ Architecture
+| Category | Technology |
+|---|---|
+| Framework | React 18 + TypeScript |
+| Build Tool | Vite 5 |
+| UI Library | Ant Design 5 |
+| State Management | React Context API |
+| Routing | React Router DOM 6 |
+| HTTP Client | Axios |
+| Charts | Recharts |
+| Date Handling | Day.js |
+| Export | FileSaver + SheetJS (xlsx) |
+| Code Quality | ESLint + Prettier + TypeScript strict |
+
+## Architecture
 
 ### State Management
-- **Zustand Stores**: Lightweight state management
-  - `authStore` - Authentication state
-  - `projectStore` - Project data management
-  - `uiStore` - UI state (sidebar, notifications, etc.)
+
+The app uses **React Context** for global state:
+
+- **AuthContext** — user session, JWT token management, login/logout
+- **ProjectContext** — active project selection, project data
+- **NotificationContext** — toast notifications
 
 ### API Layer
-- **Service Classes**: Organized API calls
-  - `apiService` - Base API configuration
-  - `authService` - Authentication endpoints
-  - `projectService` - Project management endpoints
-  - `dashboardService` - Dashboard data endpoints
 
-### Component Structure
-- **Pages**: Top-level route components
-- **Components**: Reusable UI components
-- **Contexts**: React contexts for global state
-- **Hooks**: Custom React hooks for logic reuse
+All API calls go through the Axios instance in `services/api.ts`, which handles:
+- Base URL configuration from env
+- JWT token injection via request interceptors
+- 401 response handling (auto-logout on token expiry)
 
-## 🎯 PMBOK Knowledge Areas
+Individual service files (`authService`, `projectService`, etc.) provide typed methods for each API domain.
 
-The application covers all 10 PMBOK knowledge areas:
+### RBAC
 
-1. **Integration Management** - Project charter, change control
-2. **Scope Management** - Requirements, WBS, scope control
-3. **Schedule Management** - Gantt charts, critical path
-4. **Cost Management** - Budget tracking, cost variance
-5. **Quality Management** - Quality checks, standards
-6. **Resource Management** - Team allocation, resource planning
-7. **Communications** - Stakeholder communication
-8. **Risk Management** - Risk register, mitigation plans
-9. **Procurement Management** - Vendor management
-10. **Stakeholder Management** - Stakeholder engagement
+Role-based access control is implemented with:
+- `lib/rbac.ts` — role and permission definitions
+- `hooks/usePermissions.ts` — hook to check permissions
+- `components/rbac/Can.tsx` — declarative permission gate component
+- `ProtectedRoute` — route-level access control with admin-only support
 
-## 🔐 Authentication
+### Routing
 
-The application includes:
-- **Login/Register** pages
-- **Forgot Password** functionality
-- **Protected Routes** with authentication guards
-- **Token-based** authentication
-- **Role-based** access control (ready for implementation)
+All authenticated routes are wrapped in `<ProtectedRoute>` inside the `<Layout>` shell. Public routes (login, register, forgot-password) render outside the layout. Admin routes (users, audit log) require elevated access.
 
-## 📊 Features
+## Features
 
-### Dashboard
-- Project overview cards
-- Progress tracking
-- Recent activities
-- Quick actions
+- **Dashboard** — project overview, KPIs, recent activity, quick actions
+- **Project Management** — create, edit, and track projects
+- **PMBOK Areas** — schedule (Gantt), cost/budget, resources, risk matrix, stakeholders
+- **Analytics** — per-project and global analytics with charts and KPI grids
+- **Audit Log** — system-wide activity tracking
+- **User Management** — admin user CRUD with role assignment
+- **Reports & Export** — data export to Excel/CSV
+- **Authentication** — JWT-based login/register with forgot password flow
+- **RBAC** — granular role-based access control
+- **Dark Theme** — custom dark UI with neon green accents
 
-### Project Management
-- Project creation and editing
-- Task management with Gantt charts
-- Resource allocation
-- Risk assessment matrix
-- Cost tracking and variance analysis
+## Deployment
 
-### Analytics
-- Project performance metrics
-- Cost variance charts
-- Risk distribution
-- Timeline analysis
-
-## 🚀 Deployment
-
-### Production Build
 ```bash
+# Build for production
 npm run build
+
+# Preview locally
+npm run preview
 ```
 
-### Build Output
-The build creates a `dist/` folder with:
-- Optimized JavaScript bundles
-- Minified CSS
-- Static assets
-- Source maps (for debugging)
+The build outputs to `dist/` with optimized JS bundles, minified CSS, and source maps. Deploy to any static hosting provider (Netlify, Vercel, AWS S3 + CloudFront, Nginx, etc.).
 
-### Deployment Options
-- **Static Hosting**: Netlify, Vercel, GitHub Pages
-- **CDN**: AWS CloudFront, Cloudflare
-- **Server**: Nginx, Apache
+For production, set `VITE_API_BASE_URL` to your production API endpoint.
 
-## 🧪 Code Quality
+## Troubleshooting
 
-### Linting Rules
-- **ESLint**: Code quality and consistency
-- **Prettier**: Code formatting
-- **TypeScript**: Type safety
+| Problem | Solution |
+|---|---|
+| Build fails with TS errors | Run `npm run build` (skips type-check) or fix with `npm run type-check` |
+| Lint errors | `npm run lint:fix` |
+| Formatting issues | `npm run format` |
+| Dependency issues | `rm -rf node_modules package-lock.json && npm install` |
+| Port 5173 in use | `npx kill-port 5173` or change port in `vite.config.ts` |
+| API connection refused | Ensure backend is running on `http://localhost:5000` |
 
-### Pre-commit Hooks (Recommended)
-```bash
-npm install --save-dev husky lint-staged
-```
+## Contributing
 
-Add to `package.json`:
-```json
-{
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.{json,md}": ["prettier --write"]
-  }
-}
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Build Fails with TypeScript Errors**
-   ```bash
-   # Use build without type checking
-   npm run build
-   
-   # Or fix TypeScript issues
-   npm run type-check
-   ```
-
-2. **Linting Errors**
-   ```bash
-   # Auto-fix issues
-   npm run lint:fix
-   
-   # Format code
-   npm run format
-   ```
-
-3. **Dependencies Issues**
-   ```bash
-   # Clear cache and reinstall
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
-
-4. **Port Already in Use**
-   ```bash
-   # Kill process on port 5173
-   npx kill-port 5173
-   ```
-
-## 🤝 Contributing
-
-### Development Workflow
-1. Create a feature branch
-2. Make your changes
-3. Run quality checks: `npm run check-all`
+1. Create a feature branch from `main`
+2. Make changes following existing code patterns
+3. Run `npm run check-all` before committing
 4. Commit with descriptive messages
-5. Push and create a pull request
+5. Open a pull request
 
-### Code Standards
-- Follow TypeScript best practices
-- Use meaningful variable and function names
-- Add JSDoc comments for complex functions
-- Keep components small and focused
-- Use proper error handling
+## License
 
-## 📞 Support
-
-### Team Contacts
-- **Frontend Lead**: [Your Name]
-- **Backend Team**: [Backend Team Contact]
-- **DevOps**: [DevOps Contact]
-
-### Resources
-- [React Documentation](https://react.dev/)
-- [Ant Design Components](https://ant.design/components/overview)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [Vite Guide](https://vitejs.dev/guide/)
-
-## 📄 License
-
-This project is proprietary to UA Designs. All rights reserved.
-
----
-
-**Happy Coding! 🚀**
+Proprietary — UA Designs. All rights reserved.
