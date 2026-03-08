@@ -34,7 +34,7 @@ export interface Communication {
   stakeholderId: string;
   subject?: string;
   message?: string;
-  channel?: string;
+  type?: string;
   date?: string;
   [key: string]: any;
 }
@@ -42,7 +42,7 @@ export interface Communication {
 export interface CreateCommunicationData {
   subject?: string;
   message?: string;
-  channel?: string;
+  type?: string;
   date?: string;
   [key: string]: any;
 }
@@ -50,21 +50,21 @@ export interface CreateCommunicationData {
 export interface EngagementRecord {
   id: string;
   stakeholderId: string;
-  level?: string;
+  engagementLevel?: string;
   notes?: string;
   date?: string;
   [key: string]: any;
 }
 
 export interface CreateEngagementData {
-  level?: string;
+  engagementLevel?: string;
   notes?: string;
   date?: string;
   [key: string]: any;
 }
 
 export interface FeedbackData {
-  comments?: string;
+  feedback?: string;
   rating?: number;
   date?: string;
   [key: string]: any;

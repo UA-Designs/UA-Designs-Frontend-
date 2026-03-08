@@ -526,19 +526,39 @@ const ProjectSchedule: React.FC = () => {
                   {criticalPathData ? (
                     <>
                       <Alert
-                        message={`Total Duration: ${criticalPathData.totalDuration} days`}
+                        message={<span style={{ color: '#1a1a1a', fontWeight: 600 }}>{`Total Duration: ${criticalPathData.totalDuration} days`}</span>}
                         type="warning"
                         showIcon
-                        style={{ marginBottom: 16 }}
+                        style={{ marginBottom: 20 }}
                       />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        alignItems: 'center',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 10,
+                        padding: '16px 20px',
+                      }}>
                         {criticalPathData.criticalPath.map((task, idx) => (
                           <React.Fragment key={task.id}>
-                            <Tag color="red" style={{ padding: '4px 8px', fontSize: 13 }}>
-                              {task.name}{task.duration ? ` (${task.duration}d)` : ''}
-                            </Tag>
+                            <div style={{
+                              display: 'inline-flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              background: 'rgba(220, 53, 69, 0.15)',
+                              border: '1px solid rgba(220, 53, 69, 0.5)',
+                              borderRadius: 6,
+                              padding: '5px 12px',
+                            }}>
+                              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{task.name}</span>
+                              {task.duration && (
+                                <span style={{ color: '#ff7875', fontSize: 11, marginTop: 2 }}>{task.duration}d</span>
+                              )}
+                            </div>
                             {idx < criticalPathData.criticalPath.length - 1 && (
-                              <Text style={{ color: '#808080' }}>→</Text>
+                              <span style={{ color: '#ff7875', fontSize: 18, fontWeight: 700, lineHeight: 1 }}>→</span>
                             )}
                           </React.Fragment>
                         ))}
@@ -668,11 +688,6 @@ const ProjectSchedule: React.FC = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="duration" label="Duration (days)">
-                <InputNumber min={0} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
               <Form.Item name="progress" label="Progress (%)" initialValue={0}>
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
@@ -685,7 +700,7 @@ const ProjectSchedule: React.FC = () => {
               showSearch
               optionFilterProp="label"
               options={users.map(u => ({
-                value: `${u.firstName} ${u.lastName}`,
+                value: u.id,
                 label: `${u.firstName} ${u.lastName}`,
               }))}
             />

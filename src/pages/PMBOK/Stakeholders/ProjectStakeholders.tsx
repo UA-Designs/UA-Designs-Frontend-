@@ -356,7 +356,7 @@ const ProjectStakeholders: React.FC = () => {
       },
     },
     { title: 'Subject', dataIndex: 'subject', key: 'subject', render: (v: string) => v || '—' },
-    { title: 'Channel', dataIndex: 'channel', key: 'channel', render: (v: string) => v ? <Tag>{v}</Tag> : '—' },
+    { title: 'Type', dataIndex: 'type', key: 'type', render: (v: string) => v ? <Tag>{v.replace(/_/g, ' ')}</Tag> : '—' },
     { title: 'Date', dataIndex: 'date', key: 'date', render: (v: string) => v ? new Date(v).toLocaleDateString() : '—' },
     {
       title: 'Actions',
@@ -502,13 +502,13 @@ const ProjectStakeholders: React.FC = () => {
                                 ))}
                               </Select>
                             </Form.Item>
-                            <Form.Item name="level" label="Engagement Level">
+                            <Form.Item name="engagementLevel" label="Engagement Level" rules={[{ required: true, message: 'Please select an engagement level' }]}>
                               <Select placeholder="Select level">
-                                <Option value="Unaware">Unaware</Option>
-                                <Option value="Resistant">Resistant</Option>
-                                <Option value="Neutral">Neutral</Option>
-                                <Option value="Supportive">Supportive</Option>
-                                <Option value="Leading">Leading</Option>
+                                <Option value="UNAWARE">Unaware</Option>
+                                <Option value="RESISTANT">Resistant</Option>
+                                <Option value="NEUTRAL">Neutral</Option>
+                                <Option value="SUPPORTIVE">Supportive</Option>
+                                <Option value="LEADING">Leading</Option>
                               </Select>
                             </Form.Item>
                             <Form.Item name="notes" label="Notes">
@@ -523,7 +523,7 @@ const ProjectStakeholders: React.FC = () => {
 
                         <Card title="Record Feedback" size="small" style={{ marginTop: 16 }}>
                           <Form form={feedbackForm} layout="vertical">
-                            <Form.Item name="comments" label="Feedback Comments">
+                            <Form.Item name="feedback" label="Feedback Comments" rules={[{ required: true, message: 'Please enter feedback' }]}>
                               <TextArea rows={3} />
                             </Form.Item>
                             <Form.Item name="rating" label="Rating (1–5)">
@@ -552,7 +552,7 @@ const ProjectStakeholders: React.FC = () => {
                               renderItem={(item: any) => (
                                 <List.Item>
                                   <div>
-                                    <Tag color="blue">{item.level || 'Recorded'}</Tag>
+                                    <Tag color="blue">{item.engagementLevel ? item.engagementLevel.charAt(0) + item.engagementLevel.slice(1).toLowerCase() : 'Recorded'}</Tag>
                                     {item.notes && (
                                       <Text type="secondary" style={{ marginLeft: 8 }}>{item.notes}</Text>
                                     )}
@@ -789,13 +789,14 @@ const ProjectStakeholders: React.FC = () => {
             </Form.Item>
           )}
           <Form.Item name="subject" label="Subject"><Input /></Form.Item>
-          <Form.Item name="channel" label="Channel">
-            <Select placeholder="Select channel">
-              <Option value="Email">Email</Option>
-              <Option value="Meeting">Meeting</Option>
-              <Option value="Phone">Phone</Option>
-              <Option value="Report">Report</Option>
-              <Option value="Other">Other</Option>
+          <Form.Item name="type" label="Type" rules={[{ required: true, message: 'Please select a type' }]}>
+            <Select placeholder="Select type">
+              <Option value="EMAIL">Email</Option>
+              <Option value="MEETING">Meeting</Option>
+              <Option value="PHONE_CALL">Phone Call</Option>
+              <Option value="REPORT">Report</Option>
+              <Option value="SITE_VISIT">Site Visit</Option>
+              <Option value="LETTER">Letter</Option>
             </Select>
           </Form.Item>
           <Form.Item name="message" label="Message"><TextArea rows={3} /></Form.Item>

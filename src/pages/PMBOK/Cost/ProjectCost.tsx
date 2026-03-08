@@ -1371,17 +1371,14 @@ const ProjectCost: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item name="date" label={<Text style={labelStyle}>Date</Text>} rules={[{ required: true }]}>
                 <DatePicker style={{ ...inputStyle, width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="currency" label={<Text style={labelStyle}>Currency</Text>} initialValue="PHP">
-                <Input style={inputStyle} />
-              </Form.Item>
-            </Col>
           </Row>
+          {/* currency defaults to PHP */}
+          <Form.Item name="currency" initialValue="PHP" hidden><Input /></Form.Item>
           <Form.Item name="description" label={<Text style={labelStyle}>Description</Text>}>
             <TextArea rows={2} style={{ ...inputStyle, resize: 'none' }} />
           </Form.Item>
@@ -1404,17 +1401,14 @@ const ProjectCost: React.FC = () => {
             <Input style={inputStyle} />
           </Form.Item>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item name="amount" label={<Text style={labelStyle}>Amount</Text>} rules={[{ required: true }]}>
                 <InputNumber min={0} style={{ ...inputStyle, width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="currency" label={<Text style={labelStyle}>Currency</Text>} initialValue="PHP">
-                <Input style={inputStyle} />
-              </Form.Item>
-            </Col>
           </Row>
+          {/* currency defaults to PHP */}
+          <Form.Item name="currency" initialValue="PHP" hidden><Input /></Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="startDate" label={<Text style={labelStyle}>Start Date</Text>}>

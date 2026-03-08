@@ -15,6 +15,7 @@ import {
   Spin,
   Popconfirm,
   Space,
+  Divider,
 } from 'antd';
 import {
   PlusOutlined,
@@ -36,6 +37,9 @@ import {
   TeamMember,
   ResourceAllocation,
 } from '../../../services/resourceService';
+import { scheduleService, ScheduleTask } from '../../../services/scheduleService';
+import { authService } from '../../../services/authService';
+import { User } from '../../../types';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -54,6 +58,20 @@ const ProjectResources: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [allocations, setAllocations] = useState<ResourceAllocation[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [tasks, setTasks] = useState<ScheduleTask[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Labor rate type state
+  const [laborRateType, setLaborRateType] = useState<'HOURLY' | 'DAILY'>('HOURLY');
+
+  // Build a lookup: resourceId -> resourceType for the allocation form
+  const resourceTypeMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    materials.forEach(r => { map[r.id] = 'MATERIAL'; });
+    labor.forEach(r => { map[r.id] = 'LABOR'; });
+    equipment.forEach(r => { map[r.id] = 'EQUIPMENT'; });
+    return map;
+  }, [materials, labor, equipment]);
 
   // Modal states
   const [materialModalVisible, setMaterialModalVisible] = useState(false);
@@ -82,6 +100,10 @@ const ProjectResources: React.FC = () => {
       loadResourceData();
     }
   }, [selectedProject]);
+
+  useEffect(() => {
+    authService.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
+  }, []);
 
 
 
@@ -179,7 +201,14 @@ const ProjectResources: React.FC = () => {
   const openLaborModal = (item?: Labor) => {
     setEditingItem(item || null);
     laborForm.resetFields();
-    if (item) laborForm.setFieldsValue(item);
+    if (item) {
+      const rateType = item.dailyRate && !item.hourlyRate ? 'DAILY' : 'HOURLY';
+      setLaborRateType(rateType);
+      laborForm.setFieldsValue({ ...item, rateType });
+    } else {
+      setLaborRateType('HOURLY');
+      laborForm.setFieldsValue({ rateType: 'HOURLY' });
+    }
     setLaborModalVisible(true);
   };
 
@@ -197,11 +226,20 @@ const ProjectResources: React.FC = () => {
     setTeamModalVisible(true);
   };
 
-  const openAllocationModal = (item?: ResourceAllocation) => {
+  const openAllocationModal = async (item?: ResourceAllocation) => {
     setEditingItem(item || null);
     allocationForm.resetFields();
-    if (item) allocationForm.setFieldsValue(item);
+    if (item) {
+      const resourceType = resourceTypeMap[item.resourceId] || (item as any).resourceType;
+      allocationForm.setFieldsValue({ ...item, resourceType });
+    }
     setAllocationModalVisible(true);
+    if (selectedProject && tasks.length === 0) {
+      try {
+        const t = await scheduleService.getProjectTasks(selectedProject.id);
+        setTasks(t);
+      } catch { /* tasks optional */ }
+    }
   };
 
   // ---- Table helpers ----
@@ -534,6 +572,9 @@ const ProjectResources: React.FC = () => {
           <Form.Item name="type" label="Type"><Input /></Form.Item>
           <Form.Item name="quantity" label="Quantity"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
           <Form.Item name="unit" label="Unit"><Input /></Form.Item>
+          <Form.Item name="unitCost" label="Unit Cost" rules={[{ required: true, message: 'Unit cost is required' }]}>
+            <InputNumber min={0} style={{ width: '100%' }} prefix="₱" />
+          </Form.Item>
           <Form.Item name="description" label="Description"><TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
@@ -553,8 +594,26 @@ const ProjectResources: React.FC = () => {
         <Form form={laborForm} layout="vertical">
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="role" label="Role"><Input /></Form.Item>
-          <Form.Item name="hourlyRate" label="Hourly Rate"><InputNumber min={0} style={{ width: '100%' }} prefix="₱" /></Form.Item>
-          <Form.Item name="dailyRate" label="Daily Rate" rules={[{ required: true, message: 'Daily rate is required' }]}><InputNumber min={0} style={{ width: '100%' }} prefix="₱" /></Form.Item>
+          <Form.Item name="rateType" label="Rate Type" rules={[{ required: true }]}>
+            <Select
+              onChange={(val) => {
+                setLaborRateType(val);
+                laborForm.setFieldsValue({ hourlyRate: undefined, dailyRate: undefined });
+              }}
+            >
+              <Option value="HOURLY">Hourly</Option>
+              <Option value="DAILY">Daily</Option>
+            </Select>
+          </Form.Item>
+          {laborRateType === 'HOURLY' ? (
+            <Form.Item name="hourlyRate" label="Hourly Rate" rules={[{ required: true, message: 'Hourly rate is required' }]}>
+              <InputNumber min={0} style={{ width: '100%' }} prefix="₱" />
+            </Form.Item>
+          ) : (
+            <Form.Item name="dailyRate" label="Daily Rate" rules={[{ required: true, message: 'Daily rate is required' }]}>
+              <InputNumber min={0} style={{ width: '100%' }} prefix="₱" />
+            </Form.Item>
+          )}
           <Form.Item name="description" label="Description"><TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
@@ -599,6 +658,32 @@ const ProjectResources: React.FC = () => {
         onCancel={() => setTeamModalVisible(false)}
       >
         <Form form={teamForm} layout="vertical">
+          <Form.Item label="Pick Existing User (optional)">
+            <Select
+              showSearch
+              allowClear
+              placeholder="Search and select an existing user..."
+              optionFilterProp="label"
+              options={users.map(u => ({
+                value: u.id,
+                label: `${u.firstName} ${u.lastName}${u.email ? ` (${u.email})` : ''}`,
+              }))}
+              onChange={(userId: string) => {
+                if (!userId) return;
+                const u = users.find(x => x.id === userId);
+                if (u) {
+                  teamForm.setFieldsValue({
+                    name: `${u.firstName} ${u.lastName}`,
+                    role: (u as any).role ?? '',
+                    email: u.email ?? '',
+                    userId,
+                  });
+                }
+              }}
+            />
+          </Form.Item>
+          <Divider plain style={{ color: '#888', fontSize: 12 }}>or enter manually</Divider>
+          <Form.Item name="userId" hidden><Input /></Form.Item>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="role" label="Role"><Input /></Form.Item>
           <Form.Item name="email" label="Email"><Input /></Form.Item>
@@ -619,15 +704,46 @@ const ProjectResources: React.FC = () => {
         onCancel={() => setAllocationModalVisible(false)}
       >
         <Form form={allocationForm} layout="vertical">
-          <Form.Item name="resourceId" label="Resource ID" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="taskId" label="Task ID"><Input /></Form.Item>
+          {/* Hidden field — auto-set when a resource is selected */}
+          <Form.Item name="resourceType" hidden><Input /></Form.Item>
+          <Form.Item name="resourceId" label="Resource" rules={[{ required: true, message: 'Please select a resource' }]}>
+            <Select
+              showSearch
+              placeholder="Select a resource"
+              optionFilterProp="children"
+              onChange={(val: string) => {
+                const type = resourceTypeMap[val];
+                if (type) allocationForm.setFieldValue('resourceType', type);
+              }}
+            >
+              {materials.length > 0 && (
+                <Select.OptGroup label="Materials">
+                  {materials.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
+                </Select.OptGroup>
+              )}
+              {labor.length > 0 && (
+                <Select.OptGroup label="Labor">
+                  {labor.map(r => <Option key={r.id} value={r.id}>{r.name}{r.role ? ` — ${r.role}` : ''}</Option>)}
+                </Select.OptGroup>
+              )}
+              {equipment.length > 0 && (
+                <Select.OptGroup label="Equipment">
+                  {equipment.map(r => <Option key={r.id} value={r.id}>{r.name}</Option>)}
+                </Select.OptGroup>
+              )}
+            </Select>
+          </Form.Item>
+          <Form.Item name="taskId" label="Task (optional)">
+            <Select showSearch allowClear placeholder="Select a task (optional)" optionFilterProp="children">
+              {tasks.map(t => <Option key={t.id} value={t.id}>{t.name}</Option>)}
+            </Select>
+          </Form.Item>
           <Form.Item name="startDate" label="Start Date">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="endDate" label="End Date">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="units" label="Units (%)"><InputNumber min={0} max={100} style={{ width: '100%' }} /></Form.Item>
         </Form>
       </Modal>
     </>
