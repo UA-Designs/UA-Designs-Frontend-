@@ -1,164 +1,190 @@
 import React from 'react';
-import { Card, Row, Col, Typography, Tag, Empty, Table } from 'antd';
-
-const { Title, Text } = Typography;
+import { Empty, Tooltip } from 'antd';
 
 interface MatrixCell {
-  probability: number;
-  impact: number;
+  probabilityLabel: string;
+  impactLabel: string;
   count: number;
-  risks: any[];
+  riskIds: string[];
 }
 
 interface RiskMatrixData {
   projectId: string;
   matrix: MatrixCell[][];
-  summary: {
-    totalRisks: number;
-    bySeverity: {
-      LOW: number;
-      MEDIUM: number;
-      HIGH: number;
-      CRITICAL: number;
-    };
-  };
+  totalRisks: number;
+  probabilityBands: string[];
+  impactBands: string[];
 }
 
 interface RiskMatrixProps {
   data: RiskMatrixData;
 }
 
+const BAND_SCORE: Record<string, number> = {
+  'Very Low': 1, 'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5,
+};
+
+const SHORT: Record<string, string> = {
+  'Very Low': 'VL', 'Low': 'L', 'Medium': 'M', 'High': 'H', 'Very High': 'VH',
+};
+
+const getCellColor = (score: number): string => {
+  if (score >= 17) return 'rgba(255, 77, 79, 0.85)';
+  if (score >= 9)  return 'rgba(250, 173, 20, 0.80)';
+  if (score >= 4)  return 'rgba(250, 219, 20, 0.70)';
+  return 'rgba(82, 196, 26, 0.65)';
+};
+
+const getCellLabel = (score: number): string => {
+  if (score >= 17) return 'Critical';
+  if (score >= 9)  return 'High';
+  if (score >= 4)  return 'Medium';
+  return 'Low';
+};
+
+const LEGEND = [
+  { color: 'rgba(82, 196, 26, 0.65)',   label: 'Low' },
+  { color: 'rgba(250, 219, 20, 0.70)',  label: 'Medium' },
+  { color: 'rgba(250, 173, 20, 0.80)',  label: 'High' },
+  { color: 'rgba(255, 77, 79, 0.85)',   label: 'Critical' },
+];
+
 const RiskMatrix: React.FC<RiskMatrixProps> = ({ data }) => {
-  const getCellColor = (score: number) => {
-    if (score >= 15) return '#ff4d4f'; // Critical - red
-    if (score >= 9) return '#faad14'; // High - orange  
-    if (score >= 4) return '#fadb14'; // Medium - yellow
-    return '#52c41a'; // Low - green
-  };
-
-  const getCellText = (score: number) => {
-    if (score >= 15) return 'Critical';
-    if (score >= 9) return 'High';
-    if (score >= 4) return 'Medium';
-    return 'Low';
-  };
-
-  if (!data || !data.matrix || !data.summary || data.summary.totalRisks === 0) {
-    return (
-      <Empty
-        description="No risk matrix data available"
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-      />
-    );
+  if (!data || !data.matrix) {
+    return <Empty description="No risk matrix data available" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
-  // Create 5x5 matrix display
-  const probabilityLabels = ['Very High', 'High', 'Medium', 'Low', 'Very Low'];
-  const impactLabels = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+  const flatMatrix = data.matrix.flat();
+  const probRows   = [...(data.probabilityBands ?? [])].reverse(); // VH → VL top to bottom
+  const impCols    = data.impactBands ?? [];
+  const CELL       = 44; // px per cell
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <Title level={5}>Risk Assessment Matrix (5×5)</Title>
-        <Text type="secondary">
-          Total Risks: {data.summary?.totalRisks ?? 0} | 
-          Critical: {data.summary?.bySeverity?.CRITICAL ?? 0} | 
-          High: {data.summary?.bySeverity?.HIGH ?? 0} | 
-          Medium: {data.summary?.bySeverity?.MEDIUM ?? 0} | 
-          Low: {data.summary?.bySeverity?.LOW ?? 0}
-        </Text>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ color: '#94a3b8', fontSize: 11 }}>Probability ↕ · Impact →</span>
+        <span style={{ color: '#009944', fontSize: 12, fontWeight: 600 }}>
+          {data.totalRisks ?? 0} risk{(data.totalRisks ?? 0) !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ 
-                border: '1px solid #d9d9d9', 
-                padding: '8px',
-                backgroundColor: '#fafafa',
-                textAlign: 'center'
-              }}>
-                <Text strong>Probability ↓ Impact →</Text>
-              </th>
-              {impactLabels.map((label, idx) => (
-                <th key={idx} style={{ 
-                  border: '1px solid #d9d9d9', 
-                  padding: '8px',
-                  backgroundColor: '#fafafa',
-                  textAlign: 'center',
-                  minWidth: '100px'
-                }}>
-                  <Text strong>{label}</Text>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {probabilityLabels.map((probLabel, probIdx) => (
-              <tr key={probIdx}>
-                <td style={{ 
-                  border: '1px solid #d9d9d9', 
-                  padding: '8px',
-                  backgroundColor: '#fafafa',
-                  textAlign: 'center',
-                  fontWeight: 'bold'
-                }}>
-                  {probLabel}
-                </td>
-                {impactLabels.map((impLabel, impIdx) => {
-                  const probability = 5 - probIdx; // Reverse for display (5 = Very High at top)
-                  const impact = impIdx + 1; // 1 = Very Low at left
-                  const score = probability * impact;
-                  
-                  // Find matching cell in data
-                  const cell = data.matrix
-                    .flat()
-                    .find(c => c.probability === probability && c.impact === impact);
-                  
-                  return (
-                    <td
-                      key={impIdx}
-                      style={{
-                        border: '1px solid #d9d9d9',
-                        padding: '12px',
-                        textAlign: 'center',
-                        backgroundColor: getCellColor(score),
-                        color: score >= 9 ? '#fff' : '#000',
-                        cursor: cell && cell.count > 0 ? 'pointer' : 'default',
-                      }}
-                      title={cell && cell.count > 0 ? `${cell.count} risk(s)` : 'No risks'}
-                    >
-                      <div>
-                        <Text strong style={{ color: score >= 9 ? '#fff' : '#000' }}>
-                          {getCellText(score)}
-                        </Text>
-                        <br />
-                        <Text style={{ fontSize: '11px', color: score >= 9 ? '#fff' : '#666' }}>
-                          Score: {score}
-                        </Text>
-                        {cell && cell.count > 0 && (
-                          <>
-                            <br />
-                            <Tag color={score >= 15 ? 'red' : score >= 9 ? 'orange' : 'blue'} style={{ marginTop: 4 }}>
-                              {cell.count} risk{cell.count > 1 ? 's' : ''}
-                            </Tag>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
+      {/* Grid */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+
+        {/* Y-axis labels */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingTop: CELL + 3 + 4 }}>
+          {probRows.map(p => (
+            <div
+              key={p}
+              style={{
+                height: CELL,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                paddingRight: 6,
+                color: '#94a3b8',
+                fontSize: 10,
+                fontWeight: 600,
+                width: 22,
+                flexShrink: 0,
+              }}
+            >
+              {SHORT[p] ?? p}
+            </div>
+          ))}
+        </div>
+
+        {/* Matrix body */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* X-axis labels */}
+          <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
+            {impCols.map(imp => (
+              <div
+                key={imp}
+                style={{
+                  flex: 1,
+                  minWidth: CELL,
+                  height: CELL,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#94a3b8',
+                  fontSize: 10,
+                  fontWeight: 600,
+                }}
+              >
+                {SHORT[imp] ?? imp}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+
+          {/* Rows */}
+          {probRows.map(probLabel => (
+            <div key={probLabel} style={{ display: 'flex', gap: 3, marginBottom: 3 }}>
+              {impCols.map(impLabel => {
+                const score    = (BAND_SCORE[probLabel] ?? 1) * (BAND_SCORE[impLabel] ?? 1);
+                const cell     = flatMatrix.find(c => c.probabilityLabel === probLabel && c.impactLabel === impLabel);
+                const count    = cell?.count ?? 0;
+                const bg       = getCellColor(score);
+                const tip      = `${probLabel} probability · ${impLabel} impact\n${getCellLabel(score)}${count ? ` · ${count} risk${count > 1 ? 's' : ''}` : ''}`;
+
+                return (
+                  <Tooltip key={impLabel} title={tip}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: CELL,
+                        height: CELL,
+                        borderRadius: 6,
+                        background: bg,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: count > 0 ? 'pointer' : 'default',
+                        border: count > 0 ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
+                        transition: 'transform 0.15s',
+                        position: 'relative',
+                      }}
+                      onMouseEnter={e => { if (count > 0) (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+                    >
+                      {count > 0 && (
+                        <span
+                          style={{
+                            background: 'rgba(0,0,0,0.55)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: 20,
+                            height: 20,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 11,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <Text type="secondary">
-          <strong>Legend:</strong> Risk Score = Probability × Impact
-        </Text>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingTop: 2 }}>
+        {LEGEND.map(({ color, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
+            <span style={{ color: '#94a3b8', fontSize: 11 }}>{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

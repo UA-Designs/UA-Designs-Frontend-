@@ -9,6 +9,8 @@ import {
   Form,
   Input,
   InputNumber,
+  Select,
+  DatePicker,
   message,
   Spin,
   Popconfirm,
@@ -37,6 +39,7 @@ import {
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 const ProjectResources: React.FC = () => {
   const { selectedProject, isLoading: projectsLoading } = useProject();
@@ -120,7 +123,13 @@ const ProjectResources: React.FC = () => {
     label: string
   ) => async () => {
     try {
-      const values = await form.validateFields();
+      const raw = await form.validateFields();
+      // Convert any dayjs values to ISO strings
+      const values = Object.fromEntries(
+        Object.entries(raw).map(([k, v]) =>
+          v && typeof (v as any).toISOString === 'function' ? [k, (v as any).toISOString()] : [k, v]
+        )
+      );
       if (editingItem) {
         await updateFn(editingItem.id, values);
         message.success(`${label} updated`);
@@ -397,29 +406,91 @@ const ProjectResources: React.FC = () => {
                 )}
 
                 {/* Allocations */}
-                {activeTab === 'allocations' && (
-                  <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
-                      {can('MANAGER_AND_ABOVE') && (
-                        <Button icon={<PlusOutlined />} onClick={() => openAllocationModal()}
-                          style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                          Add Allocation
-                        </Button>
-                      )}
-                    </div>
-                    <Table
-                      columns={[
-                        { title: 'Resource', dataIndex: 'resourceId', key: 'resourceId', render: (v: string) => v || '—' },
-                        { title: 'Task', dataIndex: 'taskId', key: 'taskId', render: (v: string) => v || '—' },
-                        { title: 'Start', dataIndex: 'startDate', key: 'startDate', render: (v: string) => v || '—' },
-                        { title: 'End', dataIndex: 'endDate', key: 'endDate', render: (v: string) => v || '—' },
-                        { title: 'Units', dataIndex: 'units', key: 'units', render: (v: any) => v != null ? `${v}%` : '—' },
-                        makeActionColumn(openAllocationModal, deleteAllocation, can('MANAGER_AND_ABOVE'), can('MANAGER_AND_ABOVE')),
-                      ]}
-                      dataSource={allocations} rowKey="id" pagination={{ pageSize: 10 }} size="small"
-                    />
-                  </>
-                )}
+                {activeTab === 'allocations' && (() => {
+                  // Build a name lookup from all loaded resources
+                  const resourceNameMap: Record<string, string> = {};
+                  materials.forEach(r => { resourceNameMap[r.id] = r.name; });
+                  labor.forEach(r => { resourceNameMap[r.id] = r.name; });
+                  equipment.forEach(r => { resourceNameMap[r.id] = r.name; });
+
+                  const typeColors: Record<string, string> = {
+                    MATERIAL: 'orange', LABOR: 'blue', EQUIPMENT: 'purple',
+                  };
+                  const statusColors: Record<string, string> = {
+                    PLANNED: 'default', ALLOCATED: 'blue', IN_USE: 'green',
+                    COMPLETED: 'green', RELEASED: 'gray',
+                  };
+                  const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+                  return (
+                    <>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                        {can('MANAGER_AND_ABOVE') && (
+                          <Button icon={<PlusOutlined />} onClick={() => openAllocationModal()}
+                            style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
+                            Add Allocation
+                          </Button>
+                        )}
+                      </div>
+                      <Table
+                        columns={[
+                          {
+                            title: 'Resource',
+                            key: 'resource',
+                            render: (_: any, r: ResourceAllocation) => (
+                              <div>
+                                <div>{resourceNameMap[r.resourceId] || r.resourceId}</div>
+                                <Tag color={typeColors[r.resourceType] || 'default'} style={{ marginTop: 2 }}>
+                                  {r.resourceType}
+                                </Tag>
+                              </div>
+                            ),
+                          },
+                          {
+                            title: 'Task',
+                            key: 'task',
+                            render: (_: any, r: ResourceAllocation) =>
+                              (r as any).task ? (r as any).task.name : '—',
+                          },
+                          {
+                            title: 'Qty',
+                            dataIndex: 'quantity',
+                            key: 'quantity',
+                            render: (v: any) => v ?? '—',
+                          },
+                          {
+                            title: 'Status',
+                            dataIndex: 'status',
+                            key: 'status',
+                            render: (v: string) => v ? <Tag color={statusColors[v] || 'default'}>{v}</Tag> : '—',
+                          },
+                          {
+                            title: 'Start',
+                            dataIndex: 'startDate',
+                            key: 'startDate',
+                            render: fmt,
+                          },
+                          {
+                            title: 'End',
+                            dataIndex: 'endDate',
+                            key: 'endDate',
+                            render: fmt,
+                          },
+                          {
+                            title: 'Notes',
+                            dataIndex: 'notes',
+                            key: 'notes',
+                            render: (v: string) => v
+                              ? <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>
+                              : '—',
+                          },
+                          makeActionColumn(openAllocationModal, deleteAllocation, can('MANAGER_AND_ABOVE'), can('MANAGER_AND_ABOVE')),
+                        ]}
+                        dataSource={allocations} rowKey="id" pagination={{ pageSize: 10 }} size="small"
+                      />
+                    </>
+                  );
+                })()}
 
               </div>
             </Spin>
@@ -483,6 +554,7 @@ const ProjectResources: React.FC = () => {
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="role" label="Role"><Input /></Form.Item>
           <Form.Item name="hourlyRate" label="Hourly Rate"><InputNumber min={0} style={{ width: '100%' }} prefix="₱" /></Form.Item>
+          <Form.Item name="dailyRate" label="Daily Rate" rules={[{ required: true, message: 'Daily rate is required' }]}><InputNumber min={0} style={{ width: '100%' }} prefix="₱" /></Form.Item>
           <Form.Item name="description" label="Description"><TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
@@ -501,8 +573,15 @@ const ProjectResources: React.FC = () => {
       >
         <Form form={equipmentForm} layout="vertical">
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="type" label="Type"><Input /></Form.Item>
-          <Form.Item name="status" label="Status"><Input /></Form.Item>
+          <Form.Item name="type" label="Type"><Input placeholder="e.g. VEHICLE, MACHINERY, TOOL" /></Form.Item>
+          <Form.Item name="status" label="Status" initialValue="AVAILABLE">
+            <Select>
+              <Option value="AVAILABLE">Available</Option>
+              <Option value="IN_USE">In Use</Option>
+              <Option value="MAINTENANCE">Maintenance</Option>
+              <Option value="RETIRED">Retired</Option>
+            </Select>
+          </Form.Item>
           <Form.Item name="description" label="Description"><TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
@@ -542,8 +621,12 @@ const ProjectResources: React.FC = () => {
         <Form form={allocationForm} layout="vertical">
           <Form.Item name="resourceId" label="Resource ID" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="taskId" label="Task ID"><Input /></Form.Item>
-          <Form.Item name="startDate" label="Start Date"><Input placeholder="YYYY-MM-DD" /></Form.Item>
-          <Form.Item name="endDate" label="End Date"><Input placeholder="YYYY-MM-DD" /></Form.Item>
+          <Form.Item name="startDate" label="Start Date">
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="endDate" label="End Date">
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
           <Form.Item name="units" label="Units (%)"><InputNumber min={0} max={100} style={{ width: '100%' }} /></Form.Item>
         </Form>
       </Modal>

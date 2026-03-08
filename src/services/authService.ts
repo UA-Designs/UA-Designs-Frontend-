@@ -165,7 +165,7 @@ class AuthService {
   // User management methods
   async getUsers(): Promise<User[]> {
     try {
-      const response = await apiService.get<UsersResponse>('/users');
+      const response = await apiService.get<UsersResponse>('/users?limit=500');
       
       if (response.data.success) {
         const data = response.data.data;
@@ -245,8 +245,11 @@ class AuthService {
 
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
-      const response = await apiService.get<UsersResponse>(`/users/role/${role}`);
-      return response.data.success ? response.data.data : [];
+      const response = await apiService.get<any>(`/users/role/${role}`);
+      const payload = response.data?.data ?? response.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.users)) return payload.users;
+      return [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch users by role');
     }

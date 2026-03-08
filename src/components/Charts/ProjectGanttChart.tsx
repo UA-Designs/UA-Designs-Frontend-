@@ -16,13 +16,14 @@ interface ProjectGanttChartProps {
 
 const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
   // Use mock data if no data provided or data is invalid
-  const chartData = data && Array.isArray(data) && data.length > 0 ? data.map(item => ({
-    name: item.projectName && item.projectName.length > 15
-      ? item.projectName.substring(0, 15) + '...'
-      : item.projectName || 'Unnamed Project',
-    progress: item.progress || 0,
-    status: item.status || 'Unknown',
-  })) : [
+  const chartData = data && Array.isArray(data) && data.length > 0 ? data.map(item => {
+    const rawName = item.projectName || (item as any).name || 'Unnamed Project';
+    return {
+      name: rawName.length > 15 ? rawName.substring(0, 15) + '...' : rawName,
+      progress: item.progress || 0,
+      status: item.status || 'Unknown',
+    };
+  }) : [
     { name: 'Website Redesign', progress: 75, status: 'In Progress' },
     { name: 'Mobile App', progress: 45, status: 'In Progress' },
     { name: 'Database Migration', progress: 100, status: 'Completed' },

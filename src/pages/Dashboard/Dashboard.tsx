@@ -12,8 +12,52 @@ import {
   ProjectProgress,
   TaskProgress,
   CostVariance,
-  RiskMatrix as RiskMatrixType,
 } from '../../types';
+
+// Transform a flat risk array (from /dashboard/risk-matrix) into the
+// 5×5 matrix shape the RiskMatrix chart component expects.
+const PROB_BANDS = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+
+function getBand(val: number): string {
+  if (val <= 0.2) return 'Very Low';
+  if (val <= 0.4) return 'Low';
+  if (val <= 0.6) return 'Medium';
+  if (val <= 0.8) return 'High';
+  return 'Very High';
+}
+
+function buildRiskMatrix(raw: any): any {
+  // Already in matrix format — pass through
+  if (raw && !Array.isArray(raw) && raw.matrix) return raw;
+
+  const risks: any[] = Array.isArray(raw) ? raw : [];
+
+  const matrix = PROB_BANDS.map(probLabel =>
+    PROB_BANDS.map(impLabel => ({
+      probabilityLabel: probLabel,
+      impactLabel: impLabel,
+      count: 0,
+      riskIds: [] as string[],
+    }))
+  );
+
+  for (const risk of risks) {
+    const probIdx = PROB_BANDS.indexOf(getBand(risk.probability ?? 0));
+    const impIdx  = PROB_BANDS.indexOf(getBand(risk.impact ?? 0));
+    if (probIdx !== -1 && impIdx !== -1) {
+      matrix[probIdx][impIdx].count++;
+      matrix[probIdx][impIdx].riskIds.push(risk.id);
+    }
+  }
+
+  return {
+    projectId: 'all',
+    matrix,
+    totalRisks: risks.length,
+    probabilityBands: PROB_BANDS,
+    impactBands: PROB_BANDS,
+  };
+}
 import { dashboardService } from '../../services/dashboardService';
 import QuickActions from '../../components/Dashboard/QuickActions';
 import RecentActivities from '../../components/Dashboard/RecentActivities';
@@ -26,7 +70,7 @@ const Dashboard: React.FC = () => {
   const [projectProgress, setProjectProgress] = useState<ProjectProgress[]>([]);
   const [, setTaskProgress] = useState<TaskProgress[]>([]);
   const [costVariance, setCostVariance] = useState<CostVariance[]>([]);
-  const [riskMatrix, setRiskMatrix] = useState<RiskMatrixType | null>(null);
+  const [riskMatrix, setRiskMatrix] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,10 +90,17 @@ const Dashboard: React.FC = () => {
         ]);
 
         setStats(statsData);
-        setProjectProgress(projectData);
+        // Normalise project progress: backend may return `name` instead of `projectName`
+        const normalisedProgress: ProjectProgress[] = (Array.isArray(projectData) ? projectData : []).map(
+          (p: any) => ({
+            ...p,
+            projectName: p.projectName || p.name || 'Unnamed Project',
+          })
+        );
+        setProjectProgress(normalisedProgress);
         setTaskProgress(taskData);
         setCostVariance(costData);
-        setRiskMatrix(riskMatrixData);
+        setRiskMatrix(buildRiskMatrix(riskMatrixData));
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {

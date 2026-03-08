@@ -26,11 +26,18 @@ export enum RiskSeverity {
 
 export enum RiskStatus {
   IDENTIFIED = 'IDENTIFIED',
-  ASSESSED = 'ASSESSED',
-  MITIGATED = 'MITIGATED',
-  MONITORED = 'MONITORED',
+  ANALYZED = 'ANALYZED',
+  MITIGATING = 'MITIGATING',
+  MONITORING = 'MONITORING',
   CLOSED = 'CLOSED',
   ESCALATED = 'ESCALATED',
+}
+
+export enum ResponseStrategy {
+  AVOID = 'AVOID',
+  MITIGATE = 'MITIGATE',
+  TRANSFER = 'TRANSFER',
+  ACCEPT = 'ACCEPT',
 }
 
 export enum MitigationStatus {
@@ -75,6 +82,7 @@ export interface Risk {
   residualProbability?: RiskProbability;
   residualImpact?: RiskImpact;
   residualScore?: number;
+  responseStrategy?: ResponseStrategy;
   mitigationPlan?: string;
   contingencyPlan?: string;
   ownerId?: string;
@@ -95,6 +103,8 @@ export interface Mitigation {
   action: string;
   description?: string;
   status: MitigationStatus;
+  strategy?: string;
+  effectiveness?: string;
   assignedToId?: string;
   assignedTo?: any;
   startDate?: string;
@@ -112,42 +122,44 @@ export interface Mitigation {
 export interface RiskMatrix {
   projectId: string;
   matrix: {
-    probability: number;
-    impact: number;
+    probabilityLabel: string;
+    impactLabel: string;
     count: number;
-    risks: Risk[];
+    riskIds: string[];
   }[][];
-  summary: {
-    totalRisks: number;
-    bySeverity: {
-      LOW: number;
-      MEDIUM: number;
-      HIGH: number;
-      CRITICAL: number;
-    };
-  };
+  totalRisks: number;
+  probabilityBands: string[];
+  impactBands: string[];
 }
 
 export interface RiskMonitoring {
   projectId: string;
   summary: {
-    totalRisks: number;
-    activeRisks: number;
-    mitigatedRisks: number;
-    closedRisks: number;
-    escalatedRisks: number;
-    averageRiskScore: number;
-    trendDirection: 'INCREASING' | 'STABLE' | 'DECREASING';
-  };
-  topRisks: Risk[];
-  mitigationProgress: {
     total: number;
-    planned: number;
-    inProgress: number;
-    completed: number;
-    effectivenessRate: number;
+    open: number;
+    closed: number;
+    openClosedRatio: string;
   };
-  recentActivities: any[];
+  byStatus: Record<string, number>;
+  bySeverity: Record<string, number>;
+  topRisks: {
+    id: string;
+    title: string;
+    riskScore: number;
+    severity: string;
+    status: string;
+  }[];
+  nearingDueMitigations: {
+    riskId: string;
+    riskTitle: string;
+    mitigationId: string;
+    dueDate: string;
+  }[];
+  recentlyEscalated: {
+    id: string;
+    title: string;
+    escalatedDate: string;
+  }[];
 }
 
 export interface RiskReport {
@@ -249,10 +261,12 @@ class RiskService {
 
       const response = await apiService.get<PaginatedResponse<Risk>>('/risk/risks', { params });
       if (response.data.success) {
-        return {
-          risks: response.data.data.risks || [],
-          pagination: response.data.data.pagination,
-        };
+        const data = response.data.data as any;
+        const risks: Risk[] = Array.isArray(data) ? data : (data.risks || data.data || []);
+        const pagination = Array.isArray(data)
+          ? (response.data as any).pagination
+          : (data.pagination || (response.data as any).pagination);
+        return { risks, pagination };
       }
       return { risks: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     } catch (error: any) {
@@ -384,10 +398,12 @@ class RiskService {
 
       const response = await apiService.get<PaginatedResponse<Mitigation>>('/risk/mitigations', { params });
       if (response.data.success) {
-        return {
-          mitigations: response.data.data.mitigations || [],
-          pagination: response.data.data.pagination,
-        };
+        const data = response.data.data as any;
+        const mitigations: Mitigation[] = Array.isArray(data) ? data : (data.mitigations || data.data || []);
+        const pagination = Array.isArray(data)
+          ? (response.data as any).pagination
+          : (data.pagination || (response.data as any).pagination);
+        return { mitigations, pagination };
       }
       return { mitigations: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit } };
     } catch (error: any) {

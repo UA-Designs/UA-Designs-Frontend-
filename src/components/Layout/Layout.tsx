@@ -273,15 +273,14 @@ const Layout: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-            <Button
+          <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
               style={{ 
                 fontSize: '16px', 
-                width: 48, 
-                height: 48,
+                width: 40, 
+                height: 40,
                 color: '#009944',
                 borderRadius: '8px',
                 transition: 'all 0.3s ease',
@@ -289,19 +288,11 @@ const Layout: React.FC = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
-                e.currentTarget.style.transform = 'scale(1.05)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.transform = 'scale(1)';
               }}
             />
-            <Logo 
-              size="small" 
-              showText={false}
-              className="header-logo"
-            />
-          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <Dropdown
@@ -338,50 +329,52 @@ const Layout: React.FC = () => {
               placement="bottomRight"
               trigger={['click']}
             >
-              <div style={{ 
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: '8px',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                maxWidth: '200px',
-                minWidth: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 204, 102, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
+              <div
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '5px 10px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(0, 204, 102, 0.15)',
+                  background: 'rgba(0, 204, 102, 0.05)',
+                  transition: 'all 0.2s ease',
+                  maxWidth: 220,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 204, 102, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 204, 102, 0.35)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 204, 102, 0.05)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 204, 102, 0.15)';
+                }}
               >
                 <Avatar
                   src={user?.avatar}
                   icon={<UserOutlined />}
-                  size="small"
-                  style={{ 
+                  size={32}
+                  style={{
                     backgroundColor: '#009944',
-                    border: '2px solid rgba(0, 204, 102, 0.3)',
-                    boxShadow: '0 2px 8px rgba(0, 204, 102, 0.3)',
+                    border: '2px solid rgba(0, 204, 102, 0.4)',
                     flexShrink: 0,
                   }}
                 />
-                {!collapsed && (
-                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                    <div style={{ 
-                      color: '#ffffff', 
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {user?.firstName} {user?.lastName}
-                    </div>
-                    <TierBadge role={user?.role} style={{ marginTop: 2 }} />
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{
+                    color: '#ffffff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    lineHeight: '18px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {user?.firstName} {user?.lastName}
                   </div>
-                )}
+                  <TierBadge role={user?.role} style={{ marginTop: 1 }} />
+                </div>
               </div>
             </Dropdown>
           </div>

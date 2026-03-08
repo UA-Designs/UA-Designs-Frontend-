@@ -33,6 +33,8 @@ import {
 import ProjectSelector from '../../../components/common/ProjectSelector';
 import { useProject } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { authService } from '../../../services/authService';
+import { User } from '../../../types';
 import {
   scheduleService,
   ScheduleTask,
@@ -82,9 +84,16 @@ const ProjectSchedule: React.FC = () => {
   const [dependencyModalVisible, setDependencyModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<ScheduleTask | null>(null);
 
+  // Users for assignee picker
+  const [users, setUsers] = useState<User[]>([]);
+
   // Forms
   const [taskForm] = Form.useForm();
   const [depForm] = Form.useForm();
+
+  useEffect(() => {
+    authService.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (selectedProject) {
@@ -669,8 +678,17 @@ const ProjectSchedule: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="assignedTo" label="Assigned To (User ID)">
-            <Input placeholder="User ID" />
+          <Form.Item name="assignedTo" label="Assigned To">
+            <Select
+              placeholder="Select team member"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={users.map(u => ({
+                value: `${u.firstName} ${u.lastName}`,
+                label: `${u.firstName} ${u.lastName}`,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

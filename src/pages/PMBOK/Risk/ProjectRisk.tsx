@@ -34,16 +34,16 @@ import {
   FileTextOutlined,
   SafetyOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import ProjectSelector from '../../../components/common/ProjectSelector';
 import { useProject } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { authService } from '../../../services/authService';
+import { User } from '../../../types';
 import {
   riskService,
   Risk,
   Mitigation,
-  RiskCategory,
-  RiskProbability,
-  RiskImpact,
   RiskSeverity,
   RiskStatus,
   MitigationStatus,
@@ -52,7 +52,6 @@ import {
   RiskMonitoring as RiskMonitoringType,
 } from '../../../services/riskService';
 import RiskMatrix from '../../../components/Charts/RiskMatrix';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -67,9 +66,9 @@ const ProjectRisk: React.FC = () => {
   // Data states
   const [risks, setRisks] = useState<Risk[]>([]);
   const [mitigations, setMitigations] = useState<Mitigation[]>([]);
-  const [categories, setCategories] = useState<RiskCategory[]>([]);
   const [riskMatrix, setRiskMatrix] = useState<RiskMatrixType | null>(null);
   const [monitoring, setMonitoring] = useState<RiskMonitoringType | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   // Modal states
   const [riskModalVisible, setRiskModalVisible] = useState(false);
@@ -86,7 +85,7 @@ const ProjectRisk: React.FC = () => {
   const [assessForm] = Form.useForm();
 
   useEffect(() => {
-    loadCategories();
+    authService.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -101,19 +100,6 @@ const ProjectRisk: React.FC = () => {
   }, [selectedProject]);
 
 
-
-  const loadCategories = () => {
-    // No /api/risk/categories endpoint exists — use hardcoded categories
-    setCategories([
-      { id: 'technical', name: 'Technical', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'schedule', name: 'Schedule', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'cost', name: 'Cost', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'resource', name: 'Resource', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'stakeholder', name: 'Stakeholder', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'external', name: 'External', isActive: true, createdAt: '', updatedAt: '' },
-      { id: 'organizational', name: 'Organizational', isActive: true, createdAt: '', updatedAt: '' },
-    ]);
-  };
 
   const loadRiskData = async () => {
     if (!selectedProject) return;
@@ -152,9 +138,13 @@ const ProjectRisk: React.FC = () => {
   const handleEditRisk = (risk: Risk) => {
     setEditingRisk(risk);
     riskForm.setFieldsValue({
-      ...risk,
-      identifiedDate: risk.identifiedDate ? dayjs(risk.identifiedDate) : undefined,
-      reviewDate: risk.reviewDate ? dayjs(risk.reviewDate) : undefined,
+      title: risk.title,
+      description: risk.description,
+      status: risk.status,
+      severity: risk.severity,
+      probability: risk.probability,
+      impact: risk.impact,
+      responseStrategy: risk.responseStrategy,
     });
     setRiskModalVisible(true);
   };
@@ -180,12 +170,15 @@ const ProjectRisk: React.FC = () => {
   const handleRiskSubmit = async () => {
     try {
       const values = await riskForm.validateFields();
-
-      const riskData = {
-        ...values,
+      const riskData: any = {
+        title: values.title,
+        description: values.description,
+        probability: values.probability,
+        impact: values.impact,
+        status: values.status,
+        severity: values.severity,
+        responseStrategy: values.responseStrategy,
         projectId: selectedProject?.id,
-        identifiedDate: values.identifiedDate?.toISOString(),
-        reviewDate: values.reviewDate?.toISOString(),
       };
 
       if (editingRisk) {
@@ -289,28 +282,23 @@ const ProjectRisk: React.FC = () => {
     }
   };
 
-  // Helper functions
-  const getProbabilityLabel = (prob: RiskProbability): string => {
-    const labels = {
-      [RiskProbability.VERY_LOW]: 'Very Low',
-      [RiskProbability.LOW]: 'Low',
-      [RiskProbability.MEDIUM]: 'Medium',
-      [RiskProbability.HIGH]: 'High',
-      [RiskProbability.VERY_HIGH]: 'Very High',
-    };
-    return labels[prob] || 'Unknown';
+  // Helper functions — API returns decimals (0.1, 0.25, 0.5, 0.75, 1.0)
+  const getDecimalLabel = (val: number): string => {
+    if (val <= 0.1) return 'Very Low';
+    if (val <= 0.25) return 'Low';
+    if (val <= 0.5) return 'Medium';
+    if (val <= 0.75) return 'High';
+    return 'Very High';
   };
 
-  const getImpactLabel = (impact: RiskImpact): string => {
-    const labels = {
-      [RiskImpact.VERY_LOW]: 'Very Low',
-      [RiskImpact.LOW]: 'Low',
-      [RiskImpact.MEDIUM]: 'Medium',
-      [RiskImpact.HIGH]: 'High',
-      [RiskImpact.VERY_HIGH]: 'Very High',
-    };
-    return labels[impact] || 'Unknown';
+  const getDecimalColor = (val: number): string => {
+    if (val <= 0.25) return 'green';
+    if (val <= 0.5) return 'orange';
+    return 'red';
   };
+
+  const getProbabilityLabel = (prob: number): string => getDecimalLabel(prob);
+  const getImpactLabel = (impact: number): string => getDecimalLabel(impact);
 
   const getSeverityColor = (severity: RiskSeverity): string => {
     const colors = {
@@ -325,9 +313,9 @@ const ProjectRisk: React.FC = () => {
   const getStatusColor = (status: RiskStatus): string => {
     const colors = {
       [RiskStatus.IDENTIFIED]: 'blue',
-      [RiskStatus.ASSESSED]: 'cyan',
-      [RiskStatus.MITIGATED]: 'green',
-      [RiskStatus.MONITORED]: 'orange',
+      [RiskStatus.ANALYZED]: 'cyan',
+      [RiskStatus.MITIGATING]: 'green',
+      [RiskStatus.MONITORING]: 'orange',
       [RiskStatus.CLOSED]: 'default',
       [RiskStatus.ESCALATED]: 'red',
     };
@@ -337,12 +325,11 @@ const ProjectRisk: React.FC = () => {
   // Calculate statistics
   const safeRisks = Array.isArray(risks) ? risks : [];
   const safeMitigations = Array.isArray(mitigations) ? mitigations : [];
-  const safeCategories = Array.isArray(categories) ? categories : [];
 
   const criticalRisks = safeRisks.filter(r => r.severity === RiskSeverity.CRITICAL).length;
   const highRisks = safeRisks.filter(r => r.severity === RiskSeverity.HIGH).length;
   const activeRisks = safeRisks.filter(r => r.status !== RiskStatus.CLOSED).length;
-  const mitigatedRisks = safeRisks.filter(r => r.status === RiskStatus.MITIGATED).length;
+  const mitigatedRisks = safeRisks.filter(r => r.status === RiskStatus.MITIGATING || r.status === RiskStatus.MONITORING).length;
 
   const riskColumns = [
     {
@@ -360,29 +347,27 @@ const ProjectRisk: React.FC = () => {
     },
     {
       title: 'Category',
-      dataIndex: 'category',
       key: 'category',
-      render: (category: RiskCategory) => (
-        <Tag color={category?.color || 'blue'}>{category?.name || 'Unknown'}</Tag>
-      ),
+      render: (_: any, record: Risk) => {
+        const cat = (record as any).riskCategory || (record as any).category;
+        return <Tag color={cat?.color || 'blue'}>{cat?.name || 'N/A'}</Tag>;
+      },
     },
     {
       title: 'Probability',
       dataIndex: 'probability',
       key: 'probability',
-      render: (prob: RiskProbability) => {
-        const color = prob >= 4 ? 'red' : prob >= 3 ? 'orange' : 'green';
-        return <Tag color={color}>{getProbabilityLabel(prob)}</Tag>;
-      },
+      render: (prob: number) => (
+        <Tag color={getDecimalColor(prob)}>{getProbabilityLabel(prob)}</Tag>
+      ),
     },
     {
       title: 'Impact',
       dataIndex: 'impact',
       key: 'impact',
-      render: (impact: RiskImpact) => {
-        const color = impact >= 4 ? 'red' : impact >= 3 ? 'orange' : 'green';
-        return <Tag color={color}>{getImpactLabel(impact)}</Tag>;
-      },
+      render: (impact: number) => (
+        <Tag color={getDecimalColor(impact)}>{getImpactLabel(impact)}</Tag>
+      ),
     },
     {
       title: 'Score',
@@ -523,8 +508,11 @@ const ProjectRisk: React.FC = () => {
       title: 'Effectiveness',
       dataIndex: 'effectiveness',
       key: 'effectiveness',
-      render: (effectiveness: number) =>
-        effectiveness ? <Progress percent={effectiveness} size="small" /> : '-',
+      render: (effectiveness: string) => {
+        if (!effectiveness) return '-';
+        const colors: Record<string, string> = { LOW: 'orange', MEDIUM: 'blue', HIGH: 'green' };
+        return <Tag color={colors[effectiveness] || 'default'}>{effectiveness}</Tag>;
+      },
     },
     {
       title: 'Actions',
@@ -600,38 +588,16 @@ const ProjectRisk: React.FC = () => {
                 <Card title="Risk Monitoring Summary" style={{ marginBottom: 16 }}>
                   <Row gutter={[16, 16]}>
                     <Col xs={12} md={6}>
-                      <Statistic
-                        title="Average Risk Score"
-                        value={monitoring.summary.averageRiskScore?.toFixed(2) ?? '0.00'}
-                        valueStyle={{
-                          color: (monitoring.summary.averageRiskScore ?? 0) >= 15 ? '#ff4d4f' :
-                                 (monitoring.summary.averageRiskScore ?? 0) >= 9 ? '#faad14' : '#52c41a'
-                        }}
-                      />
+                      <Statistic title="Total" value={monitoring.summary.total ?? 0} valueStyle={{ color: '#1890ff' }} />
                     </Col>
                     <Col xs={12} md={6}>
-                      <Statistic
-                        title="Trend"
-                        value={monitoring.summary.trendDirection ?? 'STABLE'}
-                        valueStyle={{
-                          color: monitoring.summary.trendDirection === 'INCREASING' ? '#ff4d4f' :
-                                 monitoring.summary.trendDirection === 'DECREASING' ? '#52c41a' : '#1890ff'
-                        }}
-                      />
+                      <Statistic title="Open" value={monitoring.summary.open ?? 0} valueStyle={{ color: '#faad14' }} />
                     </Col>
                     <Col xs={12} md={6}>
-                      <Statistic
-                        title="Mitigation Progress"
-                        value={`${monitoring.mitigationProgress?.completed ?? 0}/${monitoring.mitigationProgress?.total ?? 0}`}
-                      />
+                      <Statistic title="Closed" value={monitoring.summary.closed ?? 0} valueStyle={{ color: '#52c41a' }} />
                     </Col>
                     <Col xs={12} md={6}>
-                      <Statistic
-                        title="Effectiveness Rate"
-                        value={monitoring.mitigationProgress?.effectivenessRate ?? 0}
-                        suffix="%"
-                        valueStyle={{ color: '#52c41a' }}
-                      />
+                      <Statistic title="Open/Closed Ratio" value={monitoring.summary.openClosedRatio ?? '0.00'} />
                     </Col>
                   </Row>
                 </Card>
@@ -708,11 +674,11 @@ const ProjectRisk: React.FC = () => {
                       <Col xs={24} lg={12}>
                         <Card title="Risk Distribution by Severity">
                           <Space direction="vertical" style={{ width: '100%' }}>
-                            {riskMatrix && riskMatrix.summary && Object.entries(riskMatrix.summary.bySeverity || {}).map(([severity, count]) => (
+                            {monitoring && Object.entries(monitoring.bySeverity || {}).map(([severity, count]) => (
                               <div key={severity}>
-                                <Text>{severity}: {count}</Text>
+                                <Text>{severity}: {count as number}</Text>
                                 <Progress
-                                  percent={riskMatrix.summary.totalRisks > 0 ? (count / riskMatrix.summary.totalRisks) * 100 : 0}
+                                  percent={monitoring.summary.total > 0 ? ((count as number) / monitoring.summary.total) * 100 : 0}
                                   strokeColor={getSeverityColor(severity as RiskSeverity)}
                                   showInfo={false}
                                 />
@@ -728,7 +694,7 @@ const ProjectRisk: React.FC = () => {
                               <div key={risk.id} style={{ marginBottom: 12 }}>
                                 <Badge count={index + 1} style={{ marginRight: 8 }} />
                                 <Text strong>{risk.title}</Text>
-                                <Tag color={getSeverityColor(risk.severity)} style={{ marginLeft: 8 }}>
+                                <Tag color={getSeverityColor(risk.severity as RiskSeverity)} style={{ marginLeft: 8 }}>
                                   Score: {risk.riskScore}
                                 </Tag>
                               </div>
@@ -802,19 +768,6 @@ const ProjectRisk: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="categoryId"
-                label="Category"
-                rules={[{ required: true, message: 'Please select category' }]}
-              >
-                <Select placeholder="Select category">
-                  {safeCategories.map(cat => (
-                    <Option key={cat.id} value={cat.id}>{cat.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="status"
                 label="Status"
                 rules={[{ required: true, message: 'Please select status' }]}
@@ -822,6 +775,15 @@ const ProjectRisk: React.FC = () => {
                 <Select placeholder="Select status">
                   {Object.values(RiskStatus).map(status => (
                     <Option key={status} value={status}>{status}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="severity" label="Severity">
+                <Select placeholder="Select severity" allowClear>
+                  {Object.values(RiskSeverity).map(s => (
+                    <Option key={s} value={s}>{s}</Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -836,11 +798,11 @@ const ProjectRisk: React.FC = () => {
                 rules={[{ required: true, message: 'Please select probability' }]}
               >
                 <Select placeholder="Select probability">
-                  <Option value={RiskProbability.VERY_LOW}>Very Low (1)</Option>
-                  <Option value={RiskProbability.LOW}>Low (2)</Option>
-                  <Option value={RiskProbability.MEDIUM}>Medium (3)</Option>
-                  <Option value={RiskProbability.HIGH}>High (4)</Option>
-                  <Option value={RiskProbability.VERY_HIGH}>Very High (5)</Option>
+                  <Option value={0.1}>Very Low</Option>
+                  <Option value={0.25}>Low</Option>
+                  <Option value={0.5}>Medium</Option>
+                  <Option value={0.75}>High</Option>
+                  <Option value={1.0}>Very High</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -851,43 +813,23 @@ const ProjectRisk: React.FC = () => {
                 rules={[{ required: true, message: 'Please select impact' }]}
               >
                 <Select placeholder="Select impact">
-                  <Option value={RiskImpact.VERY_LOW}>Very Low (1)</Option>
-                  <Option value={RiskImpact.LOW}>Low (2)</Option>
-                  <Option value={RiskImpact.MEDIUM}>Medium (3)</Option>
-                  <Option value={RiskImpact.HIGH}>High (4)</Option>
-                  <Option value={RiskImpact.VERY_HIGH}>Very High (5)</Option>
+                  <Option value={0.1}>Very Low</Option>
+                  <Option value={0.25}>Low</Option>
+                  <Option value={0.5}>Medium</Option>
+                  <Option value={0.75}>High</Option>
+                  <Option value={1.0}>Very High</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="mitigationPlan" label="Mitigation Plan">
-            <TextArea rows={2} placeholder="Describe mitigation strategy" />
-          </Form.Item>
-
-          <Form.Item name="contingencyPlan" label="Contingency Plan">
-            <TextArea rows={2} placeholder="Describe contingency plan" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="identifiedDate"
-                label="Identified Date"
-                rules={[{ required: true, message: 'Please select date' }]}
-              >
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="reviewDate" label="Review Date">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="ownerId" label="Owner (User ID)">
-            <Input placeholder="Enter owner user ID" />
+          <Form.Item name="responseStrategy" label="Response Strategy">
+            <Select placeholder="Select response strategy" allowClear>
+              <Option value="AVOID">Avoid</Option>
+              <Option value="MITIGATE">Mitigate</Option>
+              <Option value="TRANSFER">Transfer</Option>
+              <Option value="ACCEPT">Accept</Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
@@ -909,11 +851,11 @@ const ProjectRisk: React.FC = () => {
             rules={[{ required: true, message: 'Please select residual probability' }]}
           >
             <Select placeholder="Select residual probability">
-              <Option value={RiskProbability.VERY_LOW}>Very Low (1)</Option>
-              <Option value={RiskProbability.LOW}>Low (2)</Option>
-              <Option value={RiskProbability.MEDIUM}>Medium (3)</Option>
-              <Option value={RiskProbability.HIGH}>High (4)</Option>
-              <Option value={RiskProbability.VERY_HIGH}>Very High (5)</Option>
+              <Option value={0.1}>Very Low</Option>
+              <Option value={0.25}>Low</Option>
+              <Option value={0.5}>Medium</Option>
+              <Option value={0.75}>High</Option>
+              <Option value={1.0}>Very High</Option>
             </Select>
           </Form.Item>
 
@@ -923,11 +865,11 @@ const ProjectRisk: React.FC = () => {
             rules={[{ required: true, message: 'Please select residual impact' }]}
           >
             <Select placeholder="Select residual impact">
-              <Option value={RiskImpact.VERY_LOW}>Very Low (1)</Option>
-              <Option value={RiskImpact.LOW}>Low (2)</Option>
-              <Option value={RiskImpact.MEDIUM}>Medium (3)</Option>
-              <Option value={RiskImpact.HIGH}>High (4)</Option>
-              <Option value={RiskImpact.VERY_HIGH}>Very High (5)</Option>
+              <Option value={0.1}>Very Low</Option>
+              <Option value={0.25}>Low</Option>
+              <Option value={0.5}>Medium</Option>
+              <Option value={0.75}>High</Option>
+              <Option value={1.0}>Very High</Option>
             </Select>
           </Form.Item>
         </Form>
@@ -1003,6 +945,14 @@ const ProjectRisk: React.FC = () => {
           </Form.Item>
 
           <Form.Item
+            name="strategy"
+            label="Strategy"
+            rules={[{ required: true, message: 'Please enter strategy' }]}
+          >
+            <TextArea rows={2} placeholder="Describe the mitigation strategy" />
+          </Form.Item>
+
+          <Form.Item
             name="status"
             label="Status"
             rules={[{ required: true, message: 'Please select status' }]}
@@ -1029,19 +979,26 @@ const ProjectRisk: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="estimatedCost" label="Estimated Cost ($)">
+              <Form.Item name="estimatedCost" label="Estimated Cost (₱)">
                 <InputNumber min={0} style={{ width: '100%' }} placeholder="0.00" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="effectiveness" label="Effectiveness (%)">
-                <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0" />
+              <Form.Item name="effectiveness" label="Effectiveness">
+                <Select placeholder="Select effectiveness" allowClear>
+                  <Option value="LOW">Low</Option>
+                  <Option value="MEDIUM">Medium</Option>
+                  <Option value="HIGH">High</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="assignedToId" label="Assigned To (User ID)">
-            <Input placeholder="Enter user ID" />
+          <Form.Item name="assignedToId" label="Assigned To">
+            <Select placeholder="Select assignee (optional)" allowClear showSearch
+              optionFilterProp="label"
+              options={users.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName} (${u.email})` }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

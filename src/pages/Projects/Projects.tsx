@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Table,
   Button,
@@ -77,6 +78,7 @@ const formatCurrency = (v?: number) =>
 const Projects: React.FC = () => {
   const { user: currentUser, can } = useAuth();
   const { projects: ctxProjects, setProjects: setCtxProjects } = useProject();
+  const location = useLocation();
 
   const isAdmin = can('ADMIN_ONLY');
   const isPM    = can('MANAGER_AND_ABOVE');
@@ -142,12 +144,20 @@ const Projects: React.FC = () => {
 
   useEffect(() => { fetchProjects(); fetchStats(); }, [fetchProjects, fetchStats]);
 
+  // Auto-open create modal when navigated from Quick Actions
+  useEffect(() => {
+    if ((location.state as any)?.openCreate) {
+      setCreateModalVisible(true);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
+
   // ── load PM users ────────────────────────────────────────────────────────
   const loadPmUsers = async () => {
     setPmLoading(true);
     try {
       const users = await authService.getUsersByRole(UserRole.PROJECT_MANAGER);
-      setPmUsers(users);
+      setPmUsers(Array.isArray(users) ? users : []);
     } catch {
       message.error('Failed to load project managers');
     } finally {
@@ -464,7 +474,7 @@ const Projects: React.FC = () => {
   ];
 
   // ── shared form fields ───────────────────────────────────────────────────
-  const ProjectFormFields: React.FC<{ showPM?: boolean }> = ({ showPM }) => (
+  const renderProjectFormFields = (showPM?: boolean) => (
     <>
       <Row gutter={16}>
         <Col span={12}>
@@ -516,7 +526,7 @@ const Projects: React.FC = () => {
       </Row>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item name="budget" label="Budget ($)">
+          <Form.Item name="budget" label="Budget (₱)">
             <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
           </Form.Item>
         </Col>
@@ -683,7 +693,7 @@ const Projects: React.FC = () => {
         styles={{ body: { background: '#1f1f1f', padding: '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
-          <ProjectFormFields showPM />
+          {renderProjectFormFields(true)}
           <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={actionLoading} style={{ background: '#009944', borderColor: '#009944' }}>
@@ -705,7 +715,7 @@ const Projects: React.FC = () => {
         styles={{ body: { background: '#1f1f1f', padding: '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
       >
         <Form form={editForm} layout="vertical" onFinish={handleEdit}>
-          <ProjectFormFields />
+          {renderProjectFormFields()}
           <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={actionLoading} style={{ background: '#009944', borderColor: '#009944' }}>

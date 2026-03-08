@@ -70,16 +70,28 @@ export interface FeedbackData {
   [key: string]: any;
 }
 
-export interface InfluenceMatrixData {
-  projectId: string;
-  stakeholders?: Array<{
+export interface MatrixQuadrant {
+  influence: string;
+  interest: string;
+  strategy: string;
+  stakeholders: Array<{
     id: string;
     name: string;
-    influence: number;
-    interest: number;
-    [key: string]: any;
+    role: string;
+    organization: string;
+    type: string;
+    influence: string;
+    interest: string;
+    engagementLevel: string;
+    status: string;
   }>;
-  [key: string]: any;
+  count: number;
+}
+
+export interface InfluenceMatrixData {
+  projectId: string;
+  matrix: Record<string, MatrixQuadrant>;
+  totalStakeholders: number;
 }
 
 export interface StakeholderSummary {

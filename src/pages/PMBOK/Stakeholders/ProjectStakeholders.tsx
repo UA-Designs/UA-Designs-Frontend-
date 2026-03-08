@@ -13,6 +13,7 @@ import {
   Form,
   Input,
   Select,
+  DatePicker,
   message,
   Spin,
   Popconfirm,
@@ -58,7 +59,7 @@ const { Option } = Select;
 // ---- Helpers ----
 
 const influenceColor = (level: string) =>
-  level === 'High' ? 'red' : level === 'Medium' ? 'orange' : 'green';
+  level === 'HIGH' ? 'red' : level === 'MEDIUM' ? 'orange' : 'green';
 
 // ---- Component ----
 
@@ -194,6 +195,7 @@ const ProjectStakeholders: React.FC = () => {
   const handleCommSubmit = async () => {
     try {
       const values = await commForm.validateFields();
+      if (values.date) values.date = values.date.toISOString();
       if (editingComm) {
         await stakeholderService.updateCommunication(editingComm.id, values);
         message.success('Communication updated');
@@ -256,15 +258,22 @@ const ProjectStakeholders: React.FC = () => {
   };
 
   // ---- Influence Matrix chart data ----
+  const LEVEL_NUM: Record<string, number> = { LOW: 2, MEDIUM: 5, HIGH: 8 };
 
   const matrixPoints = React.useMemo(() => {
-    if (!influenceMatrix) return [];
-    const list: any[] = influenceMatrix.stakeholders || influenceMatrix.data || [];
-    return list.map((s: any) => ({
-      name: s.name,
-      x: typeof s.interest === 'number' ? s.interest : 5,
-      y: typeof s.influence === 'number' ? s.influence : 5,
-    }));
+    if (!influenceMatrix?.matrix) return [];
+    const points: { name: string; x: number; y: number; strategy: string }[] = [];
+    Object.values(influenceMatrix.matrix).forEach((cell: any) => {
+      (cell.stakeholders || []).forEach((s: any) => {
+        points.push({
+          name: s.name,
+          x: LEVEL_NUM[cell.interest]  ?? 5,
+          y: LEVEL_NUM[cell.influence] ?? 5,
+          strategy: cell.strategy,
+        });
+      });
+    });
+    return points;
   }, [influenceMatrix]);
 
   const CustomDot = (props: any) => {
@@ -314,7 +323,7 @@ const ProjectStakeholders: React.FC = () => {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
-      render: (v: string) => v ? <Tag color={v === 'Internal' ? 'blue' : 'purple'}>{v}</Tag> : '—',
+      render: (v: string) => v ? <Tag color={v === 'INTERNAL' ? 'blue' : 'purple'}>{v}</Tag> : '—',
     },
     {
       title: 'Actions',
@@ -577,10 +586,10 @@ const ProjectStakeholders: React.FC = () => {
                             <ResponsiveContainer width="100%" height={380}>
                               <ScatterChart margin={{ top: 30, right: 30, bottom: 40, left: 40 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                                <XAxis type="number" dataKey="x" domain={[0, 10]} tick={{ fill: '#aaa' }} stroke="#555">
+                                <XAxis type="number" dataKey="x" domain={[0, 10]} ticks={[2, 5, 8]} tick={{ fill: '#aaa' }} stroke="#555">
                                   <Label value="Interest →" fill="#aaa" position="insideBottom" offset={-20} />
                                 </XAxis>
-                                <YAxis type="number" dataKey="y" domain={[0, 10]} tick={{ fill: '#aaa' }} stroke="#555">
+                                <YAxis type="number" dataKey="y" domain={[0, 10]} ticks={[2, 5, 8]} tick={{ fill: '#aaa' }} stroke="#555">
                                   <Label value="Influence →" fill="#aaa" angle={-90} position="insideLeft" offset={20} />
                                 </YAxis>
                                 <Tooltip
@@ -589,19 +598,19 @@ const ProjectStakeholders: React.FC = () => {
                                     if (payload && payload.length) {
                                       const d = payload[0].payload;
                                       return (
-                                        <div style={{ background: '#1f1f1f', border: '1px solid #333', padding: '8px 12px', borderRadius: 4 }}>
+                                        <div style={{ background: '#1f1f1f', border: '1px solid #333', padding: '8px 12px', borderRadius: 4, maxWidth: 220 }}>
                                           <strong style={{ color: '#fff' }}>{d.name}</strong>
-                                          <div style={{ color: '#aaa', fontSize: 12 }}>
-                                            Interest: {d.x} | Influence: {d.y}
-                                          </div>
+                                          {d.strategy && <div style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>{d.strategy}</div>}
                                         </div>
                                       );
                                     }
                                     return null;
                                   }}
                                 />
-                                <ReferenceLine x={5} stroke="#555" strokeDasharray="4 4" />
-                                <ReferenceLine y={5} stroke="#555" strokeDasharray="4 4" />
+                                <ReferenceLine x={3.5} stroke="#555" strokeDasharray="4 4" />
+                                <ReferenceLine x={6.5} stroke="#555" strokeDasharray="4 4" />
+                                <ReferenceLine y={3.5} stroke="#555" strokeDasharray="4 4" />
+                                <ReferenceLine y={6.5} stroke="#555" strokeDasharray="4 4" />
                                 <Scatter data={matrixPoints} shape={(props: any) => {
                                   const { cx, cy, payload } = props;
                                   return (
@@ -618,25 +627,51 @@ const ProjectStakeholders: React.FC = () => {
                       </Col>
 
                       <Col xs={24} lg={8}>
-                        <Card title="Quadrant Guide" size="small">
-                          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                            <div>
-                              <Tag color="red">Manage Closely</Tag>
-                              <div><Text type="secondary" style={{ fontSize: 12 }}>High Influence, High Interest</Text></div>
-                            </div>
-                            <div>
-                              <Tag color="orange">Keep Satisfied</Tag>
-                              <div><Text type="secondary" style={{ fontSize: 12 }}>High Influence, Low Interest</Text></div>
-                            </div>
-                            <div>
-                              <Tag color="blue">Keep Informed</Tag>
-                              <div><Text type="secondary" style={{ fontSize: 12 }}>Low Influence, High Interest</Text></div>
-                            </div>
-                            <div>
-                              <Tag color="default">Monitor</Tag>
-                              <div><Text type="secondary" style={{ fontSize: 12 }}>Low Influence, Low Interest</Text></div>
-                            </div>
-                          </Space>
+                        <Card title="Influence × Interest Grid" size="small" bodyStyle={{ padding: 0 }}>
+                          {influenceMatrix?.matrix ? (() => {
+                            const levels = ['HIGH', 'MEDIUM', 'LOW'];
+                            const quadColors: Record<string, string> = {
+                              HIGH_HIGH: '#ff4d4f', HIGH_MEDIUM: '#fa8c16', HIGH_LOW: '#fa8c16',
+                              MEDIUM_HIGH: '#1890ff', MEDIUM_MEDIUM: '#8c8c8c', MEDIUM_LOW: '#8c8c8c',
+                              LOW_HIGH: '#1890ff', LOW_MEDIUM: '#8c8c8c', LOW_LOW: '#8c8c8c',
+                            };
+                            return (
+                              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ padding: '6px 8px', background: '#2a2a2a', color: '#aaa', fontSize: 11, textAlign: 'center', border: '1px solid #333' }}>Inf ↓ / Int →</th>
+                                    {['LOW', 'MEDIUM', 'HIGH'].map(i => (
+                                      <th key={i} style={{ padding: '6px 8px', background: '#2a2a2a', color: '#e2e8f0', fontSize: 11, textAlign: 'center', border: '1px solid #333' }}>{i}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {levels.map(inf => (
+                                    <tr key={inf}>
+                                      <td style={{ padding: '6px 8px', background: '#2a2a2a', color: '#e2e8f0', fontSize: 11, fontWeight: 600, border: '1px solid #333', textAlign: 'center' }}>{inf}</td>
+                                      {['LOW', 'MEDIUM', 'HIGH'].map(int => {
+                                        const key = `${inf}_${int}`;
+                                        const cell = influenceMatrix.matrix[key];
+                                        const bg = quadColors[key] || '#8c8c8c';
+                                        return (
+                                          <td key={int} style={{ padding: '6px 8px', border: '1px solid #333', verticalAlign: 'top', background: 'transparent' }}>
+                                            <div style={{ fontSize: 10, color: bg, fontWeight: 600, marginBottom: 2 }}>
+                                              {cell?.count ? `${cell.count} stakeholder${cell.count > 1 ? 's' : ''}` : '—'}
+                                            </div>
+                                            {(cell?.stakeholders || []).map((s: any) => (
+                                              <div key={s.id} style={{ fontSize: 10, color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 90 }} title={s.name}>
+                                                {s.name}
+                                              </div>
+                                            ))}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            );
+                          })() : <Empty description="No data" />}
                         </Card>
                       </Col>
                     </Row>
@@ -704,26 +739,26 @@ const ProjectStakeholders: React.FC = () => {
             <Col span={8}>
               <Form.Item name="influence" label="Influence">
                 <Select placeholder="Select">
-                  <Option value="High">High</Option>
-                  <Option value="Medium">Medium</Option>
-                  <Option value="Low">Low</Option>
+                  <Option value="HIGH">High</Option>
+                  <Option value="MEDIUM">Medium</Option>
+                  <Option value="LOW">Low</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="interest" label="Interest">
                 <Select placeholder="Select">
-                  <Option value="High">High</Option>
-                  <Option value="Medium">Medium</Option>
-                  <Option value="Low">Low</Option>
+                  <Option value="HIGH">High</Option>
+                  <Option value="MEDIUM">Medium</Option>
+                  <Option value="LOW">Low</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="type" label="Type">
                 <Select placeholder="Select">
-                  <Option value="Internal">Internal</Option>
-                  <Option value="External">External</Option>
+                  <Option value="INTERNAL">Internal</Option>
+                  <Option value="EXTERNAL">External</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -764,7 +799,7 @@ const ProjectStakeholders: React.FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="message" label="Message"><TextArea rows={3} /></Form.Item>
-          <Form.Item name="date" label="Date"><Input placeholder="YYYY-MM-DD" /></Form.Item>
+          <Form.Item name="date" label="Date"><DatePicker style={{ width: '100%' }} /></Form.Item>
         </Form>
       </Modal>
     </>

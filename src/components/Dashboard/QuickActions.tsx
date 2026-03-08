@@ -20,7 +20,7 @@ const QuickActions: React.FC = () => {
       key: 'new-project',
       icon: <PlusOutlined />,
       label: 'New Project',
-      onClick: () => navigate('/pmbok/integration'),
+      onClick: () => navigate('/projects', { state: { openCreate: true } }),
       color: '#1890ff',
     },
     {

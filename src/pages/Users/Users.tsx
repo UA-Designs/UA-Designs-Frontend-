@@ -56,6 +56,7 @@ const Users: React.FC = () => {
   const [usersData, setUsersData]   = useState<User[]>([]);
   const [stats, setStats]           = useState<any>(null);
   const [isLoading, setIsLoading]   = useState(true);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
   // User create/edit modal
   const [userModalVisible, setUserModalVisible]   = useState(false);
@@ -341,9 +342,13 @@ const Users: React.FC = () => {
             dataSource={usersData}
             rowKey="id"
             pagination={{
-              pageSize: 10,
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: usersData.length,
               showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50'],
               showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
+              onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
             }}
           />
         </Spin>
