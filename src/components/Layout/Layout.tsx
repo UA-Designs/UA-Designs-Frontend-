@@ -334,47 +334,30 @@ const Layout: React.FC = () => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '5px 10px',
-                  borderRadius: 10,
-                  border: '1px solid rgba(0, 204, 102, 0.15)',
-                  background: 'rgba(0, 204, 102, 0.05)',
+                  gap: 8,
+                  padding: '4px 8px 4px 4px',
+                  borderRadius: 8,
+                  background: 'transparent',
                   transition: 'all 0.2s ease',
-                  maxWidth: 220,
+                  maxWidth: 200,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 204, 102, 0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 204, 102, 0.35)';
+                  e.currentTarget.style.background = 'rgba(0, 204, 102, 0.08)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 204, 102, 0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 204, 102, 0.15)';
+                  e.currentTarget.style.background = 'transparent';
                 }}
               >
                 <Avatar
                   src={user?.avatar}
                   icon={<UserOutlined />}
-                  size={32}
+                  size={28}
                   style={{
                     backgroundColor: '#009944',
-                    border: '2px solid rgba(0, 204, 102, 0.4)',
                     flexShrink: 0,
                   }}
                 />
-                <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                  <div style={{
-                    color: '#ffffff',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    lineHeight: '18px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {user?.firstName} {user?.lastName}
-                  </div>
-                  <TierBadge role={user?.role} style={{ marginTop: 1 }} />
-                </div>
+                
               </div>
             </Dropdown>
           </div>
