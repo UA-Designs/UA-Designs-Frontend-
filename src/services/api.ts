@@ -75,8 +75,19 @@ class ApiService {
         return response;
       },
       async error => {
+        const requestUrl = String(error.config?.url || '');
+        const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+        const isPublicAuthPage =
+          window.location.pathname === '/login' ||
+          window.location.pathname === '/register' ||
+          window.location.pathname === '/forgot-password';
+
         // Handle different error types
         if (error.response?.status === 401) {
+          if (isAuthRequest || isPublicAuthPage) {
+            return Promise.reject(error);
+          }
+
           // Clear invalid token and redirect to login
           localStorage.removeItem('ua_designs_token');
           localStorage.removeItem('ua_designs_user');
