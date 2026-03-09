@@ -20,8 +20,8 @@ cd UA-Designs-Frontend-
 # 2. Install dependencies
 npm install
 
-# 3. Configure environment (optional — defaults work for local dev)
-cp .env.example .env   # if you have one, otherwise defaults point to localhost:5000
+# 3. Configure environment
+cp .env.example .env
 
 # 4. Start dev server
 npm run dev

@@ -8,6 +8,12 @@ class ApiService {
     const envBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
     const resolvedBaseUrl = envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : '/api';
 
+    if (import.meta.env.PROD && (!envBaseUrl || envBaseUrl.length === 0)) {
+      console.warn(
+        '[ApiService] VITE_API_BASE_URL is not set in production. Falling back to /api.'
+      );
+    }
+
     this.api = axios.create({
       baseURL: resolvedBaseUrl,
       timeout: 10000,

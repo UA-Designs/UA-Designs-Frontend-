@@ -587,8 +587,15 @@ class CostService {
 
   /** Build the full URL for serving a receipt file */
   getReceiptUrl(attachment: ExpenseAttachment): string {
-    const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-    return `${backendBase}${attachment.url}`;
+    if (/^https?:\/\//i.test(attachment.url)) {
+      return attachment.url;
+    }
+
+    const baseUrl = apiService.getBaseURL().replace(/\/+$/, '');
+    const backendBase = baseUrl.endsWith('/api') ? baseUrl.slice(0, -4) : baseUrl;
+    const normalizedPath = attachment.url.startsWith('/') ? attachment.url : `/${attachment.url}`;
+
+    return `${backendBase}${normalizedPath}`;
   }
 
   // GET /api/cost/expenses/summary/:projectId
