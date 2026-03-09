@@ -5,8 +5,11 @@ class ApiService {
   private api: AxiosInstance;
 
   constructor() {
+    const envBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    const resolvedBaseUrl = envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : '/api';
+
     this.api = axios.create({
-      baseURL: '/api',
+      baseURL: resolvedBaseUrl,
       timeout: 10000,
     });
 
@@ -144,7 +147,7 @@ class ApiService {
 
   // Get base URL
   getBaseURL(): string {
-    return '/api';
+    return this.api.defaults.baseURL || '/api';
   }
 }
 

@@ -112,7 +112,6 @@ export interface Mitigation {
   completedDate?: string;
   estimatedCost?: number;
   actualCost?: number;
-  effectiveness?: number;
   notes?: string;
   isDeleted: boolean;
   createdAt: string;
