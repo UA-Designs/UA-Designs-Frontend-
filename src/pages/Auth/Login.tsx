@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Space, Divider } from 'antd';
-import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginRequest } from '../../types';
+import Logo from '../../components/Logo/Logo';
 
 const { Title, Text } = Typography;
 
@@ -84,25 +85,10 @@ const Login: React.FC = () => {
           zIndex: 1,
         }}
       >
-        {/* Logo placeholder */}
+        {/* Brand logo */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: 'linear-gradient(135deg, #009944 0%, #007733 100%)',
-              borderRadius: '20px',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(0, 204, 102, 0.35)',
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#000000',
-            }}
-          >
-            UA
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <Logo size="large" showText={false} />
           </div>
           <Title
             level={2}
