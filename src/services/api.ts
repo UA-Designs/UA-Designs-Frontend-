@@ -6,7 +6,7 @@ class ApiService {
 
   constructor() {
     const envBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const resolvedBaseUrl = envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : '/api';
+    const resolvedBaseUrl = this.resolveBaseUrl(envBaseUrl);
 
     if (import.meta.env.PROD && (!envBaseUrl || envBaseUrl.length === 0)) {
       console.warn(
@@ -20,6 +20,37 @@ class ApiService {
     });
 
     this.setupInterceptors();
+  }
+
+  private resolveBaseUrl(envBaseUrl?: string): string {
+    if (!envBaseUrl || envBaseUrl.length === 0) {
+      return '/api';
+    }
+
+    const trimmed = envBaseUrl.trim().replace(/\/+$/, '');
+    const isAbsolute = /^https?:\/\//i.test(trimmed);
+
+    if (!isAbsolute) {
+      if (trimmed === '/api' || trimmed.endsWith('/api')) {
+        return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+      }
+      return `${trimmed.startsWith('/') ? trimmed : `/${trimmed}`}/api`;
+    }
+
+    try {
+      const url = new URL(trimmed);
+      const pathname = url.pathname.replace(/\/+$/, '');
+
+      if (!pathname || pathname === '/') {
+        url.pathname = '/api';
+      } else if (!pathname.endsWith('/api')) {
+        url.pathname = `${pathname}/api`;
+      }
+
+      return url.toString().replace(/\/+$/, '');
+    } catch {
+      return trimmed;
+    }
   }
 
   private setupInterceptors() {
