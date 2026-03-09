@@ -337,6 +337,13 @@ const Projects: React.FC = () => {
     }
   };
 
+  const openCreateModal = async () => {
+    setCreateModalVisible(true);
+    if (isAdmin && pmUsers.length === 0 && !pmLoading) {
+      await loadPmUsers();
+    }
+  };
+
   // ── table columns ────────────────────────────────────────────────────────
   const columns: ColumnsType<Project> = [
     {
@@ -546,7 +553,7 @@ const Projects: React.FC = () => {
       </Form.Item>
       {showPM && isAdmin && (
         <Form.Item name="projectManagerId" label="Project Manager">
-          <Select placeholder="Assign PM (optional)" allowClear loading={pmLoading} onFocus={loadPmUsers}>
+          <Select placeholder="Assign PM (optional)" allowClear loading={pmLoading}>
             {pmUsers.map(u => (
               <Option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</Option>
             ))}
@@ -573,7 +580,7 @@ const Projects: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setCreateModalVisible(true)}
+              onClick={openCreateModal}
               style={{ background: '#009944', borderColor: '#009944' }}
             >
               New Project

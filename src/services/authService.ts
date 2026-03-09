@@ -246,10 +246,18 @@ class AuthService {
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
       const response = await apiService.get<any>(`/users/role/${role}`);
-      const payload = response.data?.data ?? response.data;
-      if (Array.isArray(payload)) return payload;
-      if (payload && Array.isArray(payload.users)) return payload.users;
-      return [];
+      if (response?.data?.success === false) return [];
+
+      const payload: any = response.data?.data ?? response.data;
+      const users = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.users)
+          ? payload.users
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+      return users.map((u: any) => this.normalizeUser(u));
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch users by role');
     }
