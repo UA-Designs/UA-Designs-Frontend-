@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Project, ProjectStatus, ProjectPriority } from '../types';
 import { projectService } from '../services/projectService';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'pms_selected_project_id';
 
@@ -29,6 +30,7 @@ interface ProjectProviderProps {
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   children,
 }) => {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [selectedProject, setSelectedProjectState] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true); // true until first load completes
@@ -70,8 +72,17 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
 
   // Load projects once on mount
   useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!isAuthenticated) {
+      setProjects([]);
+      setSelectedProject(null);
+      setIsLoading(false);
+      return;
+    }
+
     loadProjects();
-  }, [loadProjects]);
+  }, [isAuthenticated, isAuthLoading, loadProjects, setSelectedProject]);
 
   const value: ProjectContextType = {
     selectedProject,
