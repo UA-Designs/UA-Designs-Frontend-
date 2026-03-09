@@ -62,6 +62,14 @@ class AuthService {
     return { ...u, id: u.id ?? u._id ?? u.userId };
   }
 
+  /** Support multiple backend response shapes for auth payloads. */
+  private extractAuthPayload(payload: any): { token?: string; user?: User } {
+    const token = payload?.data?.token ?? payload?.token;
+    const rawUser = payload?.data?.user ?? payload?.user;
+    const user = rawUser ? this.normalizeUser(rawUser) : undefined;
+    return { token, user };
+  }
+
   // Token management
   setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
@@ -93,14 +101,17 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       const response = await apiService.post<LoginResponse>('/auth/login', credentials);
-      
+
       if (response.data.success) {
-        const normalizedUser = this.normalizeUser(response.data.data.user);
-        this.setToken(response.data.data.token);
-        this.setUser(normalizedUser);
-        response.data.data.user = normalizedUser;
+        const { token, user } = this.extractAuthPayload(response.data);
+        if (!token || !user) {
+          throw new Error('Login succeeded but token or user is missing in response');
+        }
+        this.setToken(token);
+        this.setUser(user);
+        response.data.data = { ...(response.data.data || {}), token, user };
       }
-      
+
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || error.message || 'Login failed');
@@ -110,14 +121,17 @@ class AuthService {
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
       const response = await apiService.post<RegisterResponse>('/auth/register', userData);
-      
+
       if (response.data.success) {
-        const normalizedUser = this.normalizeUser(response.data.data.user);
-        this.setToken(response.data.data.token);
-        this.setUser(normalizedUser);
-        response.data.data.user = normalizedUser;
+        const { token, user } = this.extractAuthPayload(response.data);
+        if (!token || !user) {
+          throw new Error('Registration succeeded but token or user is missing in response');
+        }
+        this.setToken(token);
+        this.setUser(user);
+        response.data.data = { ...(response.data.data || {}), token, user };
       }
-      
+
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Registration failed');
