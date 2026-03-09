@@ -346,8 +346,12 @@ class AuthService {
     return this.hasRole(UserRole.PROJECT_MANAGER);
   }
 
+  isArchitect(): boolean {
+    return this.hasRole(UserRole.ARCHITECT);
+  }
+
   canManageUsers(): boolean {
-    return this.hasAnyRole([UserRole.ADMIN, UserRole.PROJECT_MANAGER]);
+    return this.hasAnyRole([UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.ARCHITECT]);
   }
 }
 

@@ -179,7 +179,10 @@ const ExpenseDetailDrawer: React.FC<DetailDrawerProps> = ({
 
   if (!expense) return null;
 
-  const canManage = currentUserRole === 'ADMIN' || currentUserRole === 'PROJECT_MANAGER';
+  const canManage =
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'PROJECT_MANAGER' ||
+    currentUserRole === 'ARCHITECT';
   const isOwner = expense.submittedBy === currentUserId;
   const canUploadReceipt = (isOwner || canManage) &&
     expense.status === ExpenseStatus.PENDING &&

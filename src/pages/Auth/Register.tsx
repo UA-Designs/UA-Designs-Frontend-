@@ -247,6 +247,7 @@ const Register: React.FC = () => {
               }}
             >
               <Option value={UserRole.PROJECT_MANAGER}>Project Manager</Option>
+              <Option value={UserRole.ARCHITECT}>Architect</Option>
               <Option value={UserRole.ENGINEER}>Engineer</Option>
               <Option value={UserRole.STAFF}>Staff</Option>
             </Select>

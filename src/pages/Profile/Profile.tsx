@@ -28,6 +28,7 @@ const { Title, Text } = Typography;
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: '#ff4d4f',
   PROJECT_MANAGER: '#1890ff',
+  ARCHITECT: '#722ed1',
   ENGINEER: '#52c41a',
   STAFF: '#9ca3af',
 };
