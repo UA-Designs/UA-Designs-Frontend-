@@ -76,7 +76,7 @@ function App() {
               <Route
                 path="users"
                 element={
-                  <ProtectedRoute access="ADMIN_ONLY">
+                  <ProtectedRoute access="ENGINEER_AND_ABOVE">
                     <Users />
                   </ProtectedRoute>
                 }
@@ -84,7 +84,7 @@ function App() {
               <Route
                 path="audit-log"
                 element={
-                  <ProtectedRoute access="ADMIN_ONLY">
+                  <ProtectedRoute access="ALL_EXCEPT_STAFF">
                     <AuditLog />
                   </ProtectedRoute>
                 }

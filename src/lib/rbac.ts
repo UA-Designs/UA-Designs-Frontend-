@@ -14,8 +14,10 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 // ── Access Levels ─────────────────────────────────────────────────────────────
 export const ACCESS_LEVELS = {
   ADMIN_ONLY:         [ROLES.ADMIN],
-  MANAGER_AND_ABOVE:  [ROLES.ADMIN, ROLES.PROJECT_MANAGER, ROLES.ARCHITECT],
+  MANAGER_AND_ABOVE:  [ROLES.ADMIN, ROLES.PROJECT_MANAGER, ROLES.ARCHITECT, ROLES.ENGINEER],
   ENGINEER_AND_ABOVE: [ROLES.ADMIN, ROLES.PROJECT_MANAGER, ROLES.ARCHITECT, ROLES.ENGINEER],
+  /** Audit Log: all roles except Staff */
+  ALL_EXCEPT_STAFF:  [ROLES.ADMIN, ROLES.PROJECT_MANAGER, ROLES.ARCHITECT, ROLES.ENGINEER],
   ALL_ROLES:          Object.values(ROLES),
 } as const;
 

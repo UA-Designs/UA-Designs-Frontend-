@@ -51,8 +51,8 @@ const roleColor = (role: string) =>
   ROLES.find(r => r.value === role)?.color ?? 'default';
 
 const Users: React.FC = () => {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const { user: currentUser, can } = useAuth();
+  const canManageUsers = can('ENGINEER_AND_ABOVE');
 
   const [usersData, setUsersData]   = useState<User[]>([]);
   const [stats, setStats]           = useState<any>(null);
@@ -207,7 +207,7 @@ const Users: React.FC = () => {
         icon: <EditOutlined />,
         onClick: () => openEditModal(record),
       },
-      ...(isAdmin ? [
+      ...(canManageUsers ? [
         {
           key: 'toggle',
           label: record.isActive ? 'Deactivate' : 'Activate',
@@ -329,7 +329,7 @@ const Users: React.FC = () => {
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={loadAll}>Refresh</Button>
-            {isAdmin && (
+            {canManageUsers && (
               <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal}>
                 Add User
               </Button>

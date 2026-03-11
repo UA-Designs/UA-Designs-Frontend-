@@ -138,7 +138,7 @@ const Layout: React.FC = () => {
       icon: <FileTextOutlined />,
       label: 'Reports',
     },
-    ...(can('ADMIN_ONLY') ? [
+    ...(can('ENGINEER_AND_ABOVE') ? [
       {
         key: '/users',
         icon: <TeamOutlined />,

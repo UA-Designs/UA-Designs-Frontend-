@@ -80,8 +80,7 @@ const Projects: React.FC = () => {
   const { projects: ctxProjects, setProjects: setCtxProjects } = useProject();
   const location = useLocation();
 
-  const isAdmin = can('ADMIN_ONLY');
-  const isPM    = can('MANAGER_AND_ABOVE');
+  const isPM = can('MANAGER_AND_ABOVE');
 
   // ── list state ──────────────────────────────────────────────────────────
   const [projects, setProjects]       = useState<Project[]>([]);
@@ -339,7 +338,7 @@ const Projects: React.FC = () => {
 
   const openCreateModal = async () => {
     setCreateModalVisible(true);
-    if (isAdmin && pmUsers.length === 0 && !pmLoading) {
+    if (isPM && pmUsers.length === 0 && !pmLoading) {
       await loadPmUsers();
     }
   };
@@ -465,7 +464,7 @@ const Projects: React.FC = () => {
             { key: 'edit', icon: <EditOutlined />, label: 'Edit Project', onClick: () => openEdit(record) },
             { key: 'status', icon: <SyncOutlined />, label: 'Update Status', onClick: () => openStatusModal(record) },
           ] : []),
-          ...(isAdmin ? [
+          ...(isPM ? [
             { key: 'assign', icon: <UserSwitchOutlined />, label: 'Assign Manager', onClick: () => openAssignModal(record) },
             { type: 'divider' as const },
             { key: 'delete', icon: <DeleteOutlined />, label: 'Delete Project', danger: true, onClick: () => handleDelete(record) },
@@ -551,7 +550,7 @@ const Projects: React.FC = () => {
       <Form.Item name="location" label="Location">
         <Input placeholder="Project location" />
       </Form.Item>
-      {showPM && isAdmin && (
+      {showPM && isPM && (
         <Form.Item name="projectManagerId" label="Project Manager">
           <Select placeholder="Assign PM (optional)" allowClear loading={pmLoading}>
             {pmUsers.map(u => (

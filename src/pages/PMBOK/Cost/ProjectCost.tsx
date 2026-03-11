@@ -179,10 +179,7 @@ const ExpenseDetailDrawer: React.FC<DetailDrawerProps> = ({
 
   if (!expense) return null;
 
-  const canManage =
-    currentUserRole === 'ADMIN' ||
-    currentUserRole === 'PROJECT_MANAGER' ||
-    currentUserRole === 'ARCHITECT';
+  const canManage = ['ADMIN', 'PROJECT_MANAGER', 'ARCHITECT', 'ENGINEER'].includes(currentUserRole || '');
   const isOwner = expense.submittedBy === currentUserId;
   const canUploadReceipt = (isOwner || canManage) &&
     expense.status === ExpenseStatus.PENDING &&
@@ -465,7 +462,7 @@ const ExpenseDetailDrawer: React.FC<DetailDrawerProps> = ({
               Mark Paid
             </Button>
           )}
-          {(expense.status === ExpenseStatus.PENDING || currentUserRole === 'ADMIN') && (
+          {(expense.status === ExpenseStatus.PENDING || canManage) && (
             <Button
               icon={<EditOutlined />}
               onClick={() => { onClose(); onEdit(expense); }}
@@ -474,7 +471,7 @@ const ExpenseDetailDrawer: React.FC<DetailDrawerProps> = ({
               Edit
             </Button>
           )}
-          {(expense.status !== ExpenseStatus.PAID || currentUserRole === 'ADMIN') && (
+          {(expense.status !== ExpenseStatus.PAID || canManage) && (
             <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
               Delete
             </Button>
@@ -961,12 +958,12 @@ const ProjectCost: React.FC = () => {
           {can('MANAGER_AND_ABOVE') && (
             <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditBudget(record)} />
           )}
-          {can('ADMIN_ONLY') && record.status === BudgetStatus.PLANNED && (
+          {can('MANAGER_AND_ABOVE') && record.status === BudgetStatus.PLANNED && (
             <Popconfirm title="Approve this budget?" onConfirm={() => handleApproveBudget(record.id)} okButtonProps={{ style: { background: '#009944' } }}>
               <Button type="link" icon={<CheckCircleOutlined />} size="small" style={{ color: '#52c41a' }} />
             </Popconfirm>
           )}
-          {can('ADMIN_ONLY') && record.status === BudgetStatus.APPROVED && (
+          {can('MANAGER_AND_ABOVE') && record.status === BudgetStatus.APPROVED && (
             <Popconfirm title="Close this budget?" onConfirm={() => handleCloseBudget(record.id)} okButtonProps={{ danger: true }}>
               <Button type="link" size="small" style={{ color: '#8c8c8c' }}>Close</Button>
             </Popconfirm>
