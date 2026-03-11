@@ -20,6 +20,7 @@ export interface User {
 
 export enum UserRole {
   ADMIN = 'ADMIN',
+  PROPRIETOR = 'PROPRIETOR',
   PROJECT_MANAGER = 'PROJECT_MANAGER',
   ARCHITECT = 'ARCHITECT',
   ENGINEER = 'ENGINEER',

@@ -41,12 +41,12 @@ const { Option } = Select;
 const { useBreakpoint } = Grid;
 
 const ROLES: { value: UserRole; label: string; color: string }[] = [
-  { value: UserRole.ADMIN,            label: 'Admin',            color: 'red'    },
-  { value: UserRole.PROJECT_MANAGER,  label: 'Project Manager',  color: 'blue'   },
-  { value: UserRole.ARCHITECT,        label: 'Architect',        color: 'purple' },
-  { value: UserRole.ENGINEER,         label: 'Engineer',          color: 'green'  },
-  { value: UserRole.STAFF,            label: 'Staff',             color: 'default'},
-
+  { value: UserRole.PROPRIETOR,      label: 'Proprietor',       color: 'magenta' },
+  { value: UserRole.ADMIN,           label: 'Admin',            color: 'red'     },
+  { value: UserRole.PROJECT_MANAGER, label: 'Project Manager',  color: 'blue'    },
+  { value: UserRole.ARCHITECT,       label: 'Architect',        color: 'purple'  },
+  { value: UserRole.ENGINEER,        label: 'Engineer',         color: 'green'   },
+  { value: UserRole.STAFF,           label: 'Staff',            color: 'default' },
 ];
 
 const roleColor = (role: string) =>

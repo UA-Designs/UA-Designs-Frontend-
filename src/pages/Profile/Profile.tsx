@@ -26,6 +26,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const { Title, Text } = Typography;
 
 const ROLE_COLORS: Record<string, string> = {
+  PROPRIETOR: '#f97316',
   ADMIN: '#ff4d4f',
   PROJECT_MANAGER: '#1890ff',
   ARCHITECT: '#722ed1',

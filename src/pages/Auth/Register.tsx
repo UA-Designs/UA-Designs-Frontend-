@@ -246,6 +246,7 @@ const Register: React.FC = () => {
                 height: '48px',
               }}
             >
+              <Option value={UserRole.PROPRIETOR}>Proprietor</Option>
               <Option value={UserRole.PROJECT_MANAGER}>Project Manager</Option>
               <Option value={UserRole.ARCHITECT}>Architect</Option>
               <Option value={UserRole.ENGINEER}>Engineer</Option>
