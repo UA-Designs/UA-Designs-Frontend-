@@ -262,6 +262,11 @@ const ProjectStakeholders: React.FC = () => {
   };
 
   // ---- Influence Matrix chart data ----
+  const safeNum = (n: unknown, fallback = 5): number => {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : fallback;
+  };
+
   const LEVEL_NUM: Record<string, number> = { LOW: 2, MEDIUM: 5, HIGH: 8 };
 
   const matrixPoints = React.useMemo(() => {
@@ -269,11 +274,14 @@ const ProjectStakeholders: React.FC = () => {
     const points: { name: string; x: number; y: number; strategy: string }[] = [];
     Object.values(influenceMatrix.matrix).forEach((cell: any) => {
       (cell.stakeholders || []).forEach((s: any) => {
+        const x = safeNum(LEVEL_NUM?.[cell?.interest], 5);
+        const y = safeNum(LEVEL_NUM?.[cell?.influence], 5);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
         points.push({
-          name: s.name,
-          x: LEVEL_NUM[cell.interest]  ?? 5,
-          y: LEVEL_NUM[cell.influence] ?? 5,
-          strategy: cell.strategy,
+          name: s?.name ?? 'Unnamed',
+          x,
+          y,
+          strategy: cell?.strategy ?? '',
         });
       });
     });
