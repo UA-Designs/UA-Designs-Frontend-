@@ -13,6 +13,8 @@ import { Empty, Typography } from 'antd';
 import type { ExpensesByCategory, ExpenseCategory } from '../../../types/analytics';
 import { ChartCard } from './ChartCard';
 import { formatCurrency, formatCurrencyShort } from '../../../utils/formatCurrency';
+import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
+import { getSafeDomain } from '../../../utils/chartUtils';
 
 const { Text } = Typography;
 
@@ -74,6 +76,8 @@ export const ExpensesByCategoryChart: React.FC<Props> = ({ expenses }) => {
       color: CATEGORY_COLORS[cat],
     }));
 
+  const xDomain = getSafeDomain(chartData.map((d) => d.amount), 0, 1);
+
   return (
     <ChartCard title="Expenses by Category">
       {chartData.length === 0 ? (
@@ -83,21 +87,22 @@ export const ExpensesByCategoryChart: React.FC<Props> = ({ expenses }) => {
           style={{ padding: '40px 0' }}
         />
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-            <XAxis
-              type="number"
-              domain={[0, 'auto']}
-              tick={{ fill: '#666', fontSize: 11 }}
-              tickFormatter={(v) => formatCurrencyShort(Number.isFinite(Number(v)) ? v : 0)}
-              axisLine={false}
-              tickLine={false}
-            />
+        <ChartErrorBoundary height={260}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+              <XAxis
+                type="number"
+                domain={xDomain}
+                tick={{ fill: '#666', fontSize: 11 }}
+                tickFormatter={(v) => formatCurrencyShort(Number.isFinite(Number(v)) ? v : 0)}
+                axisLine={false}
+                tickLine={false}
+              />
             <YAxis
               type="category"
               dataKey="name"
@@ -114,6 +119,7 @@ export const ExpensesByCategoryChart: React.FC<Props> = ({ expenses }) => {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </ChartErrorBoundary>
       )}
     </ChartCard>
   );

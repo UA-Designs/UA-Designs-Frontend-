@@ -9,6 +9,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CostVariance } from '../../types';
+import { ChartErrorBoundary } from './ChartErrorBoundary';
+import { getSafeDomain } from '../../utils/chartUtils';
 
 /** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
 const safeNum = (n: unknown): number => {
@@ -34,23 +36,30 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
     { name: 'Project D', planned: 120000, actual: 125000, variance: 4.2 },
   ];
 
+  const yDomain = getSafeDomain(
+    chartData.flatMap((d) => [d.planned, d.actual, d.variance]),
+    0,
+    1
+  );
+
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-        <XAxis
-          dataKey="name"
-          tick={{ fontSize: 12, fill: '#b3b3b3' }}
-          angle={-45}
-          textAnchor="end"
-          height={60}
-          axisLine={{ stroke: '#333' }}
-        />
-        <YAxis
-          domain={['auto', 'auto']}
-          tick={{ fontSize: 12, fill: '#b3b3b3' }}
-          axisLine={{ stroke: '#333' }}
-        />
+    <ChartErrorBoundary height={200}>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 12, fill: '#b3b3b3' }}
+            angle={-45}
+            textAnchor="end"
+            height={60}
+            axisLine={{ stroke: '#333' }}
+          />
+          <YAxis
+            domain={yDomain}
+            tick={{ fontSize: 12, fill: '#b3b3b3' }}
+            axisLine={{ stroke: '#333' }}
+          />
         <Tooltip
           contentStyle={{
             backgroundColor: '#1a1a1a',
@@ -83,6 +92,7 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
         />
       </LineChart>
     </ResponsiveContainer>
+    </ChartErrorBoundary>
   );
 };
 

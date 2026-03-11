@@ -44,6 +44,7 @@ import {
   Label,
 } from 'recharts';
 import ProjectSelector from '../../../components/common/ProjectSelector';
+import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
 import { useProject } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import {
@@ -595,8 +596,9 @@ const ProjectStakeholders: React.FC = () => {
                           {matrixPoints.length === 0 ? (
                             <Empty description="No influence matrix data available" />
                           ) : (
-                            <ResponsiveContainer width="100%" height={380}>
-                              <ScatterChart margin={{ top: 30, right: 30, bottom: 40, left: 40 }}>
+                            <ChartErrorBoundary height={380}>
+                              <ResponsiveContainer width="100%" height={380}>
+                                <ScatterChart margin={{ top: 30, right: 30, bottom: 40, left: 40 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                                 <XAxis type="number" dataKey="x" domain={[0, 10]} ticks={[2, 5, 8]} tick={{ fill: '#aaa' }} stroke="#555">
                                   <Label value="Interest →" fill="#aaa" position="insideBottom" offset={-20} />
@@ -632,8 +634,9 @@ const ProjectStakeholders: React.FC = () => {
                                     </g>
                                   );
                                 }} />
-                              </ScatterChart>
-                            </ResponsiveContainer>
+                                </ScatterChart>
+                              </ResponsiveContainer>
+                            </ChartErrorBoundary>
                           )}
                         </Card>
                       </Col>

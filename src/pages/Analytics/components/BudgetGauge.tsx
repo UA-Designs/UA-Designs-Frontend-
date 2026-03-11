@@ -4,6 +4,7 @@ import { Typography } from 'antd';
 import type { ProjectBudget } from '../../../types/analytics';
 import { ChartCard } from './ChartCard';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
 
 const { Text } = Typography;
 
@@ -47,8 +48,9 @@ export const BudgetGauge: React.FC<Props> = ({ budget }) => {
       <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Donut ring */}
         <div style={{ position: 'relative', width: 140, height: 140, flexShrink: 0 }}>
-          <ResponsiveContainer width={140} height={140}>
-            <PieChart>
+          <ChartErrorBoundary height={140} fallback={<div style={{ width: 140, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontSize: 12 }}>—</div>}>
+            <ResponsiveContainer width={140} height={140}>
+              <PieChart>
               <Pie
                 data={gaugeData}
                 dataKey="value"
@@ -65,8 +67,9 @@ export const BudgetGauge: React.FC<Props> = ({ budget }) => {
                   <Cell key={i} fill={entry.fill} />
                 ))}
               </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartErrorBoundary>
           {/* Center */}
           <div
             style={{

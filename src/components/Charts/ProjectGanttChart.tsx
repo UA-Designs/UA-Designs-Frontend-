@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { ProjectProgress } from '../../types';
+import { ChartErrorBoundary } from './ChartErrorBoundary';
 
 /** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
 const safeNum = (n: unknown): number => {
@@ -38,8 +39,9 @@ const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
   ];
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={chartData} layout="horizontal">
+    <ChartErrorBoundary height={200}>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={chartData} layout="horizontal">
         <CartesianGrid strokeDasharray="3 3" stroke="#333" />
         <XAxis 
           type="number" 
@@ -73,6 +75,7 @@ const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
         />
       </BarChart>
     </ResponsiveContainer>
+    </ChartErrorBoundary>
   );
 };
 

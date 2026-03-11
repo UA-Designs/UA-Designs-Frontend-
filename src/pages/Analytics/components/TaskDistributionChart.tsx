@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { Empty, Typography } from 'antd';
 import type { TaskDistribution, TaskStatus } from '../../../types/analytics';
 import { ChartCard } from './ChartCard';
+import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
 
 const { Text } = Typography;
 
@@ -69,9 +70,10 @@ export const TaskDistributionChart: React.FC<Props> = ({ distribution }) => {
           style={{ padding: '40px 0' }}
         />
       ) : (
-        <div style={{ position: 'relative' }}>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
+        <ChartErrorBoundary height={260}>
+          <div style={{ position: 'relative' }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
               <Pie
                 data={chartData}
                 dataKey="value"
@@ -93,9 +95,9 @@ export const TaskDistributionChart: React.FC<Props> = ({ distribution }) => {
                   <span style={{ color: '#aaa', fontSize: 12 }}>{value}</span>
                 )}
               />
-            </PieChart>
-          </ResponsiveContainer>
-          {/* Center label */}
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Center label */}
           <div
             style={{
               position: 'absolute',
@@ -109,7 +111,8 @@ export const TaskDistributionChart: React.FC<Props> = ({ distribution }) => {
             <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{total}</div>
             <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>Total</div>
           </div>
-        </div>
+          </div>
+        </ChartErrorBoundary>
       )}
     </ChartCard>
   );

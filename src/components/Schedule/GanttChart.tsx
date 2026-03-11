@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Empty, Typography, Tag } from 'antd';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { ChartErrorBoundary } from '../Charts/ChartErrorBoundary';
+import { getSafeDomain } from '../../utils/chartUtils';
 import { ScheduleTask, TaskDependency, TaskStatus } from '../../services/scheduleService';
 import dayjs from 'dayjs';
 
@@ -72,6 +74,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
     );
   }
 
+  const xValues = chartData.flatMap((d) => [d.offset, d.offset + d.duration]);
+  const xDomain = getSafeDomain(xValues, 0, 1);
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const d = payload[0]?.payload;
@@ -103,8 +108,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
           </div>
         ))}
       </div>
-      <ResponsiveContainer width="100%" height={Math.max(300, chartData.length * 40)}>
-        <BarChart
+      <ChartErrorBoundary height={Math.max(300, chartData.length * 40)}>
+        <ResponsiveContainer width="100%" height={Math.max(300, chartData.length * 40)}>
+          <BarChart
           layout="vertical"
           data={chartData}
           margin={{ top: 8, right: 40, left: 120, bottom: 8 }}
@@ -112,7 +118,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
         >
           <XAxis
             type="number"
-            domain={['dataMin', 'dataMax']}
+            domain={xDomain}
             tick={{ fill: '#888', fontSize: 11 }}
             label={{ value: 'Days from project start', position: 'insideBottom', offset: -4, fill: '#666', fontSize: 11 }}
           />
@@ -132,12 +138,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
-      {dependencies.length > 0 && (
-        <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-          {dependencies.length} task {dependencies.length === 1 ? 'dependency' : 'dependencies'} defined (arrows not shown in bar chart view)
-        </Text>
-      )}
+        </ResponsiveContainer>
+        {dependencies.length > 0 && (
+          <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
+            {dependencies.length} task {dependencies.length === 1 ? 'dependency' : 'dependencies'} defined (arrows not shown in bar chart view)
+          </Text>
+        )}
+      </ChartErrorBoundary>
     </div>
   );
 };
