@@ -19,6 +19,7 @@ import {
   Badge,
   Row,
   Col,
+  Grid,
 } from 'antd';
 import {
   PlusOutlined,
@@ -52,6 +53,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.NOT_STARTED]: 'default',
@@ -71,6 +73,8 @@ const priorityColors: Record<TaskPriority, string> = {
 const ProjectSchedule: React.FC = () => {
   const { selectedProject, isLoading: projectsLoading } = useProject();
   const { can } = useAuth();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks');
 
@@ -369,7 +373,7 @@ const ProjectSchedule: React.FC = () => {
   ];
 
   return (
-    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: 'flex-start' }}>
 
       {/* ══════════════ Main column ══════════════ */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -584,12 +588,12 @@ const ProjectSchedule: React.FC = () => {
 
       {/* ══════════════ Right sidebar: Quick Stats ══════════════ */}
       <div style={{
-        width: 240,
+        width: isMobile ? '100%' : 240,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        marginTop: 88,
+        marginTop: isMobile ? 0 : 88,
       }}>
           <Text style={{
             fontSize: 11,

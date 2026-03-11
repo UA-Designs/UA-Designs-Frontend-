@@ -19,6 +19,7 @@ import {
   Popconfirm,
   Statistic,
   InputNumber,
+  Grid,
 } from 'antd';
 import {
   PlusOutlined,
@@ -37,6 +38,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const ROLES: { value: UserRole; label: string; color: string }[] = [
   { value: UserRole.ADMIN,            label: 'Admin',            color: 'red'    },
@@ -52,6 +54,8 @@ const roleColor = (role: string) =>
 
 const Users: React.FC = () => {
   const { user: currentUser, can } = useAuth();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const canManageUsers = can('ENGINEER_AND_ABOVE');
 
   const [usersData, setUsersData]   = useState<User[]>([]);
@@ -289,7 +293,7 @@ const Users: React.FC = () => {
   ];
 
   return (
-    <div>
+    <div style={{ padding: isMobile ? '16px 8px' : '24px' }}>
       <div style={{ marginBottom: 24 }}>
         <Title level={2}>User Management</Title>
         <Text type="secondary">Manage system users and their permissions</Text>

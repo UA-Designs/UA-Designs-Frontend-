@@ -10,6 +10,12 @@ import {
 } from 'recharts';
 import { CostVariance } from '../../types';
 
+/** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 interface CostVarianceChartProps {
   data: CostVariance[];
 }
@@ -18,9 +24,9 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
   // Use mock data if no data provided or data is invalid
   const chartData = data && Array.isArray(data) && data.length > 0 ? data.map(item => ({
     name: item.projectName || 'Unnamed Project',
-    planned: item.plannedCost || 0,
-    actual: item.actualCost || 0,
-    variance: item.variance || 0,
+    planned: safeNum(item.plannedCost),
+    actual: safeNum(item.actualCost),
+    variance: safeNum(item.variance),
   })) : [
     { name: 'Project A', planned: 100000, actual: 95000, variance: -5 },
     { name: 'Project B', planned: 150000, actual: 160000, variance: 6.7 },
@@ -40,8 +46,9 @@ const CostVarianceChart: React.FC<CostVarianceChartProps> = ({ data }) => {
           height={60}
           axisLine={{ stroke: '#333' }}
         />
-        <YAxis 
-          tick={{ fontSize: 12, fill: '#b3b3b3' }} 
+        <YAxis
+          domain={['auto', 'auto']}
+          tick={{ fontSize: 12, fill: '#b3b3b3' }}
           axisLine={{ stroke: '#333' }}
         />
         <Tooltip

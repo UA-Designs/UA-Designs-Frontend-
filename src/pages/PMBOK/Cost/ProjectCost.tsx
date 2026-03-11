@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card, Typography, Row, Col, Button, Space, Table, Tag, Alert, Modal,
   Form, Input, Select, DatePicker, InputNumber, message, Spin,
-  Popconfirm, Drawer, Descriptions, Divider, Tooltip, Empty, Upload,
+  Popconfirm, Drawer, Descriptions, Divider, Tooltip, Empty, Upload, Grid,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined,
@@ -30,6 +30,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
+const { useBreakpoint } = Grid;
 
 // ── Theme constants ──────────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
@@ -672,6 +673,8 @@ const ProjectCost: React.FC = () => {
   const currentUserRole = (user as any)?.role ?? '';
   const currentUserId = (user as any)?.id ?? '';
   const { selectedProject, isLoading: projectsLoading } = useProject();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('costs');
 
@@ -1058,7 +1061,7 @@ const ProjectCost: React.FC = () => {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: 'flex-start' }}>
 
         {/* ── Main column ── */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1329,7 +1332,7 @@ const ProjectCost: React.FC = () => {
         </div>
 
         {/* ── Quick Stats sidebar ── */}
-          <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: 88 }}>
+          <div style={{ width: isMobile ? '100%' : 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: isMobile ? 0 : 88 }}>
             <Text style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Quick Stats
             </Text>

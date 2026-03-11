@@ -25,6 +25,7 @@ import {
   Tooltip,
   Divider,
   Badge,
+  Grid,
 } from 'antd';
 import {
   PlusOutlined,
@@ -54,6 +55,7 @@ import { useProject } from '../../contexts/ProjectContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -79,6 +81,8 @@ const Projects: React.FC = () => {
   const { user: currentUser, can } = useAuth();
   const { projects: ctxProjects, setProjects: setCtxProjects } = useProject();
   const location = useLocation();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
 
   const isPM = can('MANAGER_AND_ABOVE');
 
@@ -482,13 +486,13 @@ const Projects: React.FC = () => {
   // ── shared form fields ───────────────────────────────────────────────────
   const renderProjectFormFields = (showPM?: boolean) => (
     <>
-      <Row gutter={16}>
-        <Col span={12}>
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={12}>
           <Form.Item name="name" label="Project Name" rules={[{ required: true, message: 'Required' }]}>
             <Input placeholder="Project name" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name="clientName" label="Client Name" rules={[{ required: true, message: 'Required' }]}>
             <Input placeholder="Client name" />
           </Form.Item>
@@ -497,8 +501,8 @@ const Projects: React.FC = () => {
       <Form.Item name="description" label="Description">
         <Input.TextArea rows={2} placeholder="Project description" />
       </Form.Item>
-      <Row gutter={16}>
-        <Col span={12}>
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={12}>
           <Form.Item name="projectType" label="Project Type">
             <Select placeholder="Select type" allowClear>
               {Object.values(ProjectType).map(t => (
@@ -507,7 +511,7 @@ const Projects: React.FC = () => {
             </Select>
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name="priority" label="Priority" initialValue="medium">
             <Select>
               <Option value="low">Low</Option>
@@ -518,30 +522,30 @@ const Projects: React.FC = () => {
           </Form.Item>
         </Col>
       </Row>
-      <Row gutter={16}>
-        <Col span={12}>
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={12}>
           <Form.Item name="startDate" label="Start Date">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name="endDate" label="End Date">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Col>
       </Row>
-      <Row gutter={16}>
-        <Col span={8}>
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={8}>
           <Form.Item name="budget" label="Budget (₱)">
             <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col xs={24} sm={8}>
           <Form.Item name="clientEmail" label="Client Email">
             <Input placeholder="email@example.com" />
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col xs={24} sm={8}>
           <Form.Item name="clientPhone" label="Client Phone">
             <Input placeholder="+1 555 0000" />
           </Form.Item>
@@ -564,10 +568,10 @@ const Projects: React.FC = () => {
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px', background: 'transparent', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '16px 8px' : '24px', background: 'transparent', minHeight: '100vh' }}>
       {/* Header */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
+      <Row justify="space-between" align="middle" gutter={[12, 12]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={isPM ? undefined : 24}>
           <Title level={2} style={{ color: '#ffffff', margin: 0 }}>
             <ProjectOutlined style={{ color: '#009944', marginRight: 12 }} />
             Projects
@@ -575,7 +579,7 @@ const Projects: React.FC = () => {
           <Text type="secondary">Manage all projects across the organization</Text>
         </Col>
         {isPM && (
-          <Col>
+          <Col xs={24} md="auto">
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -617,24 +621,24 @@ const Projects: React.FC = () => {
       {/* Filters */}
       <Card
         style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginBottom: 16 }}
-        bodyStyle={{ padding: '16px 24px' }}
+        bodyStyle={{ padding: isMobile ? '12px 16px' : '16px 24px' }}
       >
-        <Row gutter={12} align="middle">
-          <Col flex="1">
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} sm={24} md={12} lg={10}>
             <Input
               prefix={<SearchOutlined style={{ color: '#aaa' }} />}
               placeholder="Search projects by name or client..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
               allowClear
-              style={{ background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }}
+              style={{ width: '100%', background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }}
             />
           </Col>
-          <Col>
+          <Col xs={12} sm={8} md={4}>
             <Select
               placeholder="Status"
               allowClear
-              style={{ width: 150 }}
+              style={{ width: '100%' }}
               value={filterStatus || undefined}
               onChange={v => { setFilterStatus(v || ''); setPage(1); }}
             >
@@ -645,11 +649,11 @@ const Projects: React.FC = () => {
               <Option value="cancelled">Cancelled</Option>
             </Select>
           </Col>
-          <Col>
+          <Col xs={12} sm={8} md={4}>
             <Select
               placeholder="Type"
               allowClear
-              style={{ width: 150 }}
+              style={{ width: '100%' }}
               value={filterType || undefined}
               onChange={v => { setFilterType(v || ''); setPage(1); }}
             >
@@ -658,8 +662,8 @@ const Projects: React.FC = () => {
               ))}
             </Select>
           </Col>
-          <Col>
-            <Button onClick={() => { setSearch(''); setFilterStatus(''); setFilterType(''); setPage(1); }}>
+          <Col xs={24} sm={8} md={4}>
+            <Button block={isMobile} onClick={() => { setSearch(''); setFilterStatus(''); setFilterType(''); setPage(1); }}>
               Reset
             </Button>
           </Col>
@@ -695,8 +699,9 @@ const Projects: React.FC = () => {
         open={createModalVisible}
         onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }}
         footer={null}
-        width={800}
-        styles={{ body: { background: '#1f1f1f', padding: '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
+        width={isMobile ? '100%' : 800}
+        style={isMobile ? { top: 10, maxWidth: 'calc(100vw - 24px)' } : undefined}
+        styles={{ body: { background: '#1f1f1f', padding: isMobile ? '16px' : '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
           {renderProjectFormFields(true)}
@@ -717,8 +722,9 @@ const Projects: React.FC = () => {
         open={editModalVisible}
         onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
         footer={null}
-        width={800}
-        styles={{ body: { background: '#1f1f1f', padding: '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
+        width={isMobile ? '100%' : 800}
+        style={isMobile ? { top: 10, maxWidth: 'calc(100vw - 24px)' } : undefined}
+        styles={{ body: { background: '#1f1f1f', padding: isMobile ? '16px' : '24px' }, header: { background: '#1f1f1f', borderBottom: '1px solid rgba(0,153,68,0.2)' }, content: { background: '#1f1f1f' } }}
       >
         <Form form={editForm} layout="vertical" onFinish={handleEdit}>
           {renderProjectFormFields()}

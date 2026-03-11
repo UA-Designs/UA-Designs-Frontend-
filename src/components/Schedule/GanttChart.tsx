@@ -6,6 +6,11 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 interface GanttChartProps {
   tasks: ScheduleTask[];
   dependencies?: TaskDependency[];
@@ -44,10 +49,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
         return {
           id: task.id,
           name: task.name.length > 25 ? task.name.slice(0, 22) + '...' : task.name,
-          offset,
-          duration,
+          offset: safeNum(offset),
+          duration: Math.max(1, safeNum(duration)),
           status: task.status,
-          progress: task.progress,
+          progress: safeNum(task.progress),
           startLabel: start.format('MMM DD'),
           endLabel: end.format('MMM DD'),
         };
@@ -107,6 +112,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
         >
           <XAxis
             type="number"
+            domain={['dataMin', 'dataMax']}
             tick={{ fill: '#888', fontSize: 11 }}
             label={{ value: 'Days from project start', position: 'insideBottom', offset: -4, fill: '#666', fontSize: 11 }}
           />

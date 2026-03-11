@@ -20,6 +20,7 @@ import {
   Space,
   Empty,
   List,
+  Grid,
 } from 'antd';
 import {
   PlusOutlined,
@@ -55,6 +56,7 @@ import {
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 // ---- Helpers ----
 
@@ -66,6 +68,8 @@ const influenceColor = (level: string) =>
 const ProjectStakeholders: React.FC = () => {
   const { selectedProject, isLoading: projectsLoading } = useProject();
   const { can } = useAuth();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('register');
 
@@ -387,7 +391,7 @@ const ProjectStakeholders: React.FC = () => {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: 'flex-start' }}>
 
         {/* ── Main column ── */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -684,7 +688,7 @@ const ProjectStakeholders: React.FC = () => {
         </div>
 
         {/* ── Quick Stats sidebar ── */}
-          <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: 88 }}>
+          <div style={{ width: isMobile ? '100%' : 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: isMobile ? 0 : 88 }}>
             <Text style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Quick Stats
             </Text>

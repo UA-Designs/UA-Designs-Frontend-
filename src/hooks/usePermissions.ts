@@ -17,7 +17,7 @@ export function useCanWriteData(): boolean {
   return useHasAccess('ENGINEER_AND_ABOVE');
 }
 
-/** Can the user perform admin-only actions (user management, audit log)? */
+/** True only for ADMIN (strict). Prefer useHasAccess('ENGINEER_AND_ABOVE') for user/audit access. */
 export function useIsAdmin(): boolean {
   return useHasAccess('ADMIN_ONLY');
 }

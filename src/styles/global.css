@@ -395,6 +395,12 @@ body {
   border: 1px solid #333333;
 }
 
+/* Allow horizontal scroll for tables on small screens */
+.ant-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Status indicators - Dark theme with neon accents */
 .status-indicator {
   display: inline-block;
@@ -464,15 +470,19 @@ body {
   border-bottom: none;
 }
 
-/* Mobile optimizations */
+/* Mobile optimizations - whole system responsive */
 @media (max-width: 768px) {
+  .ant-layout-header {
+    padding: 0 12px;
+  }
+
   .ant-table {
     font-size: 12px;
   }
 
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {
-    padding: 8px 4px;
+    padding: 8px 6px;
   }
 
   .ant-card-head-title {
@@ -485,6 +495,27 @@ body {
 
   .ant-statistic-content {
     font-size: 20px;
+  }
+
+  .form-container {
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .table-container {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .ant-layout-header {
+    padding: 0 8px;
+  }
+
+  .form-container {
+    padding: 12px;
   }
 }
 

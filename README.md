@@ -51,6 +51,16 @@ Vite loads env files in this priority order:
 
 The dev server proxies `/api` requests to `http://localhost:5000`. Make sure the backend is running before using the app. Contact the backend team for API access and credentials.
 
+**Required backend permissions (to avoid 403):** The frontend treats **Admin, Project Manager, Architect, and Engineer** as having full access to all features (including Users and Audit Log). The backend must allow these roles for the same routes, for example:
+
+| Route / scope | Allowed roles |
+|---------------|----------------|
+| `GET/POST /audit/logs*` | `ADMIN`, `PROJECT_MANAGER`, `ARCHITECT`, `ENGINEER` |
+| `GET/POST/PUT/DELETE /users*` | same as above |
+| Projects, cost, schedule, risk, stakeholders, resources | same as above |
+
+Restrict only **Staff** from audit and user-management routes if you want to mirror the frontend’s “all except Staff” behavior.
+
 ## Available Scripts
 
 ```bash

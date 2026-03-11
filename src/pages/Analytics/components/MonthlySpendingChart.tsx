@@ -43,10 +43,16 @@ const DarkTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+/** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 export const MonthlySpendingChart: React.FC<Props> = ({ data }) => {
-  const chartData = data.map((d) => ({
+  const chartData = (data ?? []).map((d) => ({
     month: formatMonthLabel(d.month),
-    amount: d.amount,
+    amount: safeNum(d.amount),
   }));
 
   return (
@@ -74,8 +80,9 @@ export const MonthlySpendingChart: React.FC<Props> = ({ data }) => {
               tickLine={false}
             />
             <YAxis
+              domain={[0, 'auto']}
               tick={{ fill: '#666', fontSize: 11 }}
-              tickFormatter={(v) => formatCurrencyShort(v)}
+              tickFormatter={(v) => formatCurrencyShort(Number.isFinite(Number(v)) ? v : 0)}
               axisLine={false}
               tickLine={false}
               width={55}

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Select, Typography, message, Spin } from 'antd';
+import { Select, Typography, message, Spin, Grid } from 'antd';
 import { Project } from '../../types';
 import { useProject } from '../../contexts/ProjectContext';
 import ProjectCreationModal from './ProjectCreationModal';
 
 const { Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 interface ProjectSelectorProps {
   onProjectChange?: (project: Project | null) => void;
@@ -19,10 +20,12 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   style = {},
 }) => {
   const { selectedProject, setSelectedProject, projects, isLoading } = useProject();
-  
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
+
   // Ensure projects is always an array
   const safeProjects = Array.isArray(projects) ? projects : [];
-  
+
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleProjectChange = (projectId: string) => {
@@ -60,11 +63,11 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   };
 
   return (
-    <div style={{ ...style }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+    <div style={{ width: isMobile ? '100%' : undefined, ...style }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, width: '100%' }}>
         {/* Dropdown */}
         {isLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 250 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: isMobile ? 0 : 250, width: isMobile ? '100%' : undefined }}>
             <Spin size="small" />
             <Text type="secondary" style={{ color: '#8c8c8c' }}>Loading projects...</Text>
           </div>
@@ -73,7 +76,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
             value={selectedProject?.id}
             onChange={handleProjectChange}
             placeholder={placeholder}
-            style={{ minWidth: 250, background: 'rgba(13, 13, 13, 0.8)' }}
+            style={{ width: isMobile ? '100%' : undefined, minWidth: isMobile ? 0 : 250, background: 'rgba(13, 13, 13, 0.8)' }}
             dropdownStyle={{
               background: 'rgba(26, 26, 26, 0.95)',
               border: '1px solid rgba(0, 204, 102, 0.3)',
@@ -115,8 +118,9 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
         {/* Inline info banner — side-by-side with the dropdown */}
         {selectedProject && (
           <div style={{
-            flex: 1,
+            flex: isMobile ? 'none' : 1,
             minWidth: 0,
+            width: isMobile ? '100%' : undefined,
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
@@ -131,7 +135,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
               {selectedProject.name}
             </span>
             <span style={{ color: '#4b5563' }}>•</span>
-            <span style={{ color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>
+            <span style={{ color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap', maxWidth: isMobile ? '100%' : 260 }}>
               {selectedProject.description || '—'}
             </span>
             <span style={{ color: '#4b5563' }}>•</span>

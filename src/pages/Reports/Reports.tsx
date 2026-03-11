@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Row, Col, Select, Typography, Button, Space, Tag, Spin,
-  Statistic, Empty, Table, message,
+  Statistic, Empty, Table, message, Grid,
 } from 'antd';
 import {
   FileTextOutlined, DownloadOutlined, ReloadOutlined,
@@ -19,6 +19,7 @@ import { scheduleService } from '../../services/scheduleService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 // ── styles ────────────────────────────────────────────────────────────────────
 const cardStyle = { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 };
@@ -588,6 +589,8 @@ const renderData = (data: any) => {
 // ── main component ────────────────────────────────────────────────────────────
 const Reports: React.FC = () => {
   const { selectedProject, setSelectedProject, projects, isLoading: projectsLoading } = useProject();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
 
   // per-report state: { data, loading, error, generated }
   const [reportState, setReportState]   = useState<Record<string, { data: any; loading: boolean; generated: boolean; error?: string }>>({});
@@ -616,7 +619,7 @@ const Reports: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px', background: 'transparent', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '16px 8px' : '24px', background: 'transparent', minHeight: '100vh' }}>
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>

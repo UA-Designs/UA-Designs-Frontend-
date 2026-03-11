@@ -11,6 +11,7 @@ import {
   message,
   Badge,
   Alert,
+  Grid,
 } from 'antd';
 import {
   SaveOutlined,
@@ -24,6 +25,7 @@ import { config } from '../../../env.config';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const SETTINGS_KEY = 'ua_designs_settings';
 
@@ -35,6 +37,8 @@ const defaultSettings = {
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [generalForm] = Form.useForm();
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
@@ -70,7 +74,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <div style={{ padding: isMobile ? '0 8px' : '0 4px' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <Title level={2} style={{ margin: 0 }}>

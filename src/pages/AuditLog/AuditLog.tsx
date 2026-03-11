@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card, Table, Typography, Space, Tag, Select, Button, Drawer,
   Row, Col, Spin, Alert, Tooltip, DatePicker, Descriptions, Badge,
-  Empty, Divider, Input,
+  Empty, Divider, Input, Grid,
 } from 'antd';
 import {
   AuditOutlined, ReloadOutlined, FilterOutlined, CloseOutlined,
@@ -22,6 +22,7 @@ dayjs.extend(relativeTime);
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
+const { useBreakpoint } = Grid;
 
 // ── Dark theme constants ─────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
@@ -96,6 +97,8 @@ const statusColor = (code: number) => {
 
 // ────────────────────────────────────────────────────────────────────────────
 const AuditLog: React.FC = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   // ── State ──────────────────────────────────────────────────────────────────
   const [entries, setEntries]       = useState<AuditLogEntry[]>([]);
   const [total, setTotal]           = useState(0);
@@ -289,7 +292,7 @@ const AuditLog: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <div style={{ padding: isMobile ? '0 8px 24px' : '0 0 24px' }}>
       {/* ── Page header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <Space>
@@ -431,6 +434,7 @@ const AuditLog: React.FC = () => {
           dataSource={entries}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           onRow={entry => ({ onClick: () => openDetail(entry), style: { cursor: 'pointer' } })}
           locale={{
             emptyText: (

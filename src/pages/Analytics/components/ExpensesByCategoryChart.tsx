@@ -40,6 +40,12 @@ interface Props {
   expenses: ExpensesByCategory;
 }
 
+/** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 const DarkTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -58,10 +64,11 @@ const DarkTooltip = ({ active, payload, label }: any) => {
 };
 
 export const ExpensesByCategoryChart: React.FC<Props> = ({ expenses }) => {
-  const chartData = (Object.entries(expenses) as [ExpenseCategory, number][])
-    .filter(([, v]) => v > 0)
-    .sort(([, a], [, b]) => b - a)
-    .map(([cat, amount]) => ({
+  const chartData = (Object.entries(expenses ?? {}) as [ExpenseCategory, number][])
+    .map(([cat, amount]) => ({ cat, amount: safeNum(amount) }))
+    .filter(({ amount }) => amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .map(({ cat, amount }) => ({
       name: CATEGORY_LABELS[cat],
       amount,
       color: CATEGORY_COLORS[cat],
@@ -85,8 +92,9 @@ export const ExpensesByCategoryChart: React.FC<Props> = ({ expenses }) => {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
             <XAxis
               type="number"
+              domain={[0, 'auto']}
               tick={{ fill: '#666', fontSize: 11 }}
-              tickFormatter={(v) => formatCurrencyShort(v)}
+              tickFormatter={(v) => formatCurrencyShort(Number.isFinite(Number(v)) ? v : 0)}
               axisLine={false}
               tickLine={false}
             />

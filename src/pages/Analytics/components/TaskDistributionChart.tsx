@@ -6,6 +6,11 @@ import { ChartCard } from './ChartCard';
 
 const { Text } = Typography;
 
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 const TASK_COLORS: Record<TaskStatus, string> = {
   NOT_STARTED: '#94a3b8',
   IN_PROGRESS: '#3b82f6',
@@ -44,15 +49,16 @@ const DarkTooltip = ({ active, payload }: any) => {
 };
 
 export const TaskDistributionChart: React.FC<Props> = ({ distribution }) => {
-  const chartData = (Object.entries(distribution) as [TaskStatus, number][])
-    .filter(([, v]) => v > 0)
-    .map(([status, count]) => ({
+  const chartData = (Object.entries(distribution ?? {}) as [TaskStatus, number][])
+    .map(([status, count]) => ({ status, value: safeNum(count) }))
+    .filter(({ value }) => value > 0)
+    .map(({ status, value }) => ({
       name: TASK_LABELS[status],
-      value: count,
+      value,
       fill: TASK_COLORS[status],
     }));
 
-  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
+  const total = chartData.reduce((a, b) => a + b.value, 0);
 
   return (
     <ChartCard title="Task Distribution">

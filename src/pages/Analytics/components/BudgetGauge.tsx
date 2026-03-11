@@ -24,8 +24,13 @@ const BudgetRow: React.FC<BudgetRowProps> = ({ label, value, valueColor = '#d1d5
   </div>
 );
 
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 export const BudgetGauge: React.FC<Props> = ({ budget }) => {
-  const pct = Math.min(budget.utilization, 100);
+  const pct = Math.min(Math.max(0, safeNum(budget?.utilization)), 100);
   const remaining = Math.max(100 - pct, 0);
 
   let ringColor = '#22c55e'; // green < 75%
@@ -33,8 +38,8 @@ export const BudgetGauge: React.FC<Props> = ({ budget }) => {
   else if (pct >= 75) ringColor = '#f59e0b';       // amber 75–100%
 
   const gaugeData = [
-    { value: pct, fill: ringColor },
-    { value: remaining, fill: 'rgba(255,255,255,0.06)' },
+    { value: safeNum(pct), fill: ringColor },
+    { value: safeNum(remaining), fill: 'rgba(255,255,255,0.06)' },
   ];
 
   return (
@@ -73,7 +78,7 @@ export const BudgetGauge: React.FC<Props> = ({ budget }) => {
             }}
           >
             <div style={{ fontSize: 20, fontWeight: 700, color: ringColor, lineHeight: 1 }}>
-              {budget.utilization.toFixed(0)}%
+              {safeNum(budget?.utilization).toFixed(0)}%
             </div>
             <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>used</div>
             {budget.isOverBudget && (
@@ -86,13 +91,13 @@ export const BudgetGauge: React.FC<Props> = ({ budget }) => {
 
         {/* Breakdown rows */}
         <div style={{ flex: 1, minWidth: 180 }}>
-          <BudgetRow label="Total Budget"  value={budget.totalBudget} />
-          <BudgetRow label="Spent"         value={budget.totalSpent}   valueColor={ringColor} />
-          <BudgetRow label="Pending"       value={budget.totalPending} valueColor="#f59e0b" />
+          <BudgetRow label="Total Budget"  value={safeNum(budget?.totalBudget)} />
+          <BudgetRow label="Spent"         value={safeNum(budget?.totalSpent)}   valueColor={ringColor} />
+          <BudgetRow label="Pending"       value={safeNum(budget?.totalPending)} valueColor="#f59e0b" />
           <BudgetRow
             label="Remaining"
-            value={budget.remaining}
-            valueColor={budget.isOverBudget ? '#ef4444' : '#22c55e'}
+            value={safeNum(budget?.remaining)}
+            valueColor={budget?.isOverBudget ? '#ef4444' : '#22c55e'}
           />
         </div>
       </div>

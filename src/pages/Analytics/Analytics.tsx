@@ -7,6 +7,7 @@ import {
   Skeleton,
   Alert,
   Tooltip,
+  Grid,
 } from 'antd';
 import {
   BarChartOutlined,
@@ -24,6 +25,7 @@ import { RecentActivityFeed } from './components/RecentActivityFeed';
 import { useProject } from '../../contexts/ProjectContext';
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const KpiSkeleton: React.FC = () => (
   <Row gutter={[16, 16]}>
@@ -61,6 +63,8 @@ const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 260 }) => (
 const Analytics: React.FC = () => {
   const navigate = useNavigate();
   const { projects } = useProject();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +91,7 @@ const Analytics: React.FC = () => {
   }, [fetchOverview]);
 
   return (
-    <div style={{ padding: '24px', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '16px 8px' : '24px', minHeight: '100vh' }}>
       <div
         style={{
           display: 'flex',

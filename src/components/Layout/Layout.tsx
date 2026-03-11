@@ -10,6 +10,8 @@ import {
   Typography,
   theme,
   Spin,
+  Drawer,
+  Grid,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -23,6 +25,7 @@ import {
   BellOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MenuOutlined,
   BarChartOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
@@ -38,9 +41,13 @@ import { TierBadge } from '../ui/TierBadge';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const Layout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user, logout, isLoading, can } = useAuth();
   const { notifications, unreadCount } = useNotification();
   const { projects, loadProjects } = useProject();
@@ -197,8 +204,44 @@ const Layout: React.FC = () => {
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key.startsWith('/')) {
       navigate(key);
+      if (isMobile) setMobileMenuOpen(false);
     }
   };
+
+  const sidebarContent = (
+    <>
+      <div
+        style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
+          background: 'rgba(0, 204, 102, 0.05)',
+          padding: '8px',
+          margin: '8px',
+          borderRadius: '12px',
+        }}
+      >
+        <Logo
+          size={isMobile ? 'medium' : (collapsed ? 'small' : 'medium')}
+          showText={isMobile || !collapsed}
+          className="sidebar-logo"
+        />
+      </div>
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        items={menuItems}
+        onClick={handleMenuClick}
+        style={{
+          borderRight: 0,
+          background: 'transparent',
+          margin: '8px',
+        }}
+      />
+    </>
+  );
 
   return (
     <AntLayout 
@@ -211,50 +254,41 @@ const Layout: React.FC = () => {
         `,
       }}
     >
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        width={256}
-        collapsedWidth={64}
-        style={{
-          background: 'rgba(13, 13, 13, 0.95)',
-          borderRight: '1px solid rgba(0, 204, 102, 0.2)',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
-        }}
-      >
-        <div
+      {!isMobile && (
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          width={256}
+          collapsedWidth={64}
           style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
-            background: 'rgba(0, 204, 102, 0.05)',
-            padding: '8px',
-            margin: '8px',
-            borderRadius: '12px',
+            background: 'rgba(13, 13, 13, 0.95)',
+            borderRight: '1px solid rgba(0, 204, 102, 0.2)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
           }}
         >
-          <Logo 
-            size={collapsed ? 'small' : 'medium'} 
-            showText={!collapsed}
-            className="sidebar-logo"
-          />
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{ 
-            borderRight: 0,
-            background: 'transparent',
-            margin: '8px',
+          {sidebarContent}
+        </Sider>
+      )}
+
+      {isMobile && (
+        <Drawer
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          placement="left"
+          width={280}
+          styles={{
+            body: {
+              padding: 0,
+              background: 'rgba(13, 13, 13, 0.98)',
+            },
+            header: { display: 'none' },
           }}
-        />
-      </Sider>
+        >
+          {sidebarContent}
+        </Drawer>
+      )}
 
       <AntLayout>
         <Header
@@ -275,8 +309,8 @@ const Layout: React.FC = () => {
         >
           <Button
               type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
+              icon={isMobile ? <MenuOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
+              onClick={() => (isMobile ? setMobileMenuOpen(true) : setCollapsed(!collapsed))}
               style={{ 
                 fontSize: '16px', 
                 width: 40, 
@@ -365,12 +399,12 @@ const Layout: React.FC = () => {
 
         <Content
           style={{
-            margin: '24px 16px',
+            margin: isMobile ? '12px 8px' : '24px 16px',
             padding: 0,
             background: 'transparent',
             borderRadius: '16px',
-            minHeight: 'calc(100vh - 112px)',
-            overflow: 'hidden',
+            minHeight: isMobile ? 'calc(100vh - 88px)' : 'calc(100vh - 112px)',
+            overflow: 'auto',
           }}
         >
           <Outlet />

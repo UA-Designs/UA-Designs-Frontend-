@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Spin, Alert } from 'antd';
+import { Row, Col, Card, Statistic, Spin, Alert, Grid } from 'antd';
 import {
   ProjectOutlined,
   CheckCircleOutlined,
@@ -65,7 +65,11 @@ import CostVarianceChart from '../../components/Charts/CostVarianceChart';
 import ProjectGanttChart from '../../components/Charts/ProjectGanttChart';
 import RiskMatrix from '../../components/Charts/RiskMatrix';
 
+const { useBreakpoint } = Grid;
+
 const Dashboard: React.FC = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projectProgress, setProjectProgress] = useState<ProjectProgress[]>([]);
   const [, setTaskProgress] = useState<TaskProgress[]>([]);
@@ -134,7 +138,7 @@ const Dashboard: React.FC = () => {
   return (
     <div 
       style={{ 
-        padding: '24px',
+        padding: isMobile ? '16px 8px' : '24px',
         minHeight: '100vh',
         background: `
           radial-gradient(circle at 20% 50%, rgba(0, 204, 102, 0.08) 0%, transparent 50%),

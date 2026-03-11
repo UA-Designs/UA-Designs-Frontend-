@@ -10,6 +10,12 @@ import {
 } from 'recharts';
 import { ProjectProgress } from '../../types';
 
+/** Ensure value is a finite number for Recharts (avoids DecimalError: NaN) */
+const safeNum = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? x : 0;
+};
+
 interface ProjectGanttChartProps {
   data: ProjectProgress[];
 }
@@ -20,7 +26,7 @@ const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ data }) => {
     const rawName = item.projectName || (item as any).name || 'Unnamed Project';
     return {
       name: rawName.length > 15 ? rawName.substring(0, 15) + '...' : rawName,
-      progress: item.progress || 0,
+      progress: Math.min(100, Math.max(0, safeNum(item.progress))),
       status: item.status || 'Unknown',
     };
   }) : [

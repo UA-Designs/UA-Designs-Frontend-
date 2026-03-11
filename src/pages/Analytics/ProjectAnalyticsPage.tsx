@@ -8,6 +8,7 @@ import {
   Alert,
   Select,
   Space,
+  Grid,
 } from 'antd';
 import {
   BarChartOutlined,
@@ -27,6 +28,7 @@ import { useProject } from '../../contexts/ProjectContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 260 }) => (
   <div
@@ -46,6 +48,8 @@ const ProjectAnalyticsPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { projects } = useProject();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
 
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +80,7 @@ const ProjectAnalyticsPage: React.FC = () => {
   }, [projectId, fetchAnalytics]);
 
   return (
-    <div style={{ padding: '24px', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '16px 8px' : '24px', minHeight: '100vh' }}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
         style={{
@@ -107,12 +111,12 @@ const ProjectAnalyticsPage: React.FC = () => {
           </Text>
         </div>
 
-        <Space wrap>
+        <Space wrap style={isMobile ? { width: '100%' } : undefined}>
           {/* Project switcher */}
           <Select
             value={projectId}
             onChange={(val) => navigate(`/projects/${val}/analytics`)}
-            style={{ width: 220 }}
+            style={{ width: isMobile ? '100%' : 220, minWidth: isMobile ? 0 : 220 }}
             placeholder="Switch project"
           >
             {projects.map((p) => (

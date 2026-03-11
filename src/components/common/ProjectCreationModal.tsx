@@ -11,6 +11,7 @@ import {
   message,
   Row,
   Col,
+  Grid,
 } from 'antd';
 import { Project, ProjectStatus, ProjectPriority, ProjectType } from '../../types';
 import { projectService } from '../../services/projectService';
@@ -18,6 +19,18 @@ import { useProject } from '../../contexts/ProjectContext';
 
 const { TextArea } = Input;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
+
+/** Label with red asterisk for required fields */
+const requiredLabel = (text: string) => (
+  <span style={{ color: '#ffffff', fontWeight: '500' }}>
+    {text} <span style={{ color: '#ff4d4f', marginLeft: 2 }}>*</span>
+  </span>
+);
+
+const optionalLabel = (text: string) => (
+  <span style={{ color: '#ffffff', fontWeight: '500' }}>{text}</span>
+);
 
 interface ProjectCreationModalProps {
   visible: boolean;
@@ -33,6 +46,8 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { projects, setProjects } = useProject();
+  const screens = useBreakpoint();
+  const isMobile = !screens.sm;
 
   const handleSubmit = async (values: any) => {
     try {
@@ -78,9 +93,12 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
       open={visible}
       onCancel={handleCancel}
       footer={null}
-      width={800}
+      width={isMobile ? '100%' : 800}
+      centered
       style={{
-        top: 20,
+        top: isMobile ? 10 : 20,
+        maxWidth: 'calc(100vw - 24px)',
+        paddingBottom: 0,
       }}
       styles={{
         body: {
@@ -88,6 +106,7 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
           border: '1px solid rgba(0, 204, 102, 0.2)',
           borderRadius: '16px',
           paddingBottom: '24px',
+          ...(isMobile ? { maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' } : {}),
         },
         header: {
           background: 'rgba(26, 26, 26, 0.95)',
@@ -101,14 +120,14 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
         layout="vertical"
         onFinish={handleSubmit}
         style={{
-          padding: '20px 0',
+          padding: isMobile ? '16px 0 20px' : '20px 0',
         }}
       >
-        <Row gutter={16}>
-          <Col span={12}>
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="name"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Project Name</span>}
+              label={requiredLabel('Project Name')}
               rules={[{ required: true, message: 'Please enter project name' }]}
             >
               <Input
@@ -121,10 +140,10 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="projectType"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Project Type</span>}
+              label={requiredLabel('Project Type')}
               rules={[{ required: true, message: 'Please select project type' }]}
             >
               <Select
@@ -149,7 +168,7 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
 
         <Form.Item
           name="description"
-          label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Description</span>}
+          label={requiredLabel('Description')}
           rules={[{ required: true, message: 'Please enter project description' }]}
         >
           <TextArea
@@ -163,11 +182,11 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
           />
         </Form.Item>
 
-        <Row gutter={16}>
-          <Col span={8}>
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={8}>
             <Form.Item
               name="priority"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Priority</span>}
+              label={requiredLabel('Priority')}
               rules={[{ required: true, message: 'Please select priority' }]}
             >
               <Select
@@ -187,10 +206,10 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={8}>
             <Form.Item
               name="startDate"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Start Date</span>}
+              label={requiredLabel('Start Date')}
               rules={[{ required: true, message: 'Please select start date' }]}
             >
               <DatePicker
@@ -203,10 +222,10 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={8}>
             <Form.Item
               name="endDate"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>End Date</span>}
+              label={requiredLabel('End Date')}
               rules={[{ required: true, message: 'Please select end date' }]}
             >
               <DatePicker
@@ -223,7 +242,7 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
 
         <Form.Item
           name="budget"
-          label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Budget</span>}
+          label={requiredLabel('Budget')}
           rules={[{ required: true, message: 'Please enter budget' }]}
         >
           <InputNumber
@@ -239,11 +258,11 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
           />
         </Form.Item>
 
-        <Row gutter={16}>
-          <Col span={12}>
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="clientName"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Client Name</span>}
+              label={requiredLabel('Client Name')}
               rules={[{ required: true, message: 'Please enter client name' }]}
             >
               <Input
@@ -256,13 +275,13 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="clientEmail"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Client Email</span>}
+              label={optionalLabel('Client Email (optional)')}
             >
               <Input
-                placeholder="Enter client email"
+                placeholder="Enter client email (optional)"
                 style={{
                   background: 'rgba(13, 13, 13, 0.8)',
                   border: '1px solid rgba(0, 204, 102, 0.3)',
@@ -273,14 +292,14 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="clientPhone"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Client Phone</span>}
+              label={optionalLabel('Client Phone (optional)')}
             >
               <Input
-                placeholder="Enter client phone"
+                placeholder="Enter client phone (optional)"
                 style={{
                   background: 'rgba(13, 13, 13, 0.8)',
                   border: '1px solid rgba(0, 204, 102, 0.3)',
@@ -289,10 +308,10 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="location"
-              label={<span style={{ color: '#ffffff', fontWeight: '500' }}>Project Location</span>}
+              label={optionalLabel('Project Location')}
             >
               <Input
                 placeholder="Enter project location"
