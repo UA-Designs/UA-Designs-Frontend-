@@ -13,6 +13,8 @@ import {
   Spin,
   message,
   Space,
+  Table,
+  Empty,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -23,9 +25,13 @@ import {
   BarChartOutlined,
   LineChartOutlined,
   FundOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { projectService, ProjectDashboardData } from '../../services/projectService';
+import { costService, Budget, Expense } from '../../services/costService';
+import { resourceService } from '../../services/resourceService';
 import { Project } from '../../types';
 
 const { Text } = Typography;
@@ -34,20 +40,24 @@ const { Option } = Select;
 const statusConfig: Record<string, { color: string; label: string }> = {
   planning:    { color: 'blue',    label: 'Planning' },
   active:      { color: 'green',   label: 'Active' },
-  in_progress: { color: 'cyan',    label: 'In Progress' },
-  on_hold:     { color: 'orange',  label: 'On Hold' },
-  completed:   { color: 'purple',  label: 'Completed' },
-  cancelled:   { color: 'red',     label: 'Cancelled' },
+  in_progress: { color: 'cyan',   label: 'In Progress' },
+  on_hold:     { color: 'orange', label: 'On Hold' },
+  completed:   { color: 'purple', label: 'Completed' },
+  cancelled:   { color: 'red',    label: 'Cancelled' },
 };
 
 const formatCurrency = (v?: number) =>
-  v !== undefined ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
+  v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [dashboardData, setDashboardData] = useState<ProjectDashboardData | null>(null);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [expensesResult, setExpensesResult] = useState<{ expenses: Expense[]; pagination: { totalItems: number } }>({ expenses: [], pagination: { totalItems: 0 } });
+  const [allocations, setAllocations] = useState<any[]>([]);
+  const [costOverview, setCostOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,13 +66,22 @@ const ProjectDetail: React.FC = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [proj, dash] = await Promise.all([
+        const [proj, dash, budgetsRes, expensesRes, allocsRes, overviewRes] = await Promise.all([
           projectService.getProjectById(projectId),
           projectService.getProjectDashboard(projectId).catch(() => null),
+          costService.getBudgets().catch(() => []),
+          costService.getExpensesPaginated({ projectId, limit: 5 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
+          resourceService.getAllocations(projectId).catch(() => []),
+          costService.getCostOverview(projectId).catch(() => null),
         ]);
         if (!cancelled) {
           setProject(proj);
           setDashboardData(dash);
+          const allBudgets = Array.isArray(budgetsRes) ? budgetsRes : [];
+          setBudgets(allBudgets.filter((b: Budget) => b.projectId === projectId));
+          setExpensesResult(expensesRes);
+          setAllocations(Array.isArray(allocsRes) ? allocsRes : []);
+          setCostOverview(overviewRes);
         }
       } catch (err: any) {
         if (!cancelled) message.error(err.message || 'Failed to load project');
@@ -84,13 +103,35 @@ const ProjectDetail: React.FC = () => {
 
   const statusCfg = statusConfig[project.status] || { color: 'default', label: project.status };
   const budget = project.budget ?? 0;
-  const spent = (project as any).actualCost ?? 0;
+  const spent = (project as any).actualCost ?? costOverview?.totalCosts ?? 0;
   const remaining = Math.max(0, budget - spent);
   const pctUsed = budget ? Math.round((spent / budget) * 100) : 0;
   const teamMembers = (project as any).teamMembers ?? [];
-  const boqCount = dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? 0;
-  const usageCount = (dashboardData as any)?.usageRecordsCount ?? 0;
-  const expenseCount = (dashboardData as any)?.expenseCount ?? 0;
+
+  const boqCount = dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
+  const usageCount = (dashboardData as any)?.usageRecordsCount ?? allocations.length;
+  const expenseCount = (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
+
+  const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });
+  const goToResources = () => navigate('/pmbok/resources', { state: { projectId } });
+
+  const boqColumns: ColumnsType<Budget> = [
+    { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
+    { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color="blue">{s || '—'}</Tag> },
+  ];
+
+  const allocationColumns: ColumnsType<any> = [
+    { title: 'Resource', key: 'resource', render: (_, r) => <Text style={{ color: '#fff' }}>{(r.resourceName || r.resourceId || r.id) || '—'}</Text> },
+    { title: 'Type', dataIndex: 'resourceType', key: 'resourceType', render: (t: string) => <Text style={{ color: '#bbb' }}>{t || '—'}</Text> },
+  ];
+
+  const expenseColumns: ColumnsType<Expense> = [
+    { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
+    { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
+    { title: 'Date', dataIndex: 'date', key: 'date', render: (d: string) => <Text style={{ color: '#bbb' }}>{d ? dayjs(d).format('M/D/YYYY') : '—'}</Text> },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color="green">{s || '—'}</Tag> },
+  ];
 
   const tabItems = [
     {
@@ -128,10 +169,126 @@ const ProjectDetail: React.FC = () => {
         </Row>
       ),
     },
-    { key: 'boq', label: <>BOQ <BankOutlined /></>, children: <div style={{ padding: 24, color: '#aaa' }}>BOQ content — use PMBOK Cost / BOQ from navigation.</div> },
-    { key: 'site', label: <>Site Usage <BarChartOutlined /></>, children: <div style={{ padding: 24, color: '#aaa' }}>Site usage — link to resources or schedule.</div> },
-    { key: 'variance', label: <>Variance <LineChartOutlined /></>, children: <div style={{ padding: 24, color: '#aaa' }}>Variance — link to Cost / Variance.</div> },
-    { key: 'expenses', label: <>Expenses <FundOutlined /></>, children: <div style={{ padding: 24, color: '#aaa' }}>Expenses — use PMBOK Cost from navigation.</div> },
+    {
+      key: 'boq',
+      label: <>BOQ <BankOutlined /></>,
+      children: (
+        <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginTop: 16 }}>
+          {budgets.length > 0 ? (
+            <>
+              <Table
+                rowKey="id"
+                dataSource={budgets}
+                columns={boqColumns}
+                pagination={false}
+                size="small"
+                style={{ background: 'transparent' }}
+              />
+              <Button type="link" icon={<RightOutlined />} onClick={goToCost} style={{ color: '#009944', marginTop: 8 }}>
+                Open in Cost Management
+              </Button>
+            </>
+          ) : (
+            <>
+              <Empty description="No BOQ / budgets for this project" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Button type="primary" onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>
+                Add in Cost Management
+              </Button>
+            </>
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: 'site',
+      label: <>Site Usage <BarChartOutlined /></>,
+      children: (
+        <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginTop: 16 }}>
+          {allocations.length > 0 ? (
+            <>
+              <Table
+                rowKey="id"
+                dataSource={allocations}
+                columns={allocationColumns}
+                pagination={false}
+                size="small"
+                style={{ background: 'transparent' }}
+              />
+              <Button type="link" icon={<RightOutlined />} onClick={goToResources} style={{ color: '#009944', marginTop: 8 }}>
+                Open in Resources
+              </Button>
+            </>
+          ) : (
+            <>
+              <Empty description="No usage records for this project" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Button type="primary" onClick={goToResources} style={{ background: '#009944', borderColor: '#009944' }}>
+                Manage in Resources
+              </Button>
+            </>
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: 'variance',
+      label: <>Variance <LineChartOutlined /></>,
+      children: (
+        <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginTop: 16 }}>
+          {costOverview ? (
+            <Space direction="vertical" size={12}>
+              <Text style={{ color: '#aaa' }}>Total Budget: <Text strong style={{ color: '#fff' }}>{formatCurrency(costOverview.totalBudget)}</Text></Text>
+              <Text style={{ color: '#aaa' }}>Total Cost: <Text strong style={{ color: '#fff' }}>{formatCurrency(costOverview.totalCosts)}</Text></Text>
+              <Text style={{ color: '#aaa' }}>Variance: <Text strong style={{ color: (costOverview.variance ?? 0) >= 0 ? '#00ff88' : '#ff4d4f' }}>{formatCurrency(costOverview.variance)}</Text></Text>
+              <Button type="link" icon={<RightOutlined />} onClick={goToCost} style={{ color: '#009944', padding: 0 }}>
+                Open in Cost Management
+              </Button>
+            </Space>
+          ) : (
+            <>
+              <Empty description="No variance data yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Button type="primary" onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>
+                View in Cost Management
+              </Button>
+            </>
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: 'expenses',
+      label: <>Expenses <FundOutlined /></>,
+      children: (
+        <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginTop: 16 }}>
+          {expensesResult.expenses?.length > 0 ? (
+            <>
+              <Table
+                rowKey="id"
+                dataSource={expensesResult.expenses}
+                columns={expenseColumns}
+                pagination={false}
+                size="small"
+                style={{ background: 'transparent' }}
+              />
+              {(expensesResult.pagination?.totalItems ?? 0) > 5 && (
+                <Text style={{ color: '#aaa', display: 'block', marginTop: 8 }}>
+                  Showing 5 of {expensesResult.pagination.totalItems} expenses
+                </Text>
+              )}
+              <Button type="link" icon={<RightOutlined />} onClick={goToCost} style={{ color: '#009944', marginTop: 8 }}>
+                View all in Cost Management
+              </Button>
+            </>
+          ) : (
+            <>
+              <Empty description="No expenses for this project" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Button type="primary" onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>
+                Add in Cost Management
+              </Button>
+            </>
+          )}
+        </Card>
+      ),
+    },
   ];
 
   return (

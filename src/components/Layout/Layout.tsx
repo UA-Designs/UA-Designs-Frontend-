@@ -32,6 +32,7 @@ import {
   UsergroupAddOutlined,
   ToolOutlined,
   AuditOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -109,6 +110,11 @@ const Layout: React.FC = () => {
       key: '/projects',
       icon: <ProjectOutlined />,
       label: 'Projects',
+    },
+    {
+      key: '/materials',
+      icon: <AppstoreOutlined />,
+      label: 'Materials',
     },
     {
       key: '/analytics',

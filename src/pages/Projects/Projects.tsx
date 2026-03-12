@@ -199,12 +199,12 @@ const Projects: React.FC = () => {
         startDate: values.startDate?.format('YYYY-MM-DD') || null,
         endDate: values.endDate?.format('YYYY-MM-DD') || null,
         budget: values.budget || 0,
-        clientEmail: values.clientEmail || '',
-        clientPhone: values.clientPhone || '',
         location: values.location || '',
         projectType: values.projectType || null,
         priority: values.priority || 'medium',
       };
+      if (values.clientEmail?.trim()) payload.clientEmail = values.clientEmail.trim();
+      if (values.clientPhone?.trim()) payload.clientPhone = values.clientPhone.trim();
       if (values.projectManagerId) payload.projectManagerId = values.projectManagerId;
 
       const newProject = await projectService.createProject(payload);
@@ -251,12 +251,12 @@ const Projects: React.FC = () => {
         startDate: values.startDate?.format('YYYY-MM-DD') || null,
         endDate: values.endDate?.format('YYYY-MM-DD') || null,
         budget: values.budget || 0,
-        clientEmail: values.clientEmail || '',
-        clientPhone: values.clientPhone || '',
         location: values.location || '',
         projectType: values.projectType || null,
         priority: values.priority || 'medium',
       };
+      if (values.clientEmail?.trim()) payload.clientEmail = values.clientEmail.trim();
+      if (values.clientPhone?.trim()) payload.clientPhone = values.clientPhone.trim();
       await projectService.updateProject(selectedProject.id, payload);
       message.success('Project updated successfully');
       editForm.resetFields();
@@ -410,12 +410,12 @@ const Projects: React.FC = () => {
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item name="clientEmail" label="Client Email">
+          <Form.Item name="clientEmail" label="Client Email (optional)">
             <Input placeholder="email@example.com" />
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item name="clientPhone" label="Client Phone">
+          <Form.Item name="clientPhone" label="Client Phone (optional)">
             <Input placeholder="+1 555 0000" />
           </Form.Item>
         </Col>

@@ -53,19 +53,19 @@ const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
     try {
       setLoading(true);
       
-      const projectData = {
+      const projectData: any = {
         name: values.name,
         clientName: values.clientName,
         description: values.description || '',
         startDate: values.startDate?.format('YYYY-MM-DD') || null,
         endDate: values.endDate?.format('YYYY-MM-DD') || null,
         budget: values.budget || 0,
-        clientEmail: values.clientEmail || '',
-        clientPhone: values.clientPhone || '',
         location: values.location || '',
         projectType: values.projectType || 'residential',
         priority: values.priority || 'medium'
       };
+      if (values.clientEmail?.trim()) projectData.clientEmail = values.clientEmail.trim();
+      if (values.clientPhone?.trim()) projectData.clientPhone = values.clientPhone.trim();
 
       const newProject = await projectService.createProject(projectData);
       
