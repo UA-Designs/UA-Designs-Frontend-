@@ -474,11 +474,9 @@ const ExpenseDetailDrawer: React.FC<DetailDrawerProps> = ({
               Edit
             </Button>
           )}
-          {(expense.status !== ExpenseStatus.PAID || canManage) && (
-            <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
-              Delete
-            </Button>
-          )}
+          <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+            Delete
+          </Button>
         </Space>
       </Drawer>
 
