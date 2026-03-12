@@ -358,7 +358,7 @@ const ProjectDetail: React.FC = () => {
   const projectStartDate = project.startDate ?? projAny.start_date ?? projAny.planned_start_date ?? '';
   const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
-  const boqCount = costs.length || dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
+  const boqCount = costs.length || (dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length);
   const expenseCount = expensesResult.expenses?.length ?? (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
   const totalExpenseAmount = expensesSum;
 
