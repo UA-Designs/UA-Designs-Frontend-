@@ -290,7 +290,8 @@ const ProjectDetail: React.FC = () => {
     if (!projectId) return;
     try {
       const list = await costService.getCosts();
-      setCosts((list || []).filter((c: Cost) => c.projectId === projectId));
+      const projectCosts = (list || []).filter((c: Cost) => (c.projectId ?? (c as any).project_id) === projectId);
+      setCosts(projectCosts);
     } catch {
       // ignore
     }
@@ -320,7 +321,7 @@ const ProjectDetail: React.FC = () => {
           setExpensesResult(expensesRes);
           setCostOverview(overviewRes);
           const allCosts = Array.isArray(costsRes) ? costsRes : [];
-          setCosts(allCosts.filter((c: Cost) => c.projectId === projectId));
+          setCosts(allCosts.filter((c: Cost) => (c.projectId ?? (c as any).project_id) === projectId));
           setCostBreakdown(breakdownRes);
         }
       } catch (err: any) {
@@ -351,16 +352,17 @@ const ProjectDetail: React.FC = () => {
     const laborFromBreakdown = Number((breakdown as any).labor ?? (breakdown as any).Labor ?? 0);
     const equipmentFromBreakdown = Number((breakdown as any).equipment ?? (breakdown as any).Equipment ?? 0);
 
-    const materialFromCosts = costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const laborFromCosts = costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const equipmentFromCosts = costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const typeIs = (c: Cost, t: string) => (c.type || '').toString().toUpperCase() === t;
+    const materialFromCosts = costs.filter(c => typeIs(c, 'MATERIAL')).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const laborFromCosts = costs.filter(c => typeIs(c, 'LABOR')).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const equipmentFromCosts = costs.filter(c => typeIs(c, 'EQUIPMENT')).reduce((s, c) => s + (c.amount ?? 0), 0);
 
     const material = materialFromBreakdown > 0 ? materialFromBreakdown : materialFromCosts;
     const labor = laborFromBreakdown > 0 ? laborFromBreakdown : laborFromCosts;
     const equipment = equipmentFromBreakdown > 0 ? equipmentFromBreakdown : equipmentFromCosts;
-    const materialCount = costs.filter(c => c.type === CostType.MATERIAL).length;
-    const laborCount = costs.filter(c => c.type === CostType.LABOR).length;
-    const equipmentCount = costs.filter(c => c.type === CostType.EQUIPMENT).length;
+    const materialCount = costs.filter(c => typeIs(c, 'MATERIAL')).length;
+    const laborCount = costs.filter(c => typeIs(c, 'LABOR')).length;
+    const equipmentCount = costs.filter(c => typeIs(c, 'EQUIPMENT')).length;
     return {
       material: typeof material === 'number' ? material : 0,
       labor: typeof labor === 'number' ? labor : 0,
@@ -461,8 +463,7 @@ const ProjectDetail: React.FC = () => {
     { category: 'Labor', budget: laborBudget, actual: actualByCat.labor },
     { category: 'Equipment', budget: equipmentBudget, actual: actualByCat.equipment },
   ];
-  const chartMaxBudget = Math.max(...varianceChartData.map(d => d.budget), 1);
-  const chartMaxActual = Math.max(...varianceChartData.map(d => d.actual), 1);
+  const chartMax = Math.max(...varianceChartData.map(d => Math.max(d.budget, d.actual)), 1);
 
   const boqColumns: ColumnsType<Cost> = [
     { title: 'Item Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
@@ -646,15 +647,14 @@ const ProjectDetail: React.FC = () => {
           <Card title="Budget vs Actual by Category" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginBottom: 24 }}>
             <ChartErrorBoundary height={280}>
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={varianceChartData} margin={{ top: 16, right: 48, left: 48, bottom: 0 }}>
+                <BarChart data={varianceChartData} margin={{ top: 16, right: 24, left: 48, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                   <XAxis dataKey="category" tick={{ fill: '#bbb', fontSize: 12 }} />
-                  <YAxis yAxisId="left" orientation="left" domain={[0, chartMaxBudget]} tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
-                  <YAxis yAxisId="right" orientation="right" domain={[0, chartMaxActual]} tick={{ fill: '#aaa', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <YAxis domain={[0, chartMax]} tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                   <Tooltip contentStyle={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.3)' }} formatter={(v: number) => [formatCurrency(v), '']} />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="budget" name="Budget" fill="#009944" radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="right" dataKey="actual" name="Actual" fill="#888" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="budget" name="Budget" fill="#009944" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="actual" name="Actual" fill="#888" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartErrorBoundary>

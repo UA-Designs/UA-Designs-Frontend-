@@ -275,16 +275,18 @@ class CostService {
     }
   }
 
-  // GET /api/cost/costs
+  // GET /api/cost/costs — normalize projectId and type (API may return project_id, type in any case)
   async getCosts(): Promise<Cost[]> {
     try {
       const response = await apiService.get<ApiResponse<any>>('/cost/costs');
-      if (response.data.success) {
-        const d = response.data.data;
-        if (d?.costs && Array.isArray(d.costs)) return d.costs;
-        if (Array.isArray(d)) return d;
-      }
-      return [];
+      if (!response.data.success) return [];
+      const d = response.data.data;
+      const raw = (d?.costs && Array.isArray(d.costs)) ? d.costs : (Array.isArray(d) ? d : []);
+      return raw.map((c: any) => ({
+        ...c,
+        projectId: c.projectId ?? c.project_id,
+        type: (c.type != null && c.type !== '') ? String(c.type).toUpperCase() : c.type,
+      }));
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch costs');
     }
