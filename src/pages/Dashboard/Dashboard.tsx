@@ -164,11 +164,18 @@ const Dashboard: React.FC = () => {
     borderRadius: 12,
   };
 
-  const totalBudget = projectStats?.totalBudget ?? stats?.totalBudget ?? 0;
-  const totalSpent =
-    projectStats?.spentBudget ?? stats?.actualCost ?? 0;
-  const activeProjects =
-    projectStats?.activeProjects ?? stats?.activeProjects ?? 0;
+  // Prefer totals derived from the projects list so cards stay in sync with what we display
+  const derivedBudget = projects.reduce((sum, p) => sum + (Number(p.budget ?? 0) || 0), 0);
+  const derivedSpent = projects.reduce((sum, p) => sum + (Number((p as any).actualCost ?? 0) || 0), 0);
+  const derivedActive = projects.filter((p) => {
+    const s = String((p as any).status ?? '').toLowerCase();
+    const inactive = ['completed', 'cancelled', 'closed', 'done', 'terminated'];
+    if (inactive.includes(s)) return false;
+    return true; // count as active if not explicitly inactive (includes "active", "in progress", or empty)
+  }).length;
+  const totalBudget = projects.length > 0 ? derivedBudget : (projectStats?.totalBudget ?? stats?.totalBudget ?? 0);
+  const totalSpent = projects.length > 0 ? derivedSpent : (projectStats?.spentBudget ?? stats?.actualCost ?? 0);
+  const activeProjects = projects.length > 0 ? derivedActive : (projectStats?.activeProjects ?? stats?.activeProjects ?? 0);
   const overBudgetCount = projects.filter((p) => {
     const b = Number(p.budget ?? 0);
     const s = Number((p as any).actualCost ?? 0);
