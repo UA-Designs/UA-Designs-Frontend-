@@ -131,12 +131,13 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
     setLoadingOptions(true);
     const load = async () => {
-      const [mProj, lProj, eProj] = await Promise.all([
-        resourceService.getMaterials(projectId).catch(() => []),
+      // Materials are global (from Materials page); labor/equipment stay project-scoped
+      const [mList, lProj, eProj] = await Promise.all([
+        resourceService.getMaterials().catch(() => []),
         resourceService.getLabor(projectId).catch(() => []),
         resourceService.getEquipment(projectId).catch(() => []),
       ]);
-      setMaterials(Array.isArray(mProj) ? mProj : []);
+      setMaterials(Array.isArray(mList) ? mList : []);
       setLabor(Array.isArray(lProj) ? lProj : []);
       setEquipment(Array.isArray(eProj) ? eProj : []);
     };
