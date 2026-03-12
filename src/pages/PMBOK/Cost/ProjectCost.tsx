@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Card, Typography, Row, Col, Button, Space, Table, Tag, Alert, Modal,
+  Card, Typography, Row, Col, Button, Space, Table, Tag, Modal,
   Form, Input, Select, DatePicker, InputNumber, message, Spin,
   Popconfirm, Drawer, Descriptions, Divider, Tooltip, Empty, Upload, Grid,
 } from 'antd';
@@ -14,13 +14,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
-import ProjectSelector from '../../../components/common/ProjectSelector';
 import { useProject } from '../../../contexts/ProjectContext';
 import {
   costService,
-  Cost, Budget, Expense,
-  CostType, BudgetStatus, ExpenseCategory, ExpenseStatus, ExpenseAttachment,
-  CreateCostData, CreateBudgetData, CreateExpenseData, ExpenseFilters,
+  Budget, Expense,
+  ExpenseCategory, ExpenseStatus, ExpenseAttachment,
+  CreateExpenseData, ExpenseFilters,
 } from '../../../services/costService';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -42,14 +41,6 @@ const inputStyle: React.CSSProperties = {
   background: '#2a2a2a',
   borderColor: 'rgba(255,255,255,0.15)',
   color: '#fff',
-};
-
-// ── Budget status colors ─────────────────────────────────────────────────────
-const budgetStatusColors: Record<BudgetStatus, string> = {
-  [BudgetStatus.PLANNED]:  'blue',
-  [BudgetStatus.APPROVED]: 'green',
-  [BudgetStatus.CLOSED]:   'default',
-  [BudgetStatus.REVISED]:  'orange',
 };
 
 // ── Expense status + category colors ────────────────────────────────────────
@@ -699,17 +690,12 @@ const ProjectCost: React.FC = () => {
   const { user, can } = useAuth();
   const currentUserRole = (user as any)?.role ?? '';
   const currentUserId = (user as any)?.id ?? '';
-  const { selectedProject, projects = [], isLoading: projectsLoading } = useProject();
+  const { projects = [] } = useProject();
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('expenses');
 
-  // ── Cost / Budget data ─────────────────────────────────
-  const [costs, setCosts] = useState<Cost[]>([]);
+  // ── Budgets (for Log Expense modal optional budget dropdown only) ──
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [totalBudget, setTotalBudget] = useState(0);
-  const [totalCosts, setTotalCosts] = useState(0);
 
   // ── Expense data (paginated) ───────────────────────────
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -741,50 +727,19 @@ const ProjectCost: React.FC = () => {
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
-  // ── Cost / Budget modal states ─────────────────────────
-  const [costModalVisible, setCostModalVisible] = useState(false);
-  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
-  const [editingCost, setEditingCost] = useState<Cost | null>(null);
-  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
-  const [costForm] = Form.useForm();
-  const [budgetForm] = Form.useForm();
-
-  // ── Load cost + budget data ────────────────────────────
-  const loadCostData = useCallback(async () => {
-    if (!selectedProject) return;
-    setLoading(true);
-    try {
-      const [costsRes, budgetsRes] = await Promise.allSettled([
-        costService.getCosts(),
-        costService.getBudgets(),
-      ]);
-      if (costsRes.status === 'fulfilled') {
-        const projectCosts = costsRes.value.filter((c: Cost) => c.projectId === selectedProject.id);
-        setCosts(projectCosts);
-        setTotalCosts(projectCosts.reduce((s: number, c: Cost) => s + (c.amount || 0), 0));
-      }
-      if (budgetsRes.status === 'fulfilled') {
-        const projectBudgets = budgetsRes.value.filter((b: Budget) => b.projectId === selectedProject.id);
-        setBudgets(projectBudgets);
-        setTotalBudget(projectBudgets.reduce((s: number, b: Budget) => s + (b.amount || 0), 0));
-      }
-    } catch {
-      message.error('Failed to load cost data');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedProject]);
+  // ── Load budgets once (for Log Expense modal optional budget dropdown) ──
+  useEffect(() => {
+    costService.getBudgets().then((b: Budget[]) => setBudgets(Array.isArray(b) ? b : [])).catch(() => {});
+  }, []);
 
   // ── Load paginated expenses ────────────────────────────
   const loadExpenses = useCallback(async (
     page = expensePage,
     filters?: ExpenseFilters,
   ) => {
-    if (!selectedProject) return;
     setExpenseLoading(true);
     try {
       const f: ExpenseFilters = {
-        projectId: selectedProject.id,
         page,
         limit: expensePageSize,
         search: filterSearch || undefined,
@@ -811,95 +766,12 @@ const ProjectCost: React.FC = () => {
     } finally {
       setExpenseLoading(false);
     }
-  }, [selectedProject, expensePage, expensePageSize, filterSearch, filterCategory, filterStatus, filterDateRange]);
+  }, [expensePage, expensePageSize, filterSearch, filterCategory, filterStatus, filterDateRange]);
 
   useEffect(() => {
-    if (selectedProject) {
-      loadCostData();
-      loadExpenses(1);
-      setExpensePage(1);
-    }
-  }, [selectedProject]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const variance = totalBudget - totalCosts - totalExpenses;
-
-  // ── Cost CRUD ──────────────────────────────────────────
-  const handleAddCost = () => { setEditingCost(null); costForm.resetFields(); setCostModalVisible(true); };
-  const handleEditCost = (cost: Cost) => {
-    setEditingCost(cost);
-    costForm.setFieldsValue({
-      name: cost.name, type: cost.type, amount: cost.amount,
-      date: cost.date ? dayjs(cost.date) : undefined,
-      currency: cost.currency, description: cost.description,
-    });
-    setCostModalVisible(true);
-  };
-  const handleCostSubmit = async () => {
-    if (!selectedProject) return;
-    try {
-      const values = await costForm.validateFields();
-      const payload: CreateCostData = {
-        name: values.name, type: values.type, amount: values.amount,
-        date: values.date ? values.date.toISOString() : new Date().toISOString(),
-        currency: values.currency || 'PHP', description: values.description,
-        projectId: selectedProject.id,
-      };
-      if (editingCost) { await costService.updateCost(editingCost.id, payload); message.success('Cost updated'); }
-      else { await costService.createCost(payload); message.success('Cost created'); }
-      setCostModalVisible(false);
-      loadCostData();
-    } catch (err: any) { message.error(err.message || 'Failed to save cost'); }
-  };
-  const handleDeleteCost = async (id: string) => {
-    try { await costService.deleteCost(id); message.success('Cost deleted'); loadCostData(); }
-    catch (err: any) { message.error(err.message || 'Failed to delete cost'); }
-  };
-
-  // ── Budget CRUD ────────────────────────────────────────
-  const handleAddBudget = () => { setEditingBudget(null); budgetForm.resetFields(); setBudgetModalVisible(true); };
-  const handleEditBudget = (budget: Budget) => {
-    setEditingBudget(budget);
-    budgetForm.setFieldsValue({
-      name: budget.name, amount: budget.amount, currency: budget.currency,
-      description: budget.description,
-      startDate: budget.startDate ? dayjs(budget.startDate) : undefined,
-      endDate: budget.endDate ? dayjs(budget.endDate) : undefined,
-      contingency: budget.contingency, managementReserve: budget.managementReserve,
-    });
-    setBudgetModalVisible(true);
-  };
-  const handleBudgetSubmit = async () => {
-    if (!selectedProject) return;
-    try {
-      const values = await budgetForm.validateFields();
-      const payload: CreateBudgetData = {
-        name: values.name, amount: values.amount, projectId: selectedProject.id,
-        currency: values.currency || 'PHP', description: values.description,
-        startDate: values.startDate ? values.startDate.toISOString() : undefined,
-        endDate: values.endDate ? values.endDate.toISOString() : undefined,
-        contingency: values.contingency, managementReserve: values.managementReserve,
-      };
-      if (editingBudget) { await costService.updateBudget(editingBudget.id, payload); message.success('Budget updated'); }
-      else { await costService.createBudget(payload); message.success('Budget created'); }
-      setBudgetModalVisible(false);
-      loadCostData();
-    } catch (err: any) { message.error(err.message || 'Failed to save budget'); }
-  };
-  const handleDeleteBudget = async (id: string) => {
-    try { await costService.deleteBudget(id); message.success('Budget deleted'); loadCostData(); }
-    catch (err: any) { message.error(err.message || 'Failed to delete budget'); }
-  };
-  const handleApproveBudget = async (id: string) => {
-    try { await costService.approveBudget(id); message.success('Budget approved'); loadCostData(); }
-    catch (err: any) { message.error(err.message || 'Failed to approve budget'); }
-  };
-  const handleCloseBudget = async (id: string) => {
-    try { await costService.closeBudget(id); message.success('Budget closed'); loadCostData(); }
-    catch (err: any) { message.error(err.message || 'Failed to close budget'); }
-  };
+    loadExpenses(1);
+    setExpensePage(1);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Expense helpers ────────────────────────────────────
   const openExpenseDetail = (expense: Expense) => { setDetailExpense(expense); setDrawerOpen(true); };
@@ -938,75 +810,8 @@ const ProjectCost: React.FC = () => {
   const clearFilters = () => {
     setFilterSearch(''); setFilterCategory(undefined);
     setFilterStatus(undefined); setFilterDateRange(null);
-    loadExpenses(1, { projectId: selectedProject!.id, page: 1, limit: expensePageSize });
+    loadExpenses(1, { page: 1, limit: expensePageSize });
   };
-
-  // ── Table column definitions ────────────────────────────
-
-  const costColumns: ColumnsType<Cost> = [
-    { title: 'Name', dataIndex: 'name', key: 'name', ellipsis: true },
-    { title: 'Type', dataIndex: 'type', key: 'type', render: (t: CostType) => <Tag color="blue">{t}</Tag>, width: 130 },
-    {
-      title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right',
-      render: (a: number, r: Cost) => fmtCurrency(a, r.currency),
-    },
-    {
-      title: 'Date', dataIndex: 'date', key: 'date', width: 120,
-      render: (d: string) => d ? fmtDate(d) : '—',
-    },
-    {
-      title: 'Actions', key: 'actions', width: 110, align: 'center',
-      render: (_: any, record: Cost) => (
-        <Space size={4}>
-          {can('ENGINEER_AND_ABOVE') && (
-            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditCost(record)} />
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Popconfirm title="Delete this cost?" onConfirm={() => handleDeleteCost(record.id)} okButtonProps={{ danger: true }}>
-              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
-
-  const budgetColumns: ColumnsType<Budget> = [
-    { title: 'Name', dataIndex: 'name', key: 'name', ellipsis: true },
-    {
-      title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right',
-      render: (a: number, r: Budget) => fmtCurrency(a, r.currency),
-    },
-    {
-      title: 'Status', dataIndex: 'status', key: 'status', width: 110,
-      render: (s: BudgetStatus) => <Tag color={budgetStatusColors[s]}>{s}</Tag>,
-    },
-    {
-      title: 'Actions', key: 'actions', width: 180, align: 'center',
-      render: (_: any, record: Budget) => (
-        <Space size={4}>
-          {can('MANAGER_AND_ABOVE') && (
-            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditBudget(record)} />
-          )}
-          {can('MANAGER_AND_ABOVE') && record.status === BudgetStatus.PLANNED && (
-            <Popconfirm title="Approve this budget?" onConfirm={() => handleApproveBudget(record.id)} okButtonProps={{ style: { background: '#009944' } }}>
-              <Button type="link" icon={<CheckCircleOutlined />} size="small" style={{ color: '#52c41a' }} />
-            </Popconfirm>
-          )}
-          {can('MANAGER_AND_ABOVE') && record.status === BudgetStatus.APPROVED && (
-            <Popconfirm title="Close this budget?" onConfirm={() => handleCloseBudget(record.id)} okButtonProps={{ danger: true }}>
-              <Button type="link" size="small" style={{ color: '#8c8c8c' }}>Close</Button>
-            </Popconfirm>
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Popconfirm title="Delete this budget?" onConfirm={() => handleDeleteBudget(record.id)} okButtonProps={{ danger: true }}>
-              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
 
   const handleDeleteExpense = async (record: Expense) => {
     try {
@@ -1112,19 +917,6 @@ const ProjectCost: React.FC = () => {
   // ────────────────────────────────────────────────────────
   const labelStyle: React.CSSProperties = { color: '#d9d9d9' };
 
-  const costTabItems = [
-    { key: 'costs',    label: 'Costs'    },
-    { key: 'budgets',  label: 'Budgets'  },
-    { key: 'expenses', label: 'Expenses' },
-  ];
-
-  const costQuickStats = [
-    { label: 'Total Budget',     value: fmtCurrency(totalBudget),   color: '#1890ff', iconBg: 'rgba(24,144,255,0.12)'   },
-    { label: 'Costs Logged',     value: fmtCurrency(totalCosts),    color: '#ffaa00', iconBg: 'rgba(255,170,0,0.12)'    },
-    { label: 'Expenses Logged',  value: fmtCurrency(totalExpenses), color: '#722ed1', iconBg: 'rgba(114,46,209,0.12)'   },
-    { label: 'Variance',         value: fmtCurrency(variance),      color: variance >= 0 ? '#009944' : '#ff0040', iconBg: variance >= 0 ? 'rgba(0,153,68,0.12)' : 'rgba(255,0,64,0.12)' },
-  ];
-
   return (
     <>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: 'flex-start' }}>
@@ -1133,126 +925,22 @@ const ProjectCost: React.FC = () => {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           <div>
-            <Title level={2} style={{ color: '#fff', marginBottom: 4 }}>
-              {activeTab === 'expenses' ? 'Expenses' : 'Cost Management'}
-            </Title>
-            <Text style={{ color: '#8c8c8c' }}>
-              {activeTab === 'expenses' ? 'Track and export project expenses' : 'Manage project budgets, work costs, and expense tracking in one place'}
-            </Text>
+            <Title level={2} style={{ color: '#fff', marginBottom: 4 }}>Expenses</Title>
+            <Text style={{ color: '#8c8c8c' }}>Track and export project expenses</Text>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title level={4} style={{ margin: 0, color: '#fff' }}>
-              {activeTab === 'expenses' ? 'Expenses' : 'Cost Management'}
-            </Title>
+            <Title level={4} style={{ margin: 0, color: '#fff' }}>Expenses</Title>
             <Button
               icon={<ReloadOutlined style={{ color: '#009944' }} />}
-              onClick={() => { loadCostData(); loadExpenses(expensePage); }}
+              onClick={() => loadExpenses(expensePage)}
               style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
             >
               Refresh
             </Button>
           </div>
 
-          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: 16 }}>
-            <ProjectSelector />
-          </div>
-
-          {!selectedProject && !projectsLoading && (
-            <Alert
-              message={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>No Project Selected</span>}
-              description={<span style={{ color: '#94a3b8' }}>Select a project above to manage its costs, budgets, and expenses.</span>}
-              type="info"
-              showIcon
-              style={{
-                background: 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.25)',
-                borderRadius: 8,
-              }}
-            />
-          )}
-
-          {selectedProject && (
-            <Spin spinning={loading}>
-
-              {/* Custom tab nav */}
-              <div style={{ borderBottom: '1px solid #333333' }}>
-                <div style={{ display: 'flex' }}>
-                  {costTabItems.map(tab => (
-                    <button
-                      key={tab.key}
-                      onClick={() => { setActiveTab(tab.key); if (tab.key === 'expenses') loadExpenses(1); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '14px 4px', marginRight: 28,
-                        background: 'transparent', border: 'none',
-                        borderBottom: activeTab === tab.key ? '2px solid #009944' : '2px solid transparent',
-                        color: activeTab === tab.key ? '#009944' : '#9ca3af',
-                        fontFamily: 'inherit', fontSize: 14, fontWeight: 500,
-                        cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', marginBottom: -1,
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tab content panel */}
-              <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderTop: 'none', borderRadius: '0 0 6px 6px', overflow: 'hidden' }}>
-
-                {/* ── Costs ── */}
-                {activeTab === 'costs' && (
-                  <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
-                      {can('ENGINEER_AND_ABOVE') && (
-                        <Button
-                          icon={<PlusOutlined />}
-                          onClick={handleAddCost}
-                          style={{ background: '#009944', borderColor: '#009944', color: '#ffffff' }}
-                        >
-                          Add Cost
-                        </Button>
-                      )}
-                    </div>
-                    <Table
-                      columns={costColumns}
-                      dataSource={costs}
-                      rowKey="id"
-                      pagination={{ pageSize: 10 }}
-                      size="small"
-                      locale={{ emptyText: <Empty description={<Text style={{ color: '#595959' }}>No costs recorded yet</Text>} /> }}
-                    />
-                  </>
-                )}
-
-                {/* ── Budgets ── */}
-                {activeTab === 'budgets' && (
-                  <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
-                      {can('MANAGER_AND_ABOVE') && (
-                        <Button
-                          icon={<PlusOutlined />}
-                          onClick={handleAddBudget}
-                          style={{ background: '#009944', borderColor: '#009944', color: '#ffffff' }}
-                        >
-                          Create Budget
-                        </Button>
-                      )}
-                    </div>
-                    <Table
-                      columns={budgetColumns}
-                      dataSource={budgets}
-                      rowKey="id"
-                      pagination={{ pageSize: 10 }}
-                      size="small"
-                      locale={{ emptyText: <Empty description={<Text style={{ color: '#595959' }}>No budgets created yet</Text>} /> }}
-                    />
-                  </>
-                )}
-
-                {/* ── Expenses ── */}
-                {activeTab === 'expenses' && (
+          <Spin spinning={expenseLoading}>
                   <div style={{ padding: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
                       <Title level={3} style={{ color: '#fff', margin: 0 }}>Expenses</Title>
@@ -1408,129 +1096,15 @@ const ProjectCost: React.FC = () => {
                       locale={{ emptyText: <Empty description={<Text style={{ color: '#595959' }}>No expenses found</Text>} /> }}
                     />
                   </div>
-                )}
-
-              </div>
-            </Spin>
-          )}
+          </Spin>
         </div>
-
-        {/* ── Quick Stats sidebar ── */}
-          <div style={{ width: isMobile ? '100%' : 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, marginTop: isMobile ? 0 : 88 }}>
-            <Text style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Quick Stats
-            </Text>
-            {costQuickStats.map((stat, i) => (
-              <div key={i} style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>{stat.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: stat.color, lineHeight: 1.2 }}>{stat.value}</div>
-              </div>
-            ))}
-          </div>
       </div>
-
-      {/* ── Cost Modal ── */}
-      <Modal
-        title={<Text strong style={{ color: '#fff' }}>{editingCost ? 'Edit Cost' : 'Add Cost'}</Text>}
-        open={costModalVisible}
-        onOk={handleCostSubmit}
-        onCancel={() => setCostModalVisible(false)}
-        okText={editingCost ? 'Update' : 'Create'}
-        okButtonProps={{ style: { background: '#009944', borderColor: '#009944' } }}
-        styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
-      >
-        <Form form={costForm} layout="vertical" style={{ marginTop: 12 }}>
-          <Form.Item name="name" label={<Text style={labelStyle}>Name</Text>} rules={[{ required: true }]}>
-            <Input style={inputStyle} />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="type" label={<Text style={labelStyle}>Type</Text>} rules={[{ required: true }]} initialValue={CostType.OTHER}>
-                <Select style={{ width: '100%' }}>
-                  {Object.values(CostType).map(t => <Option key={t} value={t}>{t}</Option>)}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="amount" label={<Text style={labelStyle}>Amount</Text>} rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="date" label={<Text style={labelStyle}>Date</Text>} rules={[{ required: true }]}>
-                <DatePicker style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          {/* currency defaults to PHP */}
-          <Form.Item name="currency" initialValue="PHP" hidden><Input /></Form.Item>
-          <Form.Item name="description" label={<Text style={labelStyle}>Description</Text>}>
-            <TextArea rows={2} style={{ ...inputStyle, resize: 'none' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* ── Budget Modal ── */}
-      <Modal
-        title={<Text strong style={{ color: '#fff' }}>{editingBudget ? 'Edit Budget' : 'Create Budget'}</Text>}
-        open={budgetModalVisible}
-        onOk={handleBudgetSubmit}
-        onCancel={() => setBudgetModalVisible(false)}
-        okText={editingBudget ? 'Update' : 'Create'}
-        okButtonProps={{ style: { background: '#009944', borderColor: '#009944' } }}
-        width={600}
-        styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
-      >
-        <Form form={budgetForm} layout="vertical" style={{ marginTop: 12 }}>
-          <Form.Item name="name" label={<Text style={labelStyle}>Name</Text>} rules={[{ required: true }]}>
-            <Input style={inputStyle} />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="amount" label={<Text style={labelStyle}>Amount</Text>} rules={[{ required: true }]}>
-                <InputNumber min={0} style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          {/* currency defaults to PHP */}
-          <Form.Item name="currency" initialValue="PHP" hidden><Input /></Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="startDate" label={<Text style={labelStyle}>Start Date</Text>}>
-                <DatePicker style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="endDate" label={<Text style={labelStyle}>End Date</Text>}>
-                <DatePicker style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contingency" label={<Text style={labelStyle}>Contingency</Text>}>
-                <InputNumber min={0} style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="managementReserve" label={<Text style={labelStyle}>Management Reserve</Text>}>
-                <InputNumber min={0} style={{ ...inputStyle, width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="description" label={<Text style={labelStyle}>Description</Text>}>
-            <TextArea rows={2} style={{ ...inputStyle, resize: 'none' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* ── Expense Form Modal ── */}
       <ExpenseFormModal
         open={expenseFormOpen}
         editing={editingExpense}
-        lockedProjectId={selectedProject?.id ?? ''}
+        lockedProjectId=""
         budgets={budgets}
         projects={projects}
         onClose={() => setExpenseFormOpen(false)}

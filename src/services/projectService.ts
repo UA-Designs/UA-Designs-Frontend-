@@ -106,6 +106,7 @@ class ProjectService {
         endDate: raw.endDate ?? p.end_date ?? raw.end_date,
         plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? raw.planned_end_date,
         clientName: raw.clientName ?? p.client_name ?? raw.client_name,
+        budget: raw.budget ?? p.budget_amount ?? 0,
       } as Project;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch project');
