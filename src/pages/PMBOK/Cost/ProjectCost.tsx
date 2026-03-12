@@ -8,7 +8,7 @@ import {
   PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined,
   DollarOutlined, CheckCircleOutlined, CloseCircleOutlined,
   PaperClipOutlined, FilterOutlined, CloseOutlined, UploadOutlined,
-  FilePdfOutlined, FileImageOutlined,
+  FilePdfOutlined, FileImageOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -498,24 +498,30 @@ interface ExpenseModalProps {
   editing: Expense | null;
   lockedProjectId: string;
   budgets: Budget[];
+  /** When set and lockedProjectId is empty, show Project * dropdown */
+  projects?: { id: string; name: string }[];
   onClose: () => void;
   onSaved: (expense: Expense) => void;
 }
 
 const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
-  open, editing, lockedProjectId, budgets, onClose, onSaved,
+  open, editing, lockedProjectId, budgets, projects = [], onClose, onSaved,
 }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-  const projectBudgets = budgets.filter(b => b.projectId === lockedProjectId);
+  const formProjectId = Form.useWatch('projectId', form);
+  const effectiveProjectId = lockedProjectId || formProjectId || '';
+  const projectBudgets = budgets.filter(b => b.projectId === effectiveProjectId);
+  const showProjectField = !lockedProjectId && (projects?.length ?? 0) > 0;
 
   useEffect(() => {
     if (open) {
       if (editing) {
         form.setFieldsValue({
+          ...(showProjectField && { projectId: editing.projectId }),
           name: editing.name,
           amount: editing.amount,
           category: editing.category,
@@ -532,9 +538,14 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
       setPendingFile(null);
       setFileList([]);
     }
-  }, [open, editing, form]);
+  }, [open, editing, form, showProjectField]);
 
   const handleSubmit = async (values: any) => {
+    const projectId = lockedProjectId || values.projectId;
+    if (!projectId) {
+      message.error('Please select a project');
+      return;
+    }
     setSaving(true);
     try {
       const payload: CreateExpenseData = {
@@ -542,7 +553,7 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
         amount: values.amount,
         category: values.category,
         date: (values.date as dayjs.Dayjs).format('YYYY-MM-DD'),
-        projectId: lockedProjectId,
+        projectId,
         budgetId: values.budgetId || undefined,
         vendor: values.vendor || undefined,
         invoiceNumber: values.invoiceNumber || undefined,
@@ -577,10 +588,15 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
   return (
     <Modal
       open={open}
-      title={<Text strong style={{ color: '#fff' }}>{editing ? 'Edit Expense' : 'New Expense'}</Text>}
+      title={
+        <div>
+          <Text strong style={{ color: '#fff', display: 'block' }}>{editing ? 'Edit Expense' : 'Log Expense'}</Text>
+          {!editing && <Text style={{ color: '#8c8c8c', fontSize: 12 }}>Record a new expense for a project.</Text>}
+        </div>
+      }
       onCancel={onClose}
       onOk={() => form.submit()}
-      okText={editing ? 'Save Changes' : 'Create Expense'}
+      okText={editing ? 'Save Changes' : 'Log Expense'}
       okButtonProps={{ loading: saving, style: { background: '#009944', borderColor: '#009944' } }}
       cancelButtonProps={{ disabled: saving }}
       width={640}
@@ -589,18 +605,29 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
         <Row gutter={16}>
+          {showProjectField && (
+            <Col span={24}>
+              <Form.Item name="projectId" label={<Text style={labelStyle}>Project *</Text>} rules={[{ required: true, message: 'Select a project' }]}>
+                <Select style={{ width: '100%' }} placeholder="Select a project" optionFilterProp="label">
+                  {projects.map(p => (
+                    <Option key={p.id} value={p.id} label={p.name}>{p.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          )}
           <Col span={24}>
             <Form.Item name="name" label={<Text style={labelStyle}>Name</Text>} rules={[{ required: true }]}>
               <Input style={inputStyle} placeholder="e.g. Concrete Supply — Foundation" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="amount" label={<Text style={labelStyle}>Amount (PHP)</Text>} rules={[{ required: true }]}>
-              <InputNumber style={{ ...inputStyle, width: '100%' }} min={0.01} precision={2} placeholder="0.00" />
+            <Form.Item name="amount" label={<Text style={labelStyle}>Amount (₱) *</Text>} rules={[{ required: true }]}>
+              <InputNumber style={{ ...inputStyle, width: '100%' }} min={0.01} precision={2} placeholder="0" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="category" label={<Text style={labelStyle}>Category</Text>} rules={[{ required: true }]}>
+            <Form.Item name="category" label={<Text style={labelStyle}>Category *</Text>} rules={[{ required: true }]}>
               <Select style={{ width: '100%' }} placeholder="Select category">
                 {Object.values(ExpenseCategory).map(c => (
                   <Option key={c} value={c}>
@@ -611,7 +638,7 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="date" label={<Text style={labelStyle}>Date</Text>} rules={[{ required: true }]}>
+            <Form.Item name="date" label={<Text style={labelStyle}>Date *</Text>} rules={[{ required: true }]}>
               <DatePicker style={{ ...inputStyle, width: '100%' }} />
             </Form.Item>
           </Col>
@@ -625,8 +652,8 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="vendor" label={<Text style={labelStyle}>Vendor (optional)</Text>}>
-              <Input style={inputStyle} placeholder="Supplier name" />
+            <Form.Item name="vendor" label={<Text style={labelStyle}>Vendor/Supplier</Text>}>
+              <Input style={inputStyle} placeholder="e.g. Home Depot" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -635,8 +662,8 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={24}>
-            <Form.Item name="description" label={<Text style={labelStyle}>Description (optional)</Text>}>
-              <TextArea rows={2} style={{ ...inputStyle, resize: 'none' }} placeholder="Additional details…" />
+            <Form.Item name="description" label={<Text style={labelStyle}>Notes</Text>}>
+              <TextArea rows={2} style={{ ...inputStyle, resize: 'none' }} placeholder="Additional details about this expense…" />
             </Form.Item>
           </Col>
           {!editing && (
@@ -655,10 +682,10 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
                   maxCount={1}
                 >
                   <Button icon={<UploadOutlined />} style={{ color: '#009944', borderColor: '#009944' }}>
-                    Choose file
+                    Upload Receipt
                   </Button>
                 </Upload>
-                <Text style={{ color: '#595959', fontSize: 11 }}>Max 5 MB · JPG, PNG, WEBP, PDF</Text>
+                <Text style={{ color: '#595959', fontSize: 11 }}>JPG, PNG, WebP, or PDF. Max 5 MB.</Text>
               </Form.Item>
             </Col>
           )}
@@ -672,7 +699,7 @@ const ProjectCost: React.FC = () => {
   const { user, can } = useAuth();
   const currentUserRole = (user as any)?.role ?? '';
   const currentUserId = (user as any)?.id ?? '';
-  const { selectedProject, isLoading: projectsLoading } = useProject();
+  const { selectedProject, projects = [], isLoading: projectsLoading } = useProject();
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
@@ -981,6 +1008,37 @@ const ProjectCost: React.FC = () => {
     },
   ];
 
+  const handleDeleteExpense = async (record: Expense) => {
+    try {
+      await costService.deleteExpense(record.id);
+      handleExpenseDeleted(record.id);
+      message.success('Expense deleted');
+    } catch (err: any) {
+      message.error(err.message || 'Failed to delete expense');
+    }
+  };
+
+  const exportExpensesCSV = () => {
+    const headers = ['Date', 'Project', 'Category', 'Vendor', 'Amount', 'Added By', 'Receipt'];
+    const rows = expenses.map((r: Expense) => [
+      r.date ? dayjs(r.date).format('M/D/YYYY') : '',
+      r.project?.name || r.projectId || '—',
+      r.category || '—',
+      r.vendor || '—',
+      (r.amount ?? 0).toFixed(2),
+      r.submitter ? `${r.submitter.firstName} ${r.submitter.lastName}` : '—',
+      (r.attachments?.length ?? 0) > 0 ? 'Yes' : '—',
+    ]);
+    const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `expenses-${dayjs().format('YYYY-MM-DD')}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    message.success('CSV exported');
+  };
+
   const expenseColumns: ColumnsType<Expense> = [
     {
       title: '',
@@ -992,6 +1050,7 @@ const ProjectCost: React.FC = () => {
             type="checkbox"
             checked={selectedExpenseIds.includes(record.id)}
             style={{ accentColor: '#009944' }}
+            onClick={e => e.stopPropagation()}
             onChange={e =>
               setSelectedExpenseIds(prev =>
                 e.target.checked ? [...prev, record.id] : prev.filter(id => id !== record.id)
@@ -1001,31 +1060,31 @@ const ProjectCost: React.FC = () => {
         ) : null,
     },
     {
-      title: 'Name', dataIndex: 'name', key: 'name', ellipsis: true,
-      render: (name: string, record: Expense) => (
-        <Button type="link" style={{ padding: 0, color: '#00ff88', fontWeight: 500 }} onClick={() => openExpenseDetail(record)}>
-          {name}
-        </Button>
-      ),
+      title: 'Date', dataIndex: 'date', key: 'date', width: 100,
+      render: (d: string) => d ? dayjs(d).format('M/D/YYYY') : '—',
     },
     {
-      title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right', width: 130,
-      render: (a: number, r: Expense) => fmtCurrency(a, r.currency),
+      title: 'Project', key: 'project', width: 180, ellipsis: true,
+      render: (_: any, r: Expense) => <Text style={{ color: '#d9d9d9' }}>{r.project?.name || r.projectId || '—'}</Text>,
     },
     {
-      title: 'Category', dataIndex: 'category', key: 'category', width: 130,
+      title: 'Category', dataIndex: 'category', key: 'category', width: 110,
       render: (c: ExpenseCategory) => <Tag color={CATEGORY_COLOR[c]} style={{ fontSize: 11 }}>{c}</Tag>,
     },
     {
-      title: 'Date', dataIndex: 'date', key: 'date', width: 110,
-      render: (d: string) => fmtDate(d),
+      title: 'Vendor', dataIndex: 'vendor', key: 'vendor', width: 120, ellipsis: true,
+      render: (v: string) => <Text style={{ color: '#bbb' }}>{v || '—'}</Text>,
     },
     {
-      title: 'Submitted By', key: 'submitter', width: 160,
+      title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right', width: 110,
+      render: (a: number, r: Expense) => <Text style={{ color: '#00ff88' }}>{fmtCurrency(a, r.currency)}</Text>,
+    },
+    {
+      title: 'Added By', key: 'submitter', width: 120,
       render: (_: any, record: Expense) => <SubmitterChip submitter={record.submitter} />,
     },
     {
-      title: 'Receipts', key: 'receipts', width: 80, align: 'center',
+      title: 'Receipt', key: 'receipts', width: 80, align: 'center',
       render: (_: any, record: Expense) => (
         <ReceiptChip
           attachments={record.attachments}
@@ -1034,9 +1093,22 @@ const ProjectCost: React.FC = () => {
       ),
     },
     {
-      title: 'Status', dataIndex: 'status', key: 'status', width: 110,
+      title: 'Status', dataIndex: 'status', key: 'status', width: 95,
       render: (s: ExpenseStatus) => (
         <Tag color={STATUS_COLOR[s]} style={{ fontWeight: 600, fontSize: 11 }}>{s}</Tag>
+      ),
+    },
+    {
+      title: '', key: 'delete', width: 48, align: 'center',
+      render: (_: any, record: Expense) => (
+        <Popconfirm
+          title="Delete this expense?"
+          onConfirm={() => handleDeleteExpense(record)}
+          okText="Delete"
+          okButtonProps={{ danger: true }}
+        >
+          <Button type="text" danger icon={<DeleteOutlined />} size="small" onClick={e => e.stopPropagation()} />
+        </Popconfirm>
       ),
     },
   ];
@@ -1182,6 +1254,28 @@ const ProjectCost: React.FC = () => {
                 {/* ── Expenses ── */}
                 {activeTab === 'expenses' && (
                   <div style={{ padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                      <Title level={3} style={{ color: '#fff', margin: 0 }}>Expenses</Title>
+                      <Space>
+                        <Button
+                          icon={<DownloadOutlined />}
+                          onClick={exportExpensesCSV}
+                          style={{ color: '#d9d9d9', borderColor: '#595959' }}
+                        >
+                          Export CSV
+                        </Button>
+                        {can('ENGINEER_AND_ABOVE') && (
+                          <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            style={{ background: '#009944', borderColor: '#009944' }}
+                            onClick={() => { setEditingExpense(null); setExpenseFormOpen(true); }}
+                          >
+                            Log Expense
+                          </Button>
+                        )}
+                      </Space>
+                    </div>
                     {/* Status Summary */}
                     <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                       {[
@@ -1272,18 +1366,8 @@ const ProjectCost: React.FC = () => {
                       </Row>
                     </Card>
 
-                    {/* Toolbar */}
+                    {/* Toolbar (bulk actions) */}
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                      {can('ENGINEER_AND_ABOVE') && (
-                        <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          style={{ background: '#009944', borderColor: '#009944' }}
-                          onClick={() => { setEditingExpense(null); setExpenseFormOpen(true); }}
-                        >
-                          Add Expense
-                        </Button>
-                      )}
                       {can('MANAGER_AND_ABOVE') && selectedExpenseIds.length > 0 && (
                         <Button
                           icon={<CheckCircleOutlined />}
@@ -1448,6 +1532,7 @@ const ProjectCost: React.FC = () => {
         editing={editingExpense}
         lockedProjectId={selectedProject?.id ?? ''}
         budgets={budgets}
+        projects={projects}
         onClose={() => setExpenseFormOpen(false)}
         onSaved={handleExpenseSaved}
       />

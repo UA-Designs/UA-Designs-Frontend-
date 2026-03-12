@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -16,6 +16,10 @@ import {
   Table,
   Empty,
   Input,
+  Modal,
+  Form,
+  InputNumber,
+  Segmented,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -48,7 +52,7 @@ import {
 import dayjs from 'dayjs';
 import { projectService, ProjectDashboardData } from '../../services/projectService';
 import { costService, Budget, Expense, Cost, CostType } from '../../services/costService';
-import { resourceService } from '../../services/resourceService';
+import { resourceService, Material, Labor, Equipment } from '../../services/resourceService';
 import { Project } from '../../types';
 import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
 
@@ -67,6 +71,153 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
+const TRADE_CATEGORIES = [
+  'General', 'Electrical', 'Plumbing', 'Structural', 'Finishing', 'HVAC', 'Earthwork', 'Formworks', 'Fuel',
+];
+
+// ── Add BOQ Item Modal ─────────────────────────────────────────────────────
+interface AddBOQModalProps {
+  open: boolean;
+  projectId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}
+
+const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onAdded }) => {
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [labor, setLabor] = useState<Labor[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const category = Form.useWatch('category', form) || CostType.MATERIAL;
+
+  useEffect(() => {
+    form.setFieldValue('materialId', undefined);
+  }, [category, form]);
+
+  useEffect(() => {
+    if (!open || !projectId) return;
+    form.resetFields();
+    form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
+    setLoadingOptions(true);
+    Promise.all([
+      resourceService.getMaterials(projectId).catch(() => []),
+      resourceService.getLabor(projectId).catch(() => []),
+      resourceService.getEquipment(projectId).catch(() => []),
+    ]).then(([m, l, e]) => {
+      setMaterials(Array.isArray(m) ? m : []);
+      setLabor(Array.isArray(l) ? l : []);
+      setEquipment(Array.isArray(e) ? e : []);
+    }).finally(() => setLoadingOptions(false));
+  }, [open, projectId, form]);
+
+  const itemOptions = useMemo(() => {
+    if (category === CostType.MATERIAL) return materials.map(m => ({ id: m.id, name: m.name }));
+    if (category === CostType.LABOR) return labor.map(l => ({ id: l.id, name: l.name }));
+    return equipment.map(e => ({ id: e.id, name: e.name }));
+  }, [category, materials, labor, equipment]);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const { category: cat, materialId, estimatedQty, unitCost, tradeCategory, notes } = values;
+      const list = cat === CostType.MATERIAL ? materials : cat === CostType.LABOR ? labor : equipment;
+      const item = list.find((x: { id: string }) => x.id === materialId);
+      const name = item?.name ?? 'Unnamed item';
+      const totalAmount = Number(estimatedQty) * Number(unitCost);
+      setSaving(true);
+      await costService.createCost({
+        name,
+        type: cat,
+        amount: totalAmount,
+        date: new Date().toISOString().split('T')[0],
+        projectId,
+        description: [tradeCategory, notes].filter(Boolean).join(' — ') || undefined,
+      });
+      message.success('BOQ item added');
+      onAdded();
+      onClose();
+      form.resetFields();
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error(err.message || 'Failed to add BOQ item');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const labelStyle = { color: '#d9d9d9' };
+  const inputStyle = { background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' };
+
+  return (
+    <Modal
+      title="Add BOQ Item"
+      open={open}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      okText="Add to BOQ"
+      okButtonProps={{ loading: saving, disabled: saving, style: { background: '#009944', borderColor: '#009944' } }}
+      cancelButtonProps={{ disabled: saving }}
+      width={520}
+      destroyOnClose
+      styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
+        <Form.Item name="category" label={<span style={labelStyle}>Category *</span>} rules={[{ required: true }]}>
+          <Segmented
+            options={[
+              { label: 'Material', value: CostType.MATERIAL },
+              { label: 'Labor', value: CostType.LABOR },
+              { label: 'Equipment', value: CostType.EQUIPMENT },
+            ]}
+            block
+            style={{ background: '#2a2a2a' }}
+          />
+        </Form.Item>
+        <Form.Item name="tradeCategory" label={<span style={labelStyle}>Trade Category (optional)</span>}>
+          <Select
+            placeholder="Select trade category"
+            allowClear
+            style={{ width: '100%' }}
+            dropdownStyle={{ background: '#1f1f1f' }}
+            options={TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
+          />
+        </Form.Item>
+        <Form.Item
+          name="materialId"
+          label={<span style={labelStyle}>{category === CostType.MATERIAL ? 'Material' : category === CostType.LABOR ? 'Labor' : 'Equipment'} *</span>}
+          rules={[{ required: true, message: `Select ${category === CostType.MATERIAL ? 'material' : category === CostType.LABOR ? 'labor' : 'equipment'}` }]}
+        >
+          <Select
+            placeholder={category === CostType.MATERIAL ? 'Select material' : category === CostType.LABOR ? 'Select labor' : 'Select equipment'}
+            loading={loadingOptions}
+            style={{ width: '100%' }}
+            dropdownStyle={{ background: '#1f1f1f' }}
+            optionFilterProp="label"
+            options={itemOptions.map(o => ({ label: o.name, value: o.id }))}
+          />
+        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="estimatedQty" label={<span style={labelStyle}>Estimated Qty *</span>} rules={[{ required: true }]} initialValue={0}>
+              <InputNumber min={0} step={0.01} style={{ width: '100%', ...inputStyle }} placeholder="0.00" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="unitCost" label={<span style={labelStyle}>Unit Cost *</span>} rules={[{ required: true }]} initialValue={0}>
+              <InputNumber min={0} step={0.01} style={{ width: '100%', ...inputStyle }} placeholder="0.00" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item name="notes" label={<span style={labelStyle}>Notes</span>}>
+          <Input.TextArea rows={2} placeholder="Optional notes..." style={{ ...inputStyle, resize: 'none' }} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -82,6 +233,17 @@ const ProjectDetail: React.FC = () => {
   const [varianceFilter, setVarianceFilter] = useState<'all' | 'material' | 'labor' | 'equipment'>('all');
   const [boqSearch, setBoqSearch] = useState('');
   const [varianceSearch, setVarianceSearch] = useState('');
+  const [addBOQModalOpen, setAddBOQModalOpen] = useState(false);
+
+  const refetchCosts = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const list = await costService.getCosts();
+      setCosts((list || []).filter((c: Cost) => c.projectId === projectId));
+    } catch {
+      // ignore
+    }
+  }, [projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -276,7 +438,7 @@ const ProjectDetail: React.FC = () => {
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
             <Typography.Title level={4} style={{ color: '#ffffff', margin: 0 }}>Bill of Quantities</Typography.Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944' }}>
               Add Material
             </Button>
           </div>
@@ -308,9 +470,9 @@ const ProjectDetail: React.FC = () => {
               <Table rowKey="id" dataSource={filteredBoqCosts} columns={boqColumns} pagination={{ pageSize: 10 }} size="small" style={{ background: 'transparent' }} />
             ) : (
               <>
-                <Empty description="No BOQ items yet. Add in Cost Management." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
-                <Button type="primary" onClick={goToCost} style={{ background: '#009944', borderColor: '#009944', marginBottom: 16 }}>
-                  Add in Cost Management
+                <Empty description="No BOQ items yet. Add items below." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
+                <Button type="primary" onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944', marginBottom: 16 }}>
+                  Add Material
                 </Button>
               </>
             )}
@@ -559,6 +721,13 @@ const ProjectDetail: React.FC = () => {
         defaultActiveKey="overview"
         items={tabItems}
         style={{ color: '#fff' }}
+      />
+
+      <AddBOQModal
+        open={addBOQModalOpen}
+        projectId={projectId!}
+        onClose={() => setAddBOQModalOpen(false)}
+        onAdded={refetchCosts}
       />
     </div>
   );
