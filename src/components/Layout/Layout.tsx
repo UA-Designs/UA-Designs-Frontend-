@@ -38,6 +38,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useProject } from '../../contexts/ProjectContext';
+import Logo from '../Logo/Logo';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
@@ -177,15 +178,17 @@ const Layout: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: SIDEBAR_BG }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 6, background: SIDEBAR_ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FileTextOutlined style={{ color: '#fff', fontSize: 18 }} />
+            <div className="sidebar-logo" style={{ flexShrink: 0 }}>
+              <Logo size="small" showText={false} />
             </div>
-            <div>
-              <Text strong style={{ color: 'rgba(255,255,255,0.95)', fontSize: 16, display: 'block', lineHeight: 1.2 }}>{import.meta.env.VITE_APP_NAME || 'UA Designs PMS'}</Text>
-              {user && (
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{(user as any).role ?? 'User'}</Text>
-              )}
-            </div>
+            {(!collapsed || isMobile) && (
+              <div style={{ minWidth: 0 }}>
+                <Text strong style={{ color: 'rgba(255,255,255,0.95)', fontSize: 16, display: 'block', lineHeight: 1.2 }}>{import.meta.env.VITE_APP_NAME || 'UA Designs PMS'}</Text>
+                {user && (
+                  <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{(user as any).role ?? 'User'}</Text>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', paddingTop: 8 }}>

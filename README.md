@@ -61,6 +61,10 @@ The dev server proxies `/api` requests to `http://localhost:5000`. Make sure the
 
 Restrict only **Staff** from audit and user-management routes if you want to mirror the frontend’s “all except Staff” behavior.
 
+### Production and CORS
+
+When the frontend is on a different origin than the API (e.g. `https://ua-designs.com` vs `https://ua-designs-api.onrender.com`), the **backend must send CORS headers**. Add `Access-Control-Allow-Origin: https://ua-designs.com` (e.g. in Express: `cors({ origin: 'https://ua-designs.com' })`). Otherwise the browser blocks requests with "CORS policy: No Access-Control-Allow-Origin header". For **GET /api/resources/materials**, the frontend sends `projectId` (and `project_id`) when adding BOQ from a project; if the API returns 400 when no project is sent, the Materials catalog page may need the API to allow that route without a project.
+
 ## Available Scripts
 
 ```bash

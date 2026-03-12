@@ -96,12 +96,11 @@ interface ApiResponse<T> {
 class ResourceService {
   // ==================== MATERIALS ====================
 
-  // GET /api/resources/materials
+  // GET /api/resources/materials (backend may require projectId; use project_id for snake_case APIs)
   async getMaterials(projectId?: string): Promise<Material[]> {
     try {
-      const response = await apiService.get<ApiResponse<Material[]>>('/resources/materials', {
-        params: projectId ? { projectId } : undefined,
-      });
+      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const response = await apiService.get<ApiResponse<Material[]>>('/resources/materials', { params });
       return response.data.success ? response.data.data : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch materials');
@@ -151,12 +150,11 @@ class ResourceService {
 
   // ==================== LABOR ====================
 
-  // GET /api/resources/labor
+  // GET /api/resources/labor (backend may require projectId; use project_id for snake_case APIs)
   async getLabor(projectId?: string): Promise<Labor[]> {
     try {
-      const response = await apiService.get<ApiResponse<Labor[]>>('/resources/labor', {
-        params: projectId ? { projectId } : undefined,
-      });
+      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const response = await apiService.get<ApiResponse<Labor[]>>('/resources/labor', { params });
       return response.data.success ? response.data.data : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch labor');
@@ -209,9 +207,8 @@ class ResourceService {
   // GET /api/resources/equipment
   async getEquipment(projectId?: string): Promise<Equipment[]> {
     try {
-      const response = await apiService.get<ApiResponse<Equipment[]>>('/resources/equipment', {
-        params: projectId ? { projectId } : undefined,
-      });
+      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const response = await apiService.get<ApiResponse<Equipment[]>>('/resources/equipment', { params });
       return response.data.success ? response.data.data : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch equipment');

@@ -118,24 +118,15 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
     setLoadingOptions(true);
     const load = async () => {
+      // Use only project-scoped resources to avoid 400 when API requires projectId
       const [mProj, lProj, eProj] = await Promise.all([
         resourceService.getMaterials(projectId).catch(() => []),
         resourceService.getLabor(projectId).catch(() => []),
         resourceService.getEquipment(projectId).catch(() => []),
       ]);
-      const [mGlobal, lGlobal, eGlobal] = await Promise.all([
-        resourceService.getMaterials().catch(() => []),
-        resourceService.getLabor().catch(() => []),
-        resourceService.getEquipment().catch(() => []),
-      ]);
-      const merge = (a: any[], b: any[]) => {
-        const byId = new Map(a.map((x: any) => [x.id, x]));
-        b.forEach((x: any) => { if (!byId.has(x.id)) byId.set(x.id, x); });
-        return Array.from(byId.values());
-      };
-      setMaterials(merge(Array.isArray(mProj) ? mProj : [], Array.isArray(mGlobal) ? mGlobal : []));
-      setLabor(merge(Array.isArray(lProj) ? lProj : [], Array.isArray(lGlobal) ? lGlobal : []));
-      setEquipment(merge(Array.isArray(eProj) ? eProj : [], Array.isArray(eGlobal) ? eGlobal : []));
+      setMaterials(Array.isArray(mProj) ? mProj : []);
+      setLabor(Array.isArray(lProj) ? lProj : []);
+      setEquipment(Array.isArray(eProj) ? eProj : []);
     };
     load().finally(() => setLoadingOptions(false));
   }, [open, projectId, form]);
@@ -283,7 +274,7 @@ const ProjectDetail: React.FC = () => {
           projectService.getProjectById(projectId),
           projectService.getProjectDashboard(projectId).catch(() => null),
           costService.getBudgets().catch(() => []),
-          costService.getExpensesPaginated({ projectId, limit: 5 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
+          costService.getExpensesPaginated({ projectId, limit: 100 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
           costService.getCostOverview(projectId).catch(() => null),
           costService.getCosts().catch(() => []),
           costService.getCostBreakdown(projectId).catch(() => null),
@@ -355,28 +346,31 @@ const ProjectDetail: React.FC = () => {
   }
 
   const statusCfg = statusConfig[project.status] || { color: 'default', label: project.status };
-  const budget = project.budget ?? 0;
-  const spent = (project as any).actualCost ?? costOverview?.totalCosts ?? 0;
+  const budget = Number(project.budget ?? 0) || 0;
+  const costsSum = costs.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const expensesSum = (expensesResult.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const spent = Number((project as any).actualCost ?? costOverview?.totalCosts ?? 0) || costsSum || expensesSum;
   const remaining = Math.max(0, budget - spent);
   const pctUsed = budget ? Math.round((spent / budget) * 100) : 0;
   const teamMembers = (project as any).teamMembers ?? [];
   const projAny = project as any;
-  const projectLocation = project.location ?? projAny.location ?? '';
-  const projectStartDate = project.startDate ?? projAny.start_date ?? '';
+  const projectLocation = project.location ?? projAny.location ?? projAny.address ?? projAny.site_address ?? '';
+  const projectStartDate = project.startDate ?? projAny.start_date ?? projAny.planned_start_date ?? '';
   const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
-  const boqCount = dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
-  const expenseCount = (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
+  const boqCount = costs.length || dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
+  const expenseCount = expensesResult.expenses?.length ?? (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
+  const totalExpenseAmount = expensesSum;
 
   const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });
 
   const totalBOQ = boqByCategory.material + boqByCategory.labor + boqByCategory.equipment || budgets.reduce((s, b) => s + (b.amount ?? 0), 0);
-  const estimatedTotal = costOverview?.totalBudget ?? totalBOQ ?? budget;
-  const actualSpent = costOverview?.totalCosts ?? spent;
+  const estimatedTotal = Number(costOverview?.totalBudget ?? 0) || budget || totalBOQ;
+  const actualSpent = Number(costOverview?.totalCosts ?? 0) || spent;
   const varianceChartData = [
-    { category: 'Materials', budget: boqByCategory.material, actual: costBreakdown?.actualMaterials ?? 0 },
-    { category: 'Labor', budget: boqByCategory.labor, actual: costBreakdown?.actualLabor ?? 0 },
-    { category: 'Equipment', budget: boqByCategory.equipment, actual: costBreakdown?.actualEquipment ?? 0 },
+    { category: 'Materials', budget: boqByCategory.material, actual: costBreakdown?.actualMaterials ?? costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) },
+    { category: 'Labor', budget: boqByCategory.labor, actual: costBreakdown?.actualLabor ?? costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) },
+    { category: 'Equipment', budget: boqByCategory.equipment, actual: costBreakdown?.actualEquipment ?? costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) },
   ];
 
   const boqColumns: ColumnsType<Cost> = [
@@ -423,19 +417,25 @@ const ProjectDetail: React.FC = () => {
           <Col xs={24} md={12}>
             <Card
               title="BOQ Items"
-              style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-              bodyStyle={{ padding: 24, textAlign: 'center' }}
+              style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 180 }}
+              bodyStyle={{ padding: 24, textAlign: 'center', minHeight: 132 }}
             >
               <Text style={{ fontSize: 32, fontWeight: 700, color: '#ffffff' }}>{boqCount}</Text>
+              <div style={{ marginTop: 8 }}>
+                <Text style={{ color: '#00ff88', fontSize: 14 }}>Total BOQ: {formatCurrency(totalBOQ || budget)}</Text>
+              </div>
             </Card>
           </Col>
           <Col xs={24} md={12}>
             <Card
               title="Total Expenses"
-              style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-              bodyStyle={{ padding: 24, textAlign: 'center' }}
+              style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 180 }}
+              bodyStyle={{ padding: 24, textAlign: 'center', minHeight: 132 }}
             >
               <Text style={{ fontSize: 32, fontWeight: 700, color: '#ffffff' }}>{expenseCount}</Text>
+              <div style={{ marginTop: 8 }}>
+                <Text style={{ color: '#00ff88', fontSize: 14 }}>Total: {formatCurrency(totalExpenseAmount)}</Text>
+              </div>
             </Card>
           </Col>
         </Row>
@@ -557,10 +557,10 @@ const ProjectDetail: React.FC = () => {
               ))}
             </Space>
             <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Estimated Total</Text><div style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(estimatedTotal)}</div></Card></Col>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Project Budget</Text><div style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(budget)}</div></Card></Col>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Estimated (BOQ)</Text><div style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(estimatedTotal)}</div></Card></Col>
               <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Actual Spent</Text><div style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(actualSpent)}</div></Card></Col>
               <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Remaining</Text><div style={{ color: '#00ff88', fontWeight: 600 }}>{formatCurrency(Math.max(0, estimatedTotal - actualSpent))}</div></Card></Col>
-              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Wastage Items</Text><div style={{ color: '#00ff88', fontWeight: 600 }}>0</div></Card></Col>
             </Row>
             <Input placeholder="Search items..." value={varianceSearch} onChange={e => setVarianceSearch(e.target.value)} style={{ marginBottom: 12, background: '#141414', color: '#fff' }} allowClear />
             {filteredVarianceCosts.length > 0 ? (
@@ -587,8 +587,8 @@ const ProjectDetail: React.FC = () => {
             {expensesResult.expenses?.length > 0 ? (
               <>
                 <Table rowKey="id" dataSource={expensesResult.expenses} columns={expenseColumns} pagination={false} size="small" style={{ background: 'transparent' }} />
-                {(expensesResult.pagination?.totalItems ?? 0) > 5 && (
-                  <Text style={{ color: '#aaa', display: 'block', marginTop: 8 }}>Showing 5 of {expensesResult.pagination.totalItems} expenses</Text>
+                {(expensesResult.pagination?.totalItems ?? 0) > (expensesResult.expenses?.length ?? 0) && (
+                  <Text style={{ color: '#aaa', display: 'block', marginTop: 8 }}>Showing {expensesResult.expenses?.length ?? 0} of {expensesResult.pagination?.totalItems ?? 0} expenses</Text>
                 )}
                 <Button type="link" icon={<RightOutlined />} onClick={goToCost} style={{ color: '#009944', marginTop: 8 }}>View all in Cost Management</Button>
               </>
@@ -630,8 +630,8 @@ const ProjectDetail: React.FC = () => {
         <Col xs={24} md={8}>
           <Card
             title="Project Details"
-            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-            bodyStyle={{ padding: 20 }}
+            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 220 }}
+            bodyStyle={{ padding: 20, minHeight: 168 }}
           >
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               <Text style={{ color: '#bbb', fontSize: 13 }}>
@@ -652,8 +652,8 @@ const ProjectDetail: React.FC = () => {
         <Col xs={24} md={8}>
           <Card
             title="Budget Overview"
-            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-            bodyStyle={{ padding: 20 }}
+            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 220 }}
+            bodyStyle={{ padding: 20, minHeight: 168 }}
           >
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
               <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 600 }}>{formatCurrency(budget)}</Text>
@@ -672,8 +672,8 @@ const ProjectDetail: React.FC = () => {
                 <TeamOutlined />
               </span>
             }
-            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-            bodyStyle={{ padding: 20 }}
+            style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 220 }}
+            bodyStyle={{ padding: 20, minHeight: 168 }}
           >
             {teamMembers.length === 0 ? (
               <Text style={{ color: '#aaa', fontSize: 13 }}>No team members assigned</Text>

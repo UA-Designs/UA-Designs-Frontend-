@@ -101,12 +101,14 @@ class ProjectService {
       return {
         ...raw,
         id: raw.id ?? p._id,
-        location: raw.location ?? p.location ?? '',
-        startDate: raw.startDate ?? p.start_date ?? raw.start_date,
-        endDate: raw.endDate ?? p.end_date ?? raw.end_date,
-        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? raw.planned_end_date,
+        location: raw.location ?? p.location ?? p.address ?? p.site_address ?? '',
+        startDate: raw.startDate ?? p.start_date ?? p.planned_start_date ?? raw.start_date,
+        endDate: raw.endDate ?? p.end_date ?? p.planned_end_date ?? raw.end_date,
+        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? p.end_date ?? raw.planned_end_date,
+        actualEndDate: raw.actualEndDate ?? p.actual_end_date ?? raw.actual_end_date,
         clientName: raw.clientName ?? p.client_name ?? raw.client_name,
-        budget: raw.budget ?? p.budget_amount ?? 0,
+        budget: Number(raw.budget ?? p.budget_amount ?? p.budget ?? 0) || 0,
+        actualCost: Number(raw.actualCost ?? p.actual_cost ?? p.spent ?? p.actualCost ?? 0) || undefined,
       } as Project;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch project');
