@@ -31,7 +31,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   InboxOutlined,
-  SafetyHatOutlined,
+  UserOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -290,7 +290,7 @@ const ProjectDetail: React.FC = () => {
             </Col>
             <Col xs={24} md={8}>
               <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
-                <Space><SafetyHatOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
+                <Space><UserOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
                 <div style={{ color: '#00ff88', fontSize: 18, fontWeight: 600, marginTop: 8 }}>{formatCurrency(boqByCategory.labor)}</div>
               </Card>
             </Col>
@@ -366,7 +366,7 @@ const ProjectDetail: React.FC = () => {
             </Col>
             <Col xs={24} md={8}>
               <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
-                <Space><SafetyHatOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
+                <Space><UserOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
                 <div style={{ marginTop: 8 }}>
                   <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(boqByCategory.labor)}</Text><br />
                   <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(costBreakdown?.actualLabor ?? 0)}</Text><br />
