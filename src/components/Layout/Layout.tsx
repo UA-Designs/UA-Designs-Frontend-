@@ -237,6 +237,13 @@ const Layout: React.FC = () => {
           width={256}
           collapsedWidth={64}
           style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 100,
+            height: '100vh',
+            overflow: 'auto',
             background: SIDEBAR_BG,
             borderRight: '1px solid rgba(255,255,255,0.08)',
           }}
@@ -263,7 +270,12 @@ const Layout: React.FC = () => {
         </Drawer>
       )}
 
-      <AntLayout>
+      <AntLayout
+        style={{
+          marginLeft: !isMobile ? (collapsed ? 64 : 256) : 0,
+          minHeight: '100vh',
+        }}
+      >
         <Header
           style={{
             padding: '0 16px',
