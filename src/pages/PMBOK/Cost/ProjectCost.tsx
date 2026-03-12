@@ -781,10 +781,10 @@ const ProjectCost: React.FC = () => {
       // Build summary from returned items
       const all = result.expenses ?? [];
       setExpenseSummary({
-        pending:  all.filter((e: Expense) => e.status === ExpenseStatus.PENDING).reduce((s: number, e: Expense) => s + e.amount, 0),
-        approved: all.filter((e: Expense) => e.status === ExpenseStatus.APPROVED).reduce((s: number, e: Expense) => s + e.amount, 0),
-        paid:     all.filter((e: Expense) => e.status === ExpenseStatus.PAID).reduce((s: number, e: Expense) => s + e.amount, 0),
-        rejected: all.filter((e: Expense) => e.status === ExpenseStatus.REJECTED).reduce((s: number, e: Expense) => s + e.amount, 0),
+        pending:  all.filter((e: Expense) => e.status === ExpenseStatus.PENDING).reduce((s: number, e: Expense) => s + (Number(e.amount) || 0), 0),
+        approved: all.filter((e: Expense) => e.status === ExpenseStatus.APPROVED).reduce((s: number, e: Expense) => s + (Number(e.amount) || 0), 0),
+        paid:     all.filter((e: Expense) => e.status === ExpenseStatus.PAID).reduce((s: number, e: Expense) => s + (Number(e.amount) || 0), 0),
+        rejected: all.filter((e: Expense) => e.status === ExpenseStatus.REJECTED).reduce((s: number, e: Expense) => s + (Number(e.amount) || 0), 0),
       });
     } catch {
       message.error('Failed to load expenses');
@@ -807,6 +807,8 @@ const ProjectCost: React.FC = () => {
   const handleExpenseDeleted = (deletedId: string) => {
     setExpenses(prev => prev.filter(e => e.id !== deletedId));
     setExpenseTotal(t => Math.max(0, t - 1));
+    // Refresh from server so summary totals (pending/approved/paid/rejected) stay accurate
+    loadExpenses(expensePage);
   };
   const handleExpenseSaved = (saved: Expense) => {
     setExpenses(prev => {
@@ -814,6 +816,8 @@ const ProjectCost: React.FC = () => {
       return idx >= 0 ? prev.map(e => e.id === saved.id ? saved : e) : [saved, ...prev];
     });
     if (!editingExpense) setExpenseTotal(t => t + 1);
+    // Reload to pick up any backend-calculated fields and keep summary cards correct
+    loadExpenses(expensePage);
   };
 
   const handleBulkApprove = async () => {
@@ -954,21 +958,16 @@ const ProjectCost: React.FC = () => {
             <Text style={{ color: '#8c8c8c' }}>Track and export project expenses</Text>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title level={4} style={{ margin: 0, color: '#fff' }}>Expenses</Title>
-            <Button
-              icon={<ReloadOutlined style={{ color: '#009944' }} />}
-              onClick={() => loadExpenses(expensePage)}
-              style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
-            >
-              Refresh
-            </Button>
-          </div>
-
           <Spin spinning={expenseLoading}>
                   <div style={{ padding: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-                      <Title level={3} style={{ color: '#fff', margin: 0 }}>Expenses</Title>
+                      <Button
+                        icon={<ReloadOutlined style={{ color: '#009944' }} />}
+                        onClick={() => loadExpenses(expensePage)}
+                        style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
+                      >
+                        Refresh
+                      </Button>
                       <Space>
                         <Button
                           icon={<DownloadOutlined />}
