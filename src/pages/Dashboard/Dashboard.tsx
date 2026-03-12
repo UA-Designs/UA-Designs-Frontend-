@@ -227,6 +227,17 @@ const Dashboard: React.FC = () => {
     borderRadius: 12,
   };
 
+  const totalBudget = projectStats?.totalBudget ?? stats?.totalBudget ?? 0;
+  const totalSpent =
+    projectStats?.spentBudget ?? stats?.actualCost ?? 0;
+  const activeProjects =
+    projectStats?.activeProjects ?? stats?.activeProjects ?? 0;
+  const overBudgetCount = projects.filter((p) => {
+    const b = Number(p.budget ?? 0);
+    const s = Number((p as any).actualCost ?? 0);
+    return b > 0 && s > b;
+  }).length;
+
   return (
     <div
       style={{
@@ -264,18 +275,6 @@ const Dashboard: React.FC = () => {
           Log Expense
         </Button>
       </div>
-
-      const totalBudget = projectStats?.totalBudget ?? stats?.totalBudget ?? 0;
-      const totalSpent =
-        projectStats?.spentBudget ?? stats?.actualCost ?? 0;
-      const activeProjects =
-        projectStats?.activeProjects ?? stats?.activeProjects ?? 0;
-      const overBudgetCount = projects.filter((p) => {
-        const b = Number(p.budget ?? 0);
-        const s = Number((p as any).actualCost ?? 0);
-        return b > 0 && s > b;
-      }).length;
-
       {/* Summary cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
