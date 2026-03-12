@@ -127,7 +127,6 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
     setLoadingOptions(true);
     const load = async () => {
-      // Use only project-scoped resources to avoid 400 when API requires projectId
       const [mProj, lProj, eProj] = await Promise.all([
         resourceService.getMaterials(projectId).catch(() => []),
         resourceService.getLabor(projectId).catch(() => []),

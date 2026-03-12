@@ -10,7 +10,7 @@ export interface Material {
 
 export interface CreateMaterialData {
   name: string;
-  projectId: string;
+  projectId?: string;
   unit: string;
   unitCost: number;
   quantity: number;
@@ -130,16 +130,16 @@ class ResourceService {
     }
   }
 
-  // POST /api/resources/materials — required: name, projectId, unit, unitCost, quantity (camelCase; backend also accepts snake_case)
+  // POST /api/resources/materials — required: name, unit, unitCost, quantity; projectId optional (materials are global)
   async createMaterial(data: CreateMaterialData): Promise<Material> {
     try {
       const payload: Record<string, unknown> = {
         name: String(data.name).trim(),
-        projectId: data.projectId,
         unit: data.unit ?? 'pcs',
         unitCost: Number(data.unitCost ?? data.defaultCost ?? 0),
         quantity: Number(data.quantity ?? 0),
       };
+      if (data.projectId != null && data.projectId !== '') payload.projectId = data.projectId;
       if (data.description != null && data.description !== '') payload.description = data.description;
       if (data.category != null && data.category !== '') payload.category = data.category;
       if (data.supplier != null && data.supplier !== '') payload.supplier = data.supplier;
