@@ -153,8 +153,9 @@ class ResourceService {
     } catch (error: any) {
       const err = error.response?.data;
       const msg = err?.message ?? err?.error ?? error.message;
-      const details = Array.isArray(err?.errors) ? err.errors.map((e: any) => `${e.field}: ${e.message}`).join('; ') : '';
-      throw new Error(details ? `${msg} — ${details}` : msg || 'Failed to create material');
+      const details = Array.isArray(err?.errors) ? err.errors.map((e: any) => `${e.field ?? e.param}: ${e.message ?? e.msg}`).join('; ') : '';
+      const body = typeof err === 'string' ? err : null;
+      throw new Error(details ? `${msg || 'Validation error'} — ${details}` : body || msg || 'Failed to create material');
     }
   }
 

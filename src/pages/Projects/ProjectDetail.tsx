@@ -118,7 +118,11 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
   const category = Form.useWatch('category', form) || CostType.MATERIAL;
 
   useEffect(() => {
-    form.setFieldValue('materialId', undefined);
+    if (category === CostType.LABOR) {
+      form.setFieldValue('materialId', undefined);
+    } else {
+      form.setFieldValue('laborName', undefined);
+    }
   }, [category, form]);
 
   useEffect(() => {
@@ -148,10 +152,15 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const { category: cat, materialId, estimatedQty, unitCost, tradeCategory, notes } = values;
-      const list = cat === CostType.MATERIAL ? materials : cat === CostType.LABOR ? labor : equipment;
-      const item = list.find((x: { id: string }) => x.id === materialId);
-      const name = item?.name ?? 'Unnamed item';
+      const { category: cat, materialId, laborName, estimatedQty, unitCost, tradeCategory, notes } = values;
+      const name =
+        cat === CostType.LABOR
+          ? (laborName || '').trim() || 'Labor'
+          : (() => {
+              const list = cat === CostType.MATERIAL ? materials : equipment;
+              const item = list.find((x: { id: string }) => x.id === materialId);
+              return item?.name ?? 'Unnamed item';
+            })();
       const totalAmount = Number(estimatedQty) * Number(unitCost);
       setSaving(true);
       await costService.createCost({
@@ -212,20 +221,30 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
             options={TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
           />
         </Form.Item>
-        <Form.Item
-          name="materialId"
-          label={<span style={labelStyle}>{category === CostType.MATERIAL ? 'Material' : category === CostType.LABOR ? 'Labor' : 'Equipment'} *</span>}
-          rules={[{ required: true, message: `Select ${category === CostType.MATERIAL ? 'material' : category === CostType.LABOR ? 'labor' : 'equipment'}` }]}
-        >
-          <Select
-            placeholder={category === CostType.MATERIAL ? 'Select material' : category === CostType.LABOR ? 'Select labor' : 'Select equipment'}
-            loading={loadingOptions}
-            style={{ width: '100%' }}
-            dropdownStyle={{ background: '#1f1f1f' }}
-            optionFilterProp="label"
-            options={itemOptions.map(o => ({ label: o.name, value: o.id }))}
-          />
-        </Form.Item>
+        {category === CostType.LABOR ? (
+          <Form.Item
+            name="laborName"
+            label={<span style={labelStyle}>Labor *</span>}
+            rules={[{ required: true, message: 'Enter labor description' }]}
+          >
+            <Input placeholder="e.g. Masonry labor, Electrical work" style={inputStyle} allowClear />
+          </Form.Item>
+        ) : (
+          <Form.Item
+            name="materialId"
+            label={<span style={labelStyle}>{category === CostType.MATERIAL ? 'Material' : 'Equipment'} *</span>}
+            rules={[{ required: true, message: `Select ${category === CostType.MATERIAL ? 'material' : 'equipment'}` }]}
+          >
+            <Select
+              placeholder={category === CostType.MATERIAL ? 'Select material' : 'Select equipment'}
+              loading={loadingOptions}
+              style={{ width: '100%' }}
+              dropdownStyle={{ background: '#1f1f1f' }}
+              optionFilterProp="label"
+              options={itemOptions.map(o => ({ label: o.name, value: o.id }))}
+            />
+          </Form.Item>
+        )}
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="estimatedQty" label={<span style={labelStyle}>Estimated Qty *</span>} rules={[{ required: true }]} initialValue={0}>
