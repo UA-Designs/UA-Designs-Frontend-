@@ -33,19 +33,11 @@ import {
   Legend,
 } from 'recharts';
 import { dashboardService } from '../../services/dashboardService';
-import type { DashboardStats, ProjectProgress, CostVariance } from '../../types';
+import { projectService } from '../../services/projectService';
+import type { DashboardStats } from '../../types';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
-
-// Data as displayed in the reference dashboard (from provided screenshots)
-const SUMMARY = {
-  totalBudget: 9300000,
-  totalSpent: 698373.77,
-  activeProjects: 2,
-  budgetAlerts: 0,
-  budgetAlertsMessage: 'All projects within budget',
-};
 
 const BOQ_CATEGORIES = [
   {
@@ -120,11 +112,6 @@ const BUDGET_CHART_DATA = [
   { name: 'A Proposed Reno...', budget: 3500000, materials: 0, labor: 0, equipment: 0, other: 0 },
 ];
 
-const ALL_PROJECTS = [
-  { name: 'A Proposed 2 Storey Residential Building', status: 'Active', assigned: 0, budget: 5800000, remaining: 5101626.23, percentUsed: 12 },
-  { name: 'A Proposed Renovation of Residential House', status: 'Active', assigned: 0, budget: 3500000, remaining: 3500000, percentUsed: 0 },
-];
-
 const formatPeso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 const formatPesoK = (v: number) => (v >= 1_000_000 ? `P${(v / 1_000_000).toFixed(0)}M` : `P${(v / 1_000).toFixed(0)}K`);
 
@@ -133,8 +120,8 @@ const Dashboard: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [projectProgress, setProjectProgress] = useState<ProjectProgress[]>([]);
-  const [costVariance, setCostVariance] = useState<CostVariance[]>([]);
+  const [projectStats, setProjectStats] = useState<any | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -143,14 +130,14 @@ const Dashboard: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const [statsData, projectData, costData] = await Promise.all([
-          dashboardService.getStats(),
-          dashboardService.getProjectProgress(),
-          dashboardService.getCostVariance(),
+        const [statsData, projectStatsData, projectsResp] = await Promise.all([
+          dashboardService.getStats().catch(() => null),
+          projectService.getProjectStats().catch(() => null),
+          projectService.getProjectsFiltered().catch(() => ({ projects: [], pagination: { total: 0 } })),
         ]);
-        setStats(statsData);
-        setProjectProgress(Array.isArray(projectData) ? projectData : []);
-        setCostVariance(Array.isArray(costData) ? costData : []);
+        if (statsData) setStats(statsData);
+        if (projectStatsData) setProjectStats(projectStatsData);
+        setProjects((projectsResp as any).projects || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {
@@ -180,27 +167,59 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const chartData = costVariance?.length > 0
-    ? costVariance.map((c) => ({
-        name: (c.projectName || '').length > 18 ? `${(c.projectName || '').slice(0, 15)}...` : c.projectName || 'Project',
-        budget: c.plannedCost ?? 0,
-        materials: c.actualCost ?? 0,
-        labor: 0,
-        equipment: 0,
-        other: 0,
-      }))
-    : BUDGET_CHART_DATA;
+  const chartData =
+    projects.length > 0
+      ? projects.map((p) => {
+          const name = p.name || p.projectName || 'Project';
+          const short =
+            name.length > 18 ? `${name.slice(0, 15)}...` : name;
+          const budget = Number(p.budget ?? 0);
+          const spent = Number((p as any).actualCost ?? 0);
+          return {
+            name: short,
+            budget,
+            actual: spent,
+          };
+        })
+      : [];
 
-  const projectsDisplay = projectProgress?.length > 0
-    ? projectProgress.map((p) => ({
-        name: p.projectName || 'Unnamed Project',
-        status: p.status || 'Active',
-        assigned: 0,
-        budget: p.budget ?? 0,
-        remaining: Math.max(0, (p.budget ?? 0) - (p.actualCost ?? 0)),
-        percentUsed: (p.budget ?? 0) > 0 ? Math.round(((p.actualCost ?? 0) / (p.budget ?? 0)) * 100) : 0,
-      }))
-    : ALL_PROJECTS;
+  const projectsDisplay =
+    projects.length > 0
+      ? projects.map((p) => {
+          const spent = Number((p as any).actualCost ?? 0);
+          const budget = Number(p.budget ?? 0);
+          const remaining = Math.max(0, budget - spent);
+          const pctUsedRaw = budget > 0 ? (spent / budget) * 100 : 0;
+          const pctUsedLabel =
+            budget > 0
+              ? pctUsedRaw === 0 && spent > 0
+                ? '<1'
+                : pctUsedRaw > 0 && pctUsedRaw < 1
+                ? pctUsedRaw.toFixed(1)
+                : String(Math.round(pctUsedRaw))
+              : '0';
+          const pctUsedProgress =
+            budget > 0
+              ? Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Math.round(pctUsedRaw === 0 && spent > 0 ? 1 : pctUsedRaw)
+                  )
+                )
+              : 0;
+          const assignedCount = (p as any).teamMembers?.length ?? 0;
+          return {
+            name: p.name || p.projectName || 'Unnamed Project',
+            status: p.status || 'Active',
+            assigned: assignedCount,
+            budget,
+            remaining,
+            percentUsedLabel: pctUsedLabel,
+            percentUsedProgress: pctUsedProgress,
+          };
+        })
+      : [];
 
   const cardStyle = {
     background: 'rgba(26, 26, 26, 0.95)',
@@ -246,13 +265,24 @@ const Dashboard: React.FC = () => {
         </Button>
       </div>
 
+      const totalBudget = projectStats?.totalBudget ?? stats?.totalBudget ?? 0;
+      const totalSpent =
+        projectStats?.spentBudget ?? stats?.actualCost ?? 0;
+      const activeProjects =
+        projectStats?.activeProjects ?? stats?.activeProjects ?? 0;
+      const overBudgetCount = projects.filter((p) => {
+        const b = Number(p.budget ?? 0);
+        const s = Number((p as any).actualCost ?? 0);
+        return b > 0 && s > b;
+      }).length;
+
       {/* Summary cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
           <Card size="small" style={cardStyle}>
             <Statistic
               title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Total Budget</Text>}
-              value={stats?.totalBudget ?? SUMMARY.totalBudget}
+              value={totalBudget}
               prefix={<DollarOutlined style={{ color: '#009944', marginRight: 8 }} />}
               formatter={(val) => formatPeso(Number(val))}
               valueStyle={{ fontSize: 22, fontWeight: 700, color: '#009944' }}
@@ -263,7 +293,7 @@ const Dashboard: React.FC = () => {
           <Card size="small" style={cardStyle}>
             <Statistic
               title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Total Spent</Text>}
-              value={stats?.actualCost ?? SUMMARY.totalSpent}
+              value={totalSpent}
               prefix={<LineChartOutlined style={{ color: '#009944', marginRight: 8 }} />}
               formatter={(val) => formatPeso(Number(val))}
               valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
@@ -274,7 +304,7 @@ const Dashboard: React.FC = () => {
           <Card size="small" style={cardStyle}>
             <Statistic
               title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Active Projects</Text>}
-              value={stats?.activeProjects ?? SUMMARY.activeProjects}
+              value={activeProjects}
               prefix={<FolderOutlined style={{ color: '#009944', marginRight: 8 }} />}
               valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
             />
@@ -285,19 +315,32 @@ const Dashboard: React.FC = () => {
             size="small"
             style={{
               ...cardStyle,
-              background: SUMMARY.budgetAlerts === 0 ? 'rgba(0, 153, 68, 0.12)' : cardStyle.background,
-              border: SUMMARY.budgetAlerts === 0 ? '1px solid rgba(0, 153, 68, 0.4)' : cardStyle.border,
+              background:
+                overBudgetCount === 0
+                  ? 'rgba(0, 153, 68, 0.12)'
+                  : cardStyle.background,
+              border:
+                overBudgetCount === 0
+                  ? '1px solid rgba(0, 153, 68, 0.4)'
+                  : cardStyle.border,
             }}
           >
             <Statistic
               title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Budget Alerts</Text>}
-              value={SUMMARY.budgetAlerts}
-              prefix={<WarningOutlined style={{ color: SUMMARY.budgetAlerts === 0 ? '#52c41a' : '#faad14', marginRight: 8 }} />}
+              value={overBudgetCount}
+              prefix={
+                <WarningOutlined
+                  style={{
+                    color: overBudgetCount === 0 ? '#52c41a' : '#faad14',
+                    marginRight: 8,
+                  }}
+                />
+              }
               valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
             />
-            {SUMMARY.budgetAlerts === 0 && (
+            {overBudgetCount === 0 && (
               <Text style={{ fontSize: 12, color: '#52c41a', marginTop: 4, display: 'block' }}>
-                {SUMMARY.budgetAlertsMessage}
+                All projects within budget
               </Text>
             )}
           </Card>
@@ -430,11 +473,11 @@ const Dashboard: React.FC = () => {
           </Card>
 
           <Card
-            title={<span style={{ fontWeight: 600, color: '#ffffff' }}>Budget vs Actual by Category</span>}
+            title={<span style={{ fontWeight: 600, color: '#ffffff' }}>Budget vs Actual by Project</span>}
             style={cardStyle}
           >
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barGap={4} barCategoryGap="20%">
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barGap={8} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 11 }} tickFormatter={formatPesoK} axisLine={false} tickLine={false} />
@@ -445,10 +488,7 @@ const Dashboard: React.FC = () => {
                 />
                 <Legend wrapperStyle={{ color: '#fff' }} />
                 <Bar dataKey="budget" name="Budget" fill="#555" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="materials" name="Materials" fill="#1890ff" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="labor" name="Labor" fill="#009944" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="equipment" name="Equipment" fill="#fa8c16" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="other" name="Other" fill="#722ed1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" name="Actual" fill="#009944" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -482,8 +522,16 @@ const Dashboard: React.FC = () => {
                 <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>
                   Remaining: {formatPeso(p.remaining)}
                 </Text>
-                <Progress percent={p.percentUsed} showInfo={false} strokeColor="#009944" size="small" style={{ marginTop: 8 }} />
-                <Text style={{ fontSize: 12, color: '#52c41a' }}>{p.percentUsed}% used</Text>
+                <Progress
+                  percent={p.percentUsedProgress}
+                  showInfo={false}
+                  strokeColor="#009944"
+                  size="small"
+                  style={{ marginTop: 8 }}
+                />
+                <Text style={{ fontSize: 12, color: '#52c41a' }}>
+                  {p.percentUsedLabel}% used
+                </Text>
               </Card>
             </Col>
           ))}
