@@ -853,6 +853,10 @@ const ProjectCost: React.FC = () => {
   };
 
   const exportExpensesCSV = () => {
+    if (!expenses.length) {
+      message.info('No expenses to export yet.');
+      return;
+    }
     const headers = ['Date', 'Project', 'Category', 'Vendor', 'Amount', 'Added By', 'Receipt'];
     const rows = expenses.map((r: Expense) => [
       r.date ? dayjs(r.date).format('M/D/YYYY') : '',
@@ -865,11 +869,14 @@ const ProjectCost: React.FC = () => {
     ]);
     const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `expenses-${dayjs().format('YYYY-MM-DD')}.csv`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(link.href);
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     message.success('CSV exported');
   };
 

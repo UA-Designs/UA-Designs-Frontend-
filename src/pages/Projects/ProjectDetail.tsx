@@ -418,17 +418,19 @@ const ProjectDetail: React.FC = () => {
   const expensesSum = (expensesResult.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const budgetsTotal = budgets.reduce((s, b) => s + (Number(b.amount) ?? 0), 0);
   // API: GET /projects/:id → data.project.budget (decimal string); GET /projects/:id/budget-overview → data.budget, data.totalActualCost
-  const budget =
+  const rawBudget =
     (budgetOverview && Number(budgetOverview.budget) > 0 ? Number(budgetOverview.budget) : null) ??
     (project.budget != null && Number(project.budget) > 0 ? Number(project.budget) : null) ??
     (budgetsTotal > 0 ? budgetsTotal : 0);
+  const budget = Number.isFinite(rawBudget) ? Number(rawBudget) : 0;
   // Prefer backend totalActualCost when > 0; else use sum of fetched expenses so logged expenses show as spent
-  const spent =
+  const rawSpent =
     Number(budgetOverview?.totalActualCost ?? 0) ||
     expensesSum ||
     Number(costOverview?.totalCosts ?? 0) ||
     costsSum ||
     0;
+  const spent = Number.isFinite(rawSpent) ? Number(rawSpent) : 0;
   const remaining = Math.max(0, budget - spent);
   const pctUsed = budget > 0 ? Math.round((spent / budget) * 100) : 0;
   const projectLocation = project.location ?? projAny.location ?? projAny.address ?? projAny.site_address ?? '';
@@ -447,23 +449,43 @@ const ProjectDetail: React.FC = () => {
   const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });
 
   const totalBOQ = boqByCategory.material + boqByCategory.labor + boqByCategory.equipment || budgets.reduce((s, b) => s + (b.amount ?? 0), 0);
-  const estimatedTotal = Number(costOverview?.totalBudget ?? 0) || budget || totalBOQ;
-  const actualSpent = Number(costOverview?.totalCosts ?? 0) || spent;
+  const rawEstimatedTotal = Number(costOverview?.totalBudget ?? 0) || budget || totalBOQ;
+  const estimatedTotal = Number.isFinite(rawEstimatedTotal) ? Number(rawEstimatedTotal) : 0;
+  const rawActualSpent = Number(costOverview?.totalCosts ?? 0) || spent;
+  const actualSpent = Number.isFinite(rawActualSpent) ? Number(rawActualSpent) : 0;
   const actualByCat = {
-    material: Number(costBreakdown?.actualMaterials ?? 0) || costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.material,
-    labor: Number(costBreakdown?.actualLabor ?? 0) || costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.labor,
-    equipment: Number(costBreakdown?.actualEquipment ?? 0) || costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.equipment,
+    material:
+      Number(costBreakdown?.actualMaterials ?? 0) ||
+      costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      expensesByCategory.material,
+    labor:
+      Number(costBreakdown?.actualLabor ?? 0) ||
+      costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      expensesByCategory.labor,
+    equipment:
+      Number(costBreakdown?.actualEquipment ?? 0) ||
+      costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      expensesByCategory.equipment,
   };
   // When BOQ/costs don't set category budget (0), use project budget for categories that have actual spend so chart and cards show budget vs actual
-  const materialBudget = boqByCategory.material || (actualByCat.material > 0 && budget > 0 ? budget : 0);
-  const laborBudget = boqByCategory.labor || (actualByCat.labor > 0 && budget > 0 ? budget : 0);
-  const equipmentBudget = boqByCategory.equipment || (actualByCat.equipment > 0 && budget > 0 ? budget : 0);
+  const materialBudget = Number.isFinite(boqByCategory.material)
+    ? (boqByCategory.material || (actualByCat.material > 0 && budget > 0 ? budget : 0))
+    : 0;
+  const laborBudget = Number.isFinite(boqByCategory.labor)
+    ? (boqByCategory.labor || (actualByCat.labor > 0 && budget > 0 ? budget : 0))
+    : 0;
+  const equipmentBudget = Number.isFinite(boqByCategory.equipment)
+    ? (boqByCategory.equipment || (actualByCat.equipment > 0 && budget > 0 ? budget : 0))
+    : 0;
   const varianceChartData = [
     { category: 'Materials', budget: materialBudget, actual: actualByCat.material },
     { category: 'Labor', budget: laborBudget, actual: actualByCat.labor },
     { category: 'Equipment', budget: equipmentBudget, actual: actualByCat.equipment },
   ];
-  const chartMax = Math.max(...varianceChartData.map(d => Math.max(d.budget, d.actual)), 1);
+  const chartMax = Math.max(
+    ...varianceChartData.map(d => Math.max(Number(d.budget) || 0, Number(d.actual) || 0)),
+    1,
+  );
 
   const boqColumns: ColumnsType<Cost> = [
     { title: 'Item Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },

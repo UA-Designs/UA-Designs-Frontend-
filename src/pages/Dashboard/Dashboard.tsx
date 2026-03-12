@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Row,
@@ -39,79 +39,6 @@ import type { DashboardStats } from '../../types';
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
 
-const BOQ_CATEGORIES = [
-  {
-    key: 'materials',
-    label: 'Materials',
-    icon: '📦',
-    iconColor: '#69b1ff',
-    spent: 653062.77,
-    budget: 7253424.95,
-    status: 'On Track',
-    statusColor: 'green',
-    variance: 'Under by ₱6,600,362.18',
-  },
-  {
-    key: 'labor',
-    label: 'Labor',
-    icon: '👷',
-    iconColor: '#fadb14',
-    spent: 0,
-    budget: 2335215,
-    status: 'On Track',
-    statusColor: 'green',
-    variance: 'Under by ₱2,335,215',
-  },
-  {
-    key: 'equipment',
-    label: 'Equipment',
-    icon: '🔧',
-    iconColor: '#9254de',
-    spent: 37264,
-    budget: 193057.85,
-    status: 'On Track',
-    statusColor: 'green',
-    variance: 'Under by ₱155,793.85',
-  },
-  {
-    key: 'fuel',
-    label: 'Fuel',
-    icon: '⛽',
-    iconColor: '#52c41a',
-    spent: 0,
-    budget: 11000,
-    status: 'On Track',
-    statusColor: 'green',
-    variance: 'Under by ₱11,000',
-  },
-];
-
-const TRADE_ALERTS = [
-  { name: 'RSB Works', status: 'over budget', statusTag: '1 over budget', color: '#ff4d4f', spent: 314005, budget: 1150250.25, icon: '🎯' },
-  { name: 'Formworks', status: 'over budget', statusTag: '1 over budget', color: '#ff4d4f', spent: 68280, budget: 345074.95, icon: '🔨' },
-  { name: 'Gen Requirements', status: 'near limit', statusTag: '1 near limit', color: '#faad14', spent: 151377.77, budget: 290295.9, icon: '📋' },
-  { name: 'Earthworks', status: 'near limit', statusTag: '1 near limit', color: '#faad14', spent: 37264, budget: 294484, icon: '⛰️' },
-  { name: 'Concrete Work', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 70800, budget: 654322.47, icon: '🧱' },
-  { name: 'Roofing', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 0, budget: 620803.98, icon: '🏠' },
-  { name: 'Masonry Works', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 48600, budget: 490416.65, icon: '🧱' },
-  { name: 'Plastering Works', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 0, budget: 293490.5, icon: '🛠️' },
-  { name: 'Ceiling Works', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 0, budget: 542579.85, icon: '⬜' },
-  { name: 'Tiles Works', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 0, budget: 1284521.2, icon: '🔲' },
-  { name: 'Paint Works', status: 'on track', statusTag: 'On track', color: '#52c41a', spent: 0, budget: 936877.28, icon: '🎨' },
-];
-
-const CRITICAL_ALERTS = [
-  { project: 'A Proposed 2 Storey Residential Building', type: 'Material', item: 'PHENOLIC BOARD # 1/2MM (FORMWORKS)', detail: 'Spent P68,280 of P47,742.5 (Over by P20,537.5)', percent: 143, status: 'OVER', barColor: '#ff4d4f' },
-  { project: 'A Proposed 2 Storey Residential Building', type: 'Material', item: 'DSB # 10MM (RSB)', usage: 'Used 900/934 pc', detail: 'Spent P133,800 of P130,760 (Over by P3,040)', percent: 102, status: 'OVER', barColor: '#ff4d4f' },
-  { project: 'A Proposed 2 Storey Residential Building', type: 'Material', item: 'GENERAL REQUIREMENTS', usage: 'Used 274.25/274.25 sq_m', detail: 'Spent P151,377.77 of P151,377.77', percent: 100, barColor: '#faad14' },
-  { project: 'A Proposed 2 Storey Residential Building', type: 'Equipment', item: 'Backhoe (Earthworks)', usage: 'Used 3/3 Days', percent: 100, barColor: '#faad14' },
-];
-
-const BUDGET_CHART_DATA = [
-  { name: 'A Proposed 2 St...', budget: 5800000, materials: 653062.77, labor: 0, equipment: 37264, other: 0 },
-  { name: 'A Proposed Reno...', budget: 3500000, materials: 0, labor: 0, equipment: 0, other: 0 },
-];
-
 const formatPeso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 const formatPesoK = (v: number) => (v >= 1_000_000 ? `P${(v / 1_000_000).toFixed(0)}M` : `P${(v / 1_000).toFixed(0)}K`);
 
@@ -125,27 +52,37 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const [statsData, projectStatsData, projectsResp] = await Promise.all([
-          dashboardService.getStats().catch(() => null),
-          projectService.getProjectStats().catch(() => null),
-          projectService.getProjectsFiltered().catch(() => ({ projects: [], pagination: { total: 0 } })),
-        ]);
-        if (statsData) setStats(statsData);
-        if (projectStatsData) setProjectStats(projectStatsData);
-        setProjects((projectsResp as any).projects || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [statsData, projectStatsData, projectsResp] = await Promise.all([
+        dashboardService.getStats().catch(() => null),
+        projectService.getProjectStats().catch(() => null),
+        projectService.getProjectsFiltered().catch(() => ({ projects: [], pagination: { total: 0 } })),
+      ]);
+      if (statsData) setStats(statsData);
+      if (projectStatsData) setProjectStats(projectStatsData);
+      setProjects((projectsResp as any).projects || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Refetch when user returns to the tab so Total Budget, Total Spent, Active Projects stay up to date
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [fetchData]);
 
   if (isLoading) {
     return (
@@ -237,6 +174,70 @@ const Dashboard: React.FC = () => {
     const s = Number((p as any).actualCost ?? 0);
     return b > 0 && s > b;
   }).length;
+
+  // BOQ: single "Overall" row from real totals (no per-category on dashboard)
+  const boqCategoriesFromData = [
+    {
+      key: 'overall',
+      label: 'Overall',
+      icon: '📊',
+      iconColor: '#009944',
+      spent: totalSpent,
+      budget: totalBudget,
+      status: totalBudget > 0 && totalSpent > totalBudget ? 'Over Budget' : 'On Track',
+      statusColor: totalBudget > 0 && totalSpent > totalBudget ? 'red' : 'green',
+      variance:
+        totalBudget > 0
+          ? totalSpent > totalBudget
+            ? `Over by ${formatPeso(totalSpent - totalBudget)}`
+            : `Under by ${formatPeso(totalBudget - totalSpent)}`
+          : 'No budget set',
+    },
+  ];
+
+  const NEAR_LIMIT_PCT = 80;
+  const tradeAlertsFromData = projects.map((p) => {
+    const budget = Number(p.budget ?? 0);
+    const spent = Number((p as any).actualCost ?? 0);
+    const pct = budget > 0 ? (spent / budget) * 100 : 0;
+    const over = budget > 0 && spent > budget;
+    const near = budget > 0 && !over && pct >= NEAR_LIMIT_PCT;
+    const status = over ? 'over budget' : near ? 'near limit' : 'on track';
+    const statusTag = over ? 'Over budget' : near ? 'Near limit' : 'On track';
+    const color = over ? '#ff4d4f' : near ? '#faad14' : '#52c41a';
+    return {
+      name: p.name || p.projectName || 'Unnamed Project',
+      status,
+      statusTag,
+      color,
+      spent,
+      budget,
+      icon: '📁',
+    };
+  });
+  const tradeNeedAttentionCount = tradeAlertsFromData.filter((t) => t.status === 'over budget' || t.status === 'near limit').length;
+
+  const criticalAlertsFromData = projects
+    .filter((p) => {
+      const b = Number(p.budget ?? 0);
+      const s = Number((p as any).actualCost ?? 0);
+      return b > 0 && s > b;
+    })
+    .map((p) => {
+      const budget = Number(p.budget ?? 0);
+      const spent = Number((p as any).actualCost ?? 0);
+      const overBy = spent - budget;
+      const percent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
+      return {
+        project: p.name || p.projectName || 'Unnamed Project',
+        type: 'Project',
+        item: 'Budget vs actual',
+        detail: `Spent ${formatPeso(spent)} of ${formatPeso(budget)} (Over by ${formatPeso(overBy)})`,
+        percent,
+        status: 'OVER',
+        barColor: '#ff4d4f',
+      };
+    });
 
   return (
     <div
@@ -351,7 +352,7 @@ const Dashboard: React.FC = () => {
         title={<span style={{ fontWeight: 600, color: '#ffffff' }}>BOQ Category Budget Status</span>}
         style={{ marginBottom: 24, ...cardStyle }}
       >
-        {BOQ_CATEGORIES.map((cat) => {
+        {boqCategoriesFromData.map((cat) => {
           const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0;
           return (
             <div
@@ -391,13 +392,16 @@ const Dashboard: React.FC = () => {
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <WarningOutlined style={{ color: '#faad14' }} />
                 <span style={{ fontWeight: 600, color: '#ffffff' }}>Trade Category Alerts</span>
-                <Tag color="red">4 need attention</Tag>
+                {tradeNeedAttentionCount > 0 && <Tag color="red">{tradeNeedAttentionCount} need attention</Tag>}
               </span>
             }
             style={{ marginBottom: 24, height: '100%', ...cardStyle }}
           >
             <div style={{ maxHeight: 420, overflow: 'auto' }}>
-              {TRADE_ALERTS.map((t) => {
+              {tradeAlertsFromData.length === 0 ? (
+                <Text style={{ color: 'rgba(255,255,255,0.65)' }}>No projects yet. Alerts will show when projects are over or near budget.</Text>
+              ) : (
+              tradeAlertsFromData.map((t) => {
                 const pct = t.budget > 0 ? Math.min(100, (t.spent / t.budget) * 100) : 0;
                 return (
                   <div
@@ -428,7 +432,8 @@ const Dashboard: React.FC = () => {
                     <DownOutlined style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           </Card>
         </Col>
@@ -439,35 +444,39 @@ const Dashboard: React.FC = () => {
             title={
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ff4d4f' }}>
                 <WarningOutlined />
-                Critical Budget Alerts (4)
+                Critical Budget Alerts ({criticalAlertsFromData.length})
               </span>
             }
             style={{ marginBottom: 24, ...cardStyle }}
           >
             <div style={{ maxHeight: 320, overflow: 'auto' }}>
-              {CRITICAL_ALERTS.map((a, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '12px 0',
-                    borderBottom: i < CRITICAL_ALERTS.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                  }}
-                >
-                  {a.project && (
-                    <Text style={{ fontSize: 12, display: 'block', marginBottom: 4, color: 'rgba(255,255,255,0.65)' }}>{a.project}</Text>
-                  )}
-                  <Text strong style={{ fontSize: 13, color: '#fff' }}>
-                    {a.type}: {a.item}
-                  </Text>
-                  {a.usage && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.usage}</Text>}
-                  {a.detail && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.detail}</Text>}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                    <Progress percent={a.percent} showInfo={false} strokeColor={a.barColor} size="small" style={{ flex: 1 }} />
-                    {a.status && <Tag color="red">{a.status}</Tag>}
-                    <Text style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{a.percent}%</Text>
+              {criticalAlertsFromData.length === 0 ? (
+                <Text style={{ color: 'rgba(255,255,255,0.65)' }}>No critical budget alerts. All projects are within budget.</Text>
+              ) : (
+                criticalAlertsFromData.map((a, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '12px 0',
+                      borderBottom: i < criticalAlertsFromData.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                    }}
+                  >
+                    {a.project && (
+                      <Text style={{ fontSize: 12, display: 'block', marginBottom: 4, color: 'rgba(255,255,255,0.65)' }}>{a.project}</Text>
+                    )}
+                    <Text strong style={{ fontSize: 13, color: '#fff' }}>
+                      {a.type}: {a.item}
+                    </Text>
+                    {'usage' in a && a.usage && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.usage}</Text>}
+                    {a.detail && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.detail}</Text>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      <Progress percent={Math.min(100, a.percent)} showInfo={false} strokeColor={a.barColor} size="small" style={{ flex: 1 }} />
+                      {a.status && <Tag color="red">{a.status}</Tag>}
+                      <Text style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{a.percent}%</Text>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
 

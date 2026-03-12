@@ -16,7 +16,6 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import Analytics from './pages/Analytics/Analytics';
 import ProjectAnalyticsPage from './pages/Analytics/ProjectAnalyticsPage';
 import Profile from './pages/Profile/Profile';
-import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import Users from './pages/Users/Users';
 import Projects from './pages/Projects/Projects';
@@ -61,7 +60,7 @@ function App() {
               <Route path="analytics" element={<Analytics />} />
               <Route path="projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="reports" element={<Navigate to="/analytics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="expenses" element={<Navigate to="/pmbok/cost" replace />} />
 

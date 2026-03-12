@@ -16,6 +16,7 @@ import { analyticsService } from '../../services/analyticsService';
 import type { AnalyticsOverview } from '../../types/analytics';
 import { BudgetVsActualByProjectChart } from './components/BudgetVsActualByProjectChart';
 import { ExpensesByCategoryChart } from './components/ExpensesByCategoryChart';
+import ReportsSection from './ReportsSection';
 import { useProject } from '../../contexts/ProjectContext';
 
 const { Title, Text } = Typography;
@@ -115,6 +116,7 @@ const Analytics: React.FC = () => {
         />
       )}
 
+      {/* Charts on top */}
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
           {loading ? (
@@ -131,6 +133,9 @@ const Analytics: React.FC = () => {
           )}
         </Col>
       </Row>
+
+      {/* Reports below charts */}
+      <ReportsSection />
     </div>
   );
 };

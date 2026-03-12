@@ -28,7 +28,6 @@ import {
   MenuUnfoldOutlined,
   MenuOutlined,
   BarChartOutlined,
-  FileTextOutlined,
   ExclamationCircleOutlined,
   UsergroupAddOutlined,
   ToolOutlined,
@@ -109,11 +108,10 @@ const Layout: React.FC = () => {
     { key: '/projects', icon: <ProjectOutlined />, label: 'Projects' },
     { key: '/materials', icon: <AppstoreOutlined />, label: 'Materials' },
     { key: '/pmbok/cost', icon: <DollarOutlined />, label: 'Expenses' },
-    { key: '/analytics', icon: <BarChartOutlined />, label: 'Analytics' },
     { key: '/pmbok/schedule', icon: <CalendarOutlined />, label: 'Schedule' },
     { key: '/pmbok/risk', icon: <ExclamationCircleOutlined />, label: 'Risk Management' },
     { key: '/pmbok/stakeholders', icon: <UsergroupAddOutlined />, label: 'Stakeholders' },
-    { key: '/reports', icon: <FileTextOutlined />, label: 'Reports' },
+    { key: '/analytics', icon: <BarChartOutlined />, label: 'Analytics' },
     { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
   ];
 
