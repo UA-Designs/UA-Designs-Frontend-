@@ -25,10 +25,11 @@ export const ACCESS_LEVELS = {
 export type AccessLevel = keyof typeof ACCESS_LEVELS;
 
 // ── Core checker ──────────────────────────────────────────────────────────────
-/** Returns true if `role` is included in the given access level. */
+/** Returns true if `role` is included in the given access level. Normalizes role to uppercase so backend casing does not block access. */
 export function hasAccess(role: Role | string | undefined, level: AccessLevel): boolean {
   if (!role) return false;
-  return (ACCESS_LEVELS[level] as readonly string[]).includes(role);
+  const normalized = typeof role === 'string' ? role.toUpperCase() : role;
+  return (ACCESS_LEVELS[level] as readonly string[]).includes(normalized);
 }
 
 // ── Convenience checks ────────────────────────────────────────────────────────

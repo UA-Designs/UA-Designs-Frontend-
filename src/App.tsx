@@ -20,6 +20,7 @@ import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import Users from './pages/Users/Users';
 import Projects from './pages/Projects/Projects';
+import ProjectDetail from './pages/Projects/ProjectDetail';
 import AuditLog from './pages/AuditLog/AuditLog';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 
@@ -55,6 +56,7 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="projects" element={<Projects />} />
+              <Route path="projects/:projectId" element={<ProjectDetail />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
               <Route path="profile" element={<Profile />} />

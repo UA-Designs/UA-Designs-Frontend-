@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Table,
   Button,
@@ -19,10 +19,8 @@ import {
   Typography,
   Dropdown,
   Progress,
-  Avatar,
   Spin,
   message,
-  Tooltip,
   Divider,
   Badge,
   Grid,
@@ -44,8 +42,10 @@ import {
   CheckCircleOutlined,
   PauseCircleOutlined,
   StopOutlined,
+  EyeOutlined,
+  EnvironmentOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { projectService, ProjectFilters, ProjectDashboardData } from '../../services/projectService';
 import { authService } from '../../services/authService';
@@ -68,10 +68,6 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
   cancelled:   { color: 'red',     icon: <StopOutlined />,            label: 'Cancelled' },
 };
 
-const priorityColor: Record<string, string> = {
-  low: 'default', medium: 'blue', high: 'orange', critical: 'red',
-};
-
 const formatCurrency = (v?: number) =>
   v !== undefined ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
@@ -81,6 +77,7 @@ const Projects: React.FC = () => {
   const { user: currentUser, can } = useAuth();
   const { projects: ctxProjects, setProjects: setCtxProjects } = useProject();
   const location = useLocation();
+  const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
 
@@ -155,12 +152,20 @@ const Projects: React.FC = () => {
     }
   }, [location.state]);
 
-  // ── load PM users ────────────────────────────────────────────────────────
+  // ── load PM users (Project Managers + Proprietors — both can be assigned as manager) ────────────────────────────────────────────────────────
   const loadPmUsers = async () => {
     setPmLoading(true);
     try {
-      const users = await authService.getUsersByRole(UserRole.PROJECT_MANAGER);
-      setPmUsers(Array.isArray(users) ? users : []);
+      const [managers, proprietors] = await Promise.all([
+        authService.getUsersByRole(UserRole.PROJECT_MANAGER).catch(() => []),
+        authService.getUsersByRole(UserRole.PROPRIETOR).catch(() => []),
+      ]);
+      const byId = new Map<string, (typeof managers)[0]>();
+      [...(Array.isArray(managers) ? managers : []), ...(Array.isArray(proprietors) ? proprietors : [])].forEach((u: any) => {
+        const id = u.id ?? u._id;
+        if (id && !byId.has(id)) byId.set(id, u);
+      });
+      setPmUsers(Array.from(byId.values()));
     } catch {
       message.error('Failed to load project managers');
     } finally {
@@ -347,142 +352,6 @@ const Projects: React.FC = () => {
     }
   };
 
-  // ── table columns ────────────────────────────────────────────────────────
-  const columns: ColumnsType<Project> = [
-    {
-      title: 'Project',
-      key: 'name',
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ color: '#ffffff', fontSize: 14 }}>{record.name}</Text>
-          {record.projectNumber && (
-            <Text type="secondary" style={{ fontSize: 12 }}>#{record.projectNumber}</Text>
-          )}
-          {record.clientName && (
-            <Text type="secondary" style={{ fontSize: 12 }}>Client: {record.clientName}</Text>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      render: (_, record) => {
-        const cfg = statusConfig[record.status] || { color: 'default', icon: null, label: record.status };
-        return (
-          <Tag color={cfg.color} icon={cfg.icon}>
-            {cfg.label}
-          </Tag>
-        );
-      },
-      width: 130,
-    },
-    {
-      title: 'Priority',
-      dataIndex: 'priority',
-      key: 'priority',
-      render: (v: string) => (
-        <Tag color={priorityColor[v] || 'default'}>{v?.toUpperCase() || '—'}</Tag>
-      ),
-      width: 100,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'projectType',
-      key: 'projectType',
-      render: (v: string) => v ? <Tag>{v}</Tag> : '—',
-      width: 120,
-    },
-    {
-      title: 'Progress',
-      dataIndex: 'progress',
-      key: 'progress',
-      render: (v: number) => (
-        <Progress
-          percent={v ?? 0}
-          size="small"
-          strokeColor="#009944"
-          format={(p) => `${p}%`}
-        />
-      ),
-      width: 140,
-    },
-    {
-      title: 'Budget',
-      dataIndex: 'budget',
-      key: 'budget',
-      render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text>,
-      width: 120,
-    },
-    {
-      title: 'Dates',
-      key: 'dates',
-      render: (_, record) => {
-        const start = record.startDate ? dayjs(record.startDate).format('MMM D, YYYY') : null;
-        const end   = (record.endDate || record.plannedEndDate)
-          ? dayjs(record.endDate || record.plannedEndDate).format('MMM D, YYYY')
-          : null;
-        return (
-          <Space direction="vertical" size={0}>
-            {start && <Text style={{ fontSize: 12, color: '#aaa' }}>Start: {start}</Text>}
-            {end   && <Text style={{ fontSize: 12, color: '#aaa' }}>End: {end}</Text>}
-            {!start && !end && <Text type="secondary">—</Text>}
-          </Space>
-        );
-      },
-      width: 160,
-    },
-    {
-      title: 'Project Manager',
-      key: 'pm',
-      render: (_, record) => {
-        const pm = (record as any).projectManager;
-        if (pm) {
-          return (
-            <Space>
-              <Avatar size="small" style={{ background: '#009944' }}>
-                {((pm.firstName?.[0] || '') + (pm.lastName?.[0] || '')).toUpperCase()}
-              </Avatar>
-              <Text style={{ fontSize: 12 }}>{pm.firstName} {pm.lastName}</Text>
-            </Space>
-          );
-        }
-        return <Text type="secondary">Unassigned</Text>;
-      },
-      width: 160,
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      fixed: 'right',
-      width: 80,
-      render: (_, record) => {
-        const menuItems = [
-          {
-            key: 'dashboard',
-            icon: <DashboardOutlined />,
-            label: 'View Dashboard',
-            onClick: () => openDashboard(record),
-          },
-          ...(isPM ? [
-            { key: 'edit', icon: <EditOutlined />, label: 'Edit Project', onClick: () => openEdit(record) },
-            { key: 'status', icon: <SyncOutlined />, label: 'Update Status', onClick: () => openStatusModal(record) },
-          ] : []),
-          ...(isPM ? [
-            { key: 'assign', icon: <UserSwitchOutlined />, label: 'Assign Manager', onClick: () => openAssignModal(record) },
-            { type: 'divider' as const },
-            { key: 'delete', icon: <DeleteOutlined />, label: 'Delete Project', danger: true, onClick: () => handleDelete(record) },
-          ] : []),
-        ];
-        return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<EllipsisOutlined />} style={{ color: '#aaa' }} />
-          </Dropdown>
-        );
-      },
-    },
-  ];
-
   // ── shared form fields ───────────────────────────────────────────────────
   const renderProjectFormFields = (showPM?: boolean) => (
     <>
@@ -566,132 +435,166 @@ const Projects: React.FC = () => {
     </>
   );
 
+  // ── go to project detail ────────────────────────────────────────────────────
+  const goToProjectDetail = (project: Project, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    navigate(`/projects/${project.id}`);
+  };
+
   // ── render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ padding: isMobile ? '16px 8px' : '24px', background: 'transparent', minHeight: '100vh' }}>
-      {/* Header */}
+      {/* Header: title, search, New Project */}
       <Row justify="space-between" align="middle" gutter={[12, 12]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={isPM ? undefined : 24}>
           <Title level={2} style={{ color: '#ffffff', margin: 0 }}>
             <ProjectOutlined style={{ color: '#009944', marginRight: 12 }} />
             Projects
           </Title>
-          <Text type="secondary">Manage all projects across the organization</Text>
         </Col>
-        {isPM && (
-          <Col xs={24} md="auto">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateModal}
-              style={{ background: '#009944', borderColor: '#009944' }}
-            >
-              New Project
-            </Button>
-          </Col>
-        )}
-      </Row>
-
-      {/* Stats */}
-      {stats && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          {[
-            { label: 'Total Projects',  value: stats.totalProjects,     color: '#ffffff', icon: <ProjectOutlined /> },
-            { label: 'Active',          value: stats.activeProjects,    color: '#00ff88', icon: <CheckCircleOutlined /> },
-            { label: 'On Hold',         value: stats.onHoldProjects,    color: '#fa8c16', icon: <PauseCircleOutlined /> },
-            { label: 'Completed',       value: stats.completedProjects, color: '#722ed1', icon: <CheckCircleOutlined /> },
-          ].map(s => (
-            <Col xs={24} sm={12} md={6} key={s.label}>
-              <Card
-                style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-                bodyStyle={{ padding: '20px 24px' }}
-              >
-                <Statistic
-                  title={<Text style={{ color: '#aaa', fontSize: 13 }}>{s.label}</Text>}
-                  value={s.value ?? 0}
-                  valueStyle={{ color: s.color, fontSize: 28, fontWeight: 700 }}
-                  prefix={React.cloneElement(s.icon as React.ReactElement, { style: { marginRight: 8 } })}
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-
-      {/* Filters */}
-      <Card
-        style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginBottom: 16 }}
-        bodyStyle={{ padding: isMobile ? '12px 16px' : '16px 24px' }}
-      >
-        <Row gutter={[12, 12]} align="middle">
-          <Col xs={24} sm={24} md={12} lg={10}>
+        <Col xs={24} md="auto">
+          <Space wrap size="middle">
             <Input
               prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-              placeholder="Search projects by name or client..."
+              placeholder="Search projects..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
               allowClear
-              style={{ width: '100%', background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }}
+              style={{ width: isMobile ? '100%' : 280, background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }}
             />
-          </Col>
-          <Col xs={12} sm={8} md={4}>
-            <Select
-              placeholder="Status"
-              allowClear
-              style={{ width: '100%' }}
-              value={filterStatus || undefined}
-              onChange={v => { setFilterStatus(v || ''); setPage(1); }}
-            >
-              <Option value="planning">Planning</Option>
-              <Option value="active">Active</Option>
-              <Option value="on_hold">On Hold</Option>
-              <Option value="completed">Completed</Option>
-              <Option value="cancelled">Cancelled</Option>
-            </Select>
-          </Col>
-          <Col xs={12} sm={8} md={4}>
-            <Select
-              placeholder="Type"
-              allowClear
-              style={{ width: '100%' }}
-              value={filterType || undefined}
-              onChange={v => { setFilterType(v || ''); setPage(1); }}
-            >
-              {Object.values(ProjectType).map(t => (
-                <Option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={4}>
-            <Button block={isMobile} onClick={() => { setSearch(''); setFilterStatus(''); setFilterType(''); setPage(1); }}>
-              Reset
-            </Button>
-          </Col>
-        </Row>
-      </Card>
+            {isPM && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreateModal}
+                style={{ background: '#009944', borderColor: '#009944' }}
+              >
+                New Project
+              </Button>
+            )}
+          </Space>
+        </Col>
+      </Row>
 
-      {/* Table */}
-      <Card
-        style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-        bodyStyle={{ padding: 0 }}
-      >
-        <Table
-          rowKey="id"
-          dataSource={projects}
-          columns={columns}
-          loading={loading}
-          scroll={{ x: 1200 }}
-          pagination={{
-            current: page,
-            pageSize,
-            total: totalCount,
-            onChange: (p) => setPage(p),
-            showTotal: (t) => `${t} projects`,
-            style: { padding: '16px 24px' },
-          }}
-          style={{ background: '#1f1f1f' }}
-        />
-      </Card>
+      {/* Project cards grid */}
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {projects.map((record) => {
+            const cfg = statusConfig[record.status] || { color: 'default', icon: null, label: record.status };
+            const spent = (record as any).actualCost ?? 0;
+            const remaining = Math.max(0, (record.budget ?? 0) - spent);
+            const pctUsed = record.budget ? Math.round((spent / record.budget) * 100) : 0;
+            const assignedCount = (record as any).teamMembers?.length ?? 0;
+
+            const menuItems = [
+              { key: 'view', icon: <EyeOutlined />, label: 'View Details', onClick: () => goToProjectDetail(record) },
+              { key: 'dashboard', icon: <DashboardOutlined />, label: 'View Dashboard', onClick: () => openDashboard(record) },
+              ...(isPM ? [
+                { key: 'edit', icon: <EditOutlined />, label: 'Edit Project', onClick: () => openEdit(record) },
+                { key: 'status', icon: <SyncOutlined />, label: 'Update Status', onClick: () => openStatusModal(record) },
+                { key: 'assign', icon: <UserSwitchOutlined />, label: 'Assign Manager', onClick: () => openAssignModal(record) },
+                { type: 'divider' as const },
+                { key: 'delete', icon: <DeleteOutlined />, label: 'Delete Project', danger: true, onClick: () => handleDelete(record) },
+              ] : []),
+            ];
+
+            return (
+              <Col xs={24} sm={24} md={12} lg={12} xl={8} key={record.id}>
+                <Card
+                  hoverable
+                  onClick={() => goToProjectDetail(record)}
+                  style={{
+                    background: '#1f1f1f',
+                    border: '1px solid rgba(0,153,68,0.2)',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                  }}
+                  bodyStyle={{ padding: '20px 24px' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <Text strong style={{ color: '#ffffff', fontSize: 15, flex: 1, marginRight: 8 }}>
+                      {record.name}
+                    </Text>
+                    <Space size="small" onClick={e => e.stopPropagation()}>
+                      <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
+                      <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
+                        <Button type="text" icon={<EllipsisOutlined />} style={{ color: '#aaa' }} onClick={e => e.stopPropagation()} />
+                      </Dropdown>
+                    </Space>
+                  </div>
+                  {record.clientName && (
+                    <Text style={{ display: 'block', color: '#aaa', fontSize: 13, marginBottom: 10 }}>
+                      {record.clientName}
+                    </Text>
+                  )}
+                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                    {record.location && (
+                      <Text style={{ color: '#bbb', fontSize: 12 }}>
+                        <EnvironmentOutlined style={{ marginRight: 6 }} />
+                        {record.location}
+                      </Text>
+                    )}
+                    <Text style={{ color: '#bbb', fontSize: 12 }}>
+                      <CalendarOutlined style={{ marginRight: 6 }} />
+                      {record.startDate ? dayjs(record.startDate).format('M/D/YYYY') : '—'}
+                    </Text>
+                    <Text style={{ color: '#bbb', fontSize: 12 }}>
+                      <TeamOutlined style={{ marginRight: 6 }} />
+                      {assignedCount} assigned
+                    </Text>
+                  </Space>
+                  <Divider style={{ borderColor: 'rgba(255,255,255,0.08)', margin: '12px 0' }} />
+                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                    <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(record.budget)}</Text>
+                    <Text style={{ color: '#aaa', fontSize: 12 }}>Remaining: {formatCurrency(remaining)}</Text>
+                    <Progress percent={pctUsed} size="small" strokeColor="#009944" showInfo={false} />
+                    <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsed}% used</Text>
+                  </Space>
+                  <Button
+                    type="default"
+                    icon={<EyeOutlined />}
+                    block
+                    style={{ marginTop: 16, background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                    onClick={e => goToProjectDetail(record, e)}
+                  >
+                    View Details
+                  </Button>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalCount > pageSize && (
+        <Row justify="end" style={{ marginTop: 24 }}>
+          <Space>
+            <Text style={{ color: '#aaa' }}>
+              {totalCount} projects
+            </Text>
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              disabled={page * pageSize >= totalCount}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next
+            </Button>
+          </Space>
+        </Row>
+      )}
 
       {/* ── Create Modal ── */}
       <Modal
