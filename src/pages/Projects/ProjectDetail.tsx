@@ -254,7 +254,6 @@ const ProjectDetail: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<ProjectDashboardData | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [expensesResult, setExpensesResult] = useState<{ expenses: Expense[]; pagination: { totalItems: number } }>({ expenses: [], pagination: { totalItems: 0 } });
-  const [allocations, setAllocations] = useState<any[]>([]);
   const [costOverview, setCostOverview] = useState<any>(null);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [costBreakdown, setCostBreakdown] = useState<any>(null);
@@ -280,12 +279,11 @@ const ProjectDetail: React.FC = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [proj, dash, budgetsRes, expensesRes, allocsRes, overviewRes, costsRes, breakdownRes] = await Promise.all([
+        const [proj, dash, budgetsRes, expensesRes, overviewRes, costsRes, breakdownRes] = await Promise.all([
           projectService.getProjectById(projectId),
           projectService.getProjectDashboard(projectId).catch(() => null),
           costService.getBudgets().catch(() => []),
           costService.getExpensesPaginated({ projectId, limit: 5 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
-          resourceService.getAllocations(projectId).catch(() => []),
           costService.getCostOverview(projectId).catch(() => null),
           costService.getCosts().catch(() => []),
           costService.getCostBreakdown(projectId).catch(() => null),
@@ -296,7 +294,6 @@ const ProjectDetail: React.FC = () => {
           const allBudgets = Array.isArray(budgetsRes) ? budgetsRes : [];
           setBudgets(allBudgets.filter((b: Budget) => b.projectId === projectId));
           setExpensesResult(expensesRes);
-          setAllocations(Array.isArray(allocsRes) ? allocsRes : []);
           setCostOverview(overviewRes);
           const allCosts = Array.isArray(costsRes) ? costsRes : [];
           setCosts(allCosts.filter((c: Cost) => c.projectId === projectId));
@@ -369,11 +366,9 @@ const ProjectDetail: React.FC = () => {
   const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
   const boqCount = dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
-  const usageCount = (dashboardData as any)?.usageRecordsCount ?? allocations.length;
   const expenseCount = (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
 
   const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });
-  const goToResources = () => navigate('/pmbok/resources', { state: { projectId } });
 
   const totalBOQ = boqByCategory.material + boqByCategory.labor + boqByCategory.equipment || budgets.reduce((s, b) => s + (b.amount ?? 0), 0);
   const estimatedTotal = costOverview?.totalBudget ?? totalBOQ ?? budget;
@@ -412,11 +407,6 @@ const ProjectDetail: React.FC = () => {
     { title: 'Status', key: 'status', render: () => <Tag color="green">OK</Tag> },
   ];
 
-  const allocationColumns: ColumnsType<any> = [
-    { title: 'Resource', key: 'resource', render: (_, r) => <Text style={{ color: '#fff' }}>{(r.resourceName || r.resourceId || r.id) || '—'}</Text> },
-    { title: 'Type', dataIndex: 'resourceType', key: 'resourceType', render: (t: string) => <Text style={{ color: '#bbb' }}>{t || '—'}</Text> },
-  ];
-
   const expenseColumns: ColumnsType<Expense> = [
     { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
     { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
@@ -430,7 +420,7 @@ const ProjectDetail: React.FC = () => {
       label: 'Overview',
       children: (
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} md={8}>
+          <Col xs={24} md={12}>
             <Card
               title="BOQ Items"
               style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
@@ -439,16 +429,7 @@ const ProjectDetail: React.FC = () => {
               <Text style={{ fontSize: 32, fontWeight: 700, color: '#ffffff' }}>{boqCount}</Text>
             </Card>
           </Col>
-          <Col xs={24} md={8}>
-            <Card
-              title="Usage Records"
-              style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
-              bodyStyle={{ padding: 24, textAlign: 'center' }}
-            >
-              <Text style={{ fontSize: 32, fontWeight: 700, color: '#ffffff' }}>{usageCount}</Text>
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
+          <Col xs={24} md={12}>
             <Card
               title="Total Expenses"
               style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
@@ -504,36 +485,6 @@ const ProjectDetail: React.FC = () => {
                   Add Material
                 </Button>
               </>
-            )}
-          </Card>
-        </div>
-      ),
-    },
-    {
-      key: 'site',
-      label: <>Site Usage <BarChartOutlined /></>,
-      children: (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-            <Typography.Title level={4} style={{ color: '#ffffff', margin: 0 }}>Site Material Usage</Typography.Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={goToResources} style={{ background: '#009944', borderColor: '#009944' }}>
-              Log Usage
-            </Button>
-          </div>
-          <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}>
-            {allocations.length > 0 ? (
-              <>
-                <Table rowKey="id" dataSource={allocations} columns={allocationColumns} pagination={false} size="small" style={{ background: 'transparent' }} />
-                <Button type="link" icon={<RightOutlined />} onClick={goToResources} style={{ color: '#009944', marginTop: 8 }}>Open in Resources</Button>
-              </>
-            ) : (
-              <Empty
-                description="No material usage logged yet. Log daily consumption to track variance."
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ padding: 48 }}
-              >
-                <Button type="primary" onClick={goToResources} style={{ background: '#009944', borderColor: '#009944' }}>Log Usage</Button>
-              </Empty>
             )}
           </Card>
         </div>

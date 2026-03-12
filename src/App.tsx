@@ -28,7 +28,6 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 // PMBOK Knowledge Areas (Core 5)
 import ProjectSchedule from './pages/PMBOK/Schedule/ProjectSchedule';
 import ProjectCost from './pages/PMBOK/Cost/ProjectCost';
-import ProjectResources from './pages/PMBOK/Resources/ProjectResources';
 import ProjectRisk from './pages/PMBOK/Risk/ProjectRisk';
 import ProjectStakeholders from './pages/PMBOK/Stakeholders/ProjectStakeholders';
 
@@ -69,7 +68,6 @@ function App() {
               {/* PMBOK Knowledge Areas (Core 5) */}
               <Route path="pmbok/schedule" element={<ProjectSchedule />} />
               <Route path="pmbok/cost" element={<ProjectCost />} />
-              <Route path="pmbok/resources" element={<ProjectResources />} />
               <Route path="pmbok/risk" element={<ProjectRisk />} />
               <Route
                 path="pmbok/stakeholders"

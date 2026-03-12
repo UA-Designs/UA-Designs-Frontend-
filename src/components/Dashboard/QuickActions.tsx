@@ -31,13 +31,6 @@ const QuickActions: React.FC = () => {
       color: '#009944',
     },
     {
-      key: 'add-team',
-      icon: <TeamOutlined />,
-      label: 'Add Team Member',
-      onClick: () => navigate('/pmbok/resources'),
-      color: '#722ed1',
-    },
-    {
       key: 'add-risk',
       icon: <ExclamationCircleOutlined />,
       label: 'Add Risk',

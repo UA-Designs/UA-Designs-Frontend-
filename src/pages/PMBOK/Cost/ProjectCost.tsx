@@ -18,8 +18,8 @@ import { useProject } from '../../../contexts/ProjectContext';
 import {
   costService,
   Budget, Expense,
-  ExpenseCategory, ExpenseStatus, ExpenseAttachment,
-  CreateExpenseData, ExpenseFilters,
+  CostType, ExpenseCategory, ExpenseStatus, ExpenseAttachment,
+  CreateExpenseData, CreateCostData, ExpenseFilters,
 } from '../../../services/costService';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -60,6 +60,17 @@ const CATEGORY_COLOR: Record<ExpenseCategory, string> = {
   [ExpenseCategory.PERMITS]:       '#eb2f96',
   [ExpenseCategory.OTHER]:         '#595959',
 };
+
+/** Map expense category to BOQ cost type so every expense is tracked in the BOQ */
+function expenseCategoryToCostType(category: ExpenseCategory): CostType {
+  switch (category) {
+    case ExpenseCategory.MATERIAL: return CostType.MATERIAL;
+    case ExpenseCategory.LABOR: return CostType.LABOR;
+    case ExpenseCategory.EQUIPMENT: return CostType.EQUIPMENT;
+    case ExpenseCategory.OVERHEAD: return CostType.OVERHEAD;
+    default: return CostType.OTHER;
+  }
+}
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 const fmtCurrency = (amount: number, currency = 'PHP') =>
@@ -562,6 +573,20 @@ const ExpenseFormModal: React.FC<ExpenseModalProps> = ({
           } catch {
             message.warning('Expense created but receipt upload failed');
           }
+        }
+        // Track every expense in the BOQ: create a cost line so it appears in the project BOQ
+        try {
+          const costPayload: CreateCostData = {
+            name: payload.name,
+            type: expenseCategoryToCostType(payload.category),
+            amount: payload.amount,
+            date: payload.date,
+            projectId: payload.projectId,
+            description: payload.description,
+          };
+          await costService.createCost(costPayload);
+        } catch (costErr: any) {
+          message.warning('Expense saved but BOQ line could not be created: ' + (costErr?.message || ''));
         }
       }
       onSaved(saved);

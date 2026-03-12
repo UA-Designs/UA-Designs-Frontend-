@@ -132,11 +132,6 @@ const Layout: React.FC = () => {
       label: 'Expenses',
     },
     {
-      key: '/pmbok/resources',
-      icon: <ToolOutlined />,
-      label: 'Resources',
-    },
-    {
       key: '/pmbok/risk',
       icon: <ExclamationCircleOutlined />,
       label: 'Risk Management',

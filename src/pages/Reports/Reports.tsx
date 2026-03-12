@@ -13,7 +13,6 @@ import { saveAs } from 'file-saver';
 import { useProject } from '../../contexts/ProjectContext';
 import { costService } from '../../services/costService';
 import { riskService } from '../../services/riskService';
-import { resourceService } from '../../services/resourceService';
 import { stakeholderService } from '../../services/stakeholderService';
 import { scheduleService } from '../../services/scheduleService';
 
@@ -259,14 +258,13 @@ const generateProjectSummaryExport = async (project: any) => {
 
   try {
     // Fetch all critical data in parallel — settle so partial failures don't block the whole export
-    const [costRes, evmRes, forecastRes, riskRes, scheduleRes, resourceRes, stakeholderRes, expenseRes] =
+    const [costRes, evmRes, forecastRes, riskRes, scheduleRes, stakeholderRes, expenseRes] =
       await Promise.allSettled([
         costService.getCostOverview(pid),
         costService.getEVM(pid),
         costService.getCostForecast(pid),
         riskService.getRiskReport(pid),
         scheduleService.getProjectSchedule(pid),
-        resourceService.getSummary(pid),
         stakeholderService.getSummary(pid),
         costService.getExpenseSummary(pid),
       ]);
@@ -277,7 +275,6 @@ const generateProjectSummaryExport = async (project: any) => {
     const forecast  = val(forecastRes);
     const risk      = val(riskRes);
     const schedule  = val(scheduleRes);
-    const resource  = val(resourceRes);
     const stakeholder = val(stakeholderRes);
     const expenses  = val(expenseRes);
 
@@ -405,13 +402,7 @@ const generateProjectSummaryExport = async (project: any) => {
       XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
     }
 
-    // ── Sheet 5: Resources ────────────────────────────────────────────────
-    if (resource) {
-      const ws = buildWorksheet(resource, 'Resource Summary', projectName);
-      XLSX.utils.book_append_sheet(wb, ws, 'Resources');
-    }
-
-    // ── Sheet 6: Stakeholders ─────────────────────────────────────────────
+    // ── Sheet 5: Stakeholders ─────────────────────────────────────────────
     if (stakeholder) {
       const ws = buildWorksheet(stakeholder, 'Stakeholder Summary', projectName);
       XLSX.utils.book_append_sheet(wb, ws, 'Stakeholders');
@@ -485,15 +476,6 @@ const REPORT_DEFS: ReportDef[] = [
     color: '#722ed1',
     fetch: (id) => scheduleService.getProjectSchedule(id),
     sheetName: 'Schedule',
-  },
-  {
-    key: 'resource_summary',
-    title: 'Resource Summary',
-    description: 'Resource allocation, utilization, and team overview.',
-    icon: <TeamOutlined />,
-    color: '#13c2c2',
-    fetch: (id) => resourceService.getSummary(id),
-    sheetName: 'Resources',
   },
   {
     key: 'stakeholder_summary',

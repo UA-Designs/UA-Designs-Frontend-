@@ -765,7 +765,6 @@ const Projects: React.FC = () => {
                 { label: 'Budgets',       value: dashboardData.pmbokCoreAreas?.cost?.count         ?? dashboardData.budgetCount      ?? 0, icon: <DollarOutlined />,           color: '#faad14' },
                 { label: 'Risks',         value: dashboardData.pmbokCoreAreas?.risk?.count         ?? dashboardData.riskCount        ?? 0, icon: <ExclamationCircleOutlined />, color: '#ff4d4f' },
                 { label: 'Stakeholders',  value: dashboardData.pmbokCoreAreas?.stakeholders?.count ?? dashboardData.stakeholderCount ?? 0, icon: <TeamOutlined />,             color: '#722ed1' },
-                { label: 'Resources',     value: dashboardData.pmbokCoreAreas?.resources?.count    ?? 0,                                   icon: <TeamOutlined />,             color: '#1890ff' },
               ].map(item => (
                 <Col span={8} key={item.label} style={{ marginBottom: 12 }}>
                   <Card style={{ background: '#1f1f1f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
