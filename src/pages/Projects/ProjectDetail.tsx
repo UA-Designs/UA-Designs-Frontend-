@@ -79,6 +79,9 @@ const ProjectDetail: React.FC = () => {
   const [costs, setCosts] = useState<Cost[]>([]);
   const [costBreakdown, setCostBreakdown] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [varianceFilter, setVarianceFilter] = useState<'all' | 'material' | 'labor' | 'equipment'>('all');
+  const [boqSearch, setBoqSearch] = useState('');
+  const [varianceSearch, setVarianceSearch] = useState('');
 
   useEffect(() => {
     if (!projectId) return;
@@ -118,6 +121,43 @@ const ProjectDetail: React.FC = () => {
     return () => { cancelled = true; };
   }, [projectId]);
 
+  // All hooks must be called before any early return
+  const boqByCategory = useMemo(() => {
+    const breakdown = costBreakdown || {};
+    const material = breakdown.materials ?? breakdown.Material ?? costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const labor = breakdown.labor ?? breakdown.Labor ?? costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const equipment = breakdown.equipment ?? breakdown.Equipment ?? costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const materialCount = costs.filter(c => c.type === CostType.MATERIAL).length;
+    const laborCount = costs.filter(c => c.type === CostType.LABOR).length;
+    const equipmentCount = costs.filter(c => c.type === CostType.EQUIPMENT).length;
+    return {
+      material: typeof material === 'number' ? material : 0,
+      labor: typeof labor === 'number' ? labor : 0,
+      equipment: typeof equipment === 'number' ? equipment : 0,
+      materialCount: breakdown.materialCount ?? breakdown.materialsCount ?? materialCount,
+      laborCount: breakdown.laborCount ?? breakdown.laborCount ?? laborCount,
+      equipmentCount: breakdown.equipmentCount ?? equipmentCount,
+    };
+  }, [costs, costBreakdown]);
+
+  const filteredBoqCosts = useMemo(() => {
+    if (!boqSearch.trim()) return costs;
+    const q = boqSearch.trim().toLowerCase();
+    return costs.filter(c => (c.name || '').toLowerCase().includes(q) || (c.type || '').toLowerCase().includes(q));
+  }, [costs, boqSearch]);
+
+  const filteredVarianceCosts = useMemo(() => {
+    let list = costs;
+    if (varianceFilter === 'material') list = list.filter(c => c.type === CostType.MATERIAL);
+    else if (varianceFilter === 'labor') list = list.filter(c => c.type === CostType.LABOR);
+    else if (varianceFilter === 'equipment') list = list.filter(c => c.type === CostType.EQUIPMENT);
+    if (varianceSearch.trim()) {
+      const q = varianceSearch.trim().toLowerCase();
+      list = list.filter(c => (c.name || '').toLowerCase().includes(q) || (c.type || '').toLowerCase().includes(q));
+    }
+    return list;
+  }, [costs, varianceFilter, varianceSearch]);
+
   if (loading || !project) {
     return (
       <div style={{ padding: 24, display: 'flex', justifyContent: 'center', minHeight: 400, alignItems: 'center' }}>
@@ -140,25 +180,6 @@ const ProjectDetail: React.FC = () => {
   const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });
   const goToResources = () => navigate('/pmbok/resources', { state: { projectId } });
 
-  // BOQ totals by category (from costs or breakdown)
-  const boqByCategory = useMemo(() => {
-    const breakdown = costBreakdown || {};
-    const material = breakdown.materials ?? breakdown.Material ?? costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const labor = breakdown.labor ?? breakdown.Labor ?? costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const equipment = breakdown.equipment ?? breakdown.Equipment ?? costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const materialCount = costs.filter(c => c.type === CostType.MATERIAL).length;
-    const laborCount = costs.filter(c => c.type === CostType.LABOR).length;
-    const equipmentCount = costs.filter(c => c.type === CostType.EQUIPMENT).length;
-    return {
-      material: typeof material === 'number' ? material : 0,
-      labor: typeof labor === 'number' ? labor : 0,
-      equipment: typeof equipment === 'number' ? equipment : 0,
-      materialCount: breakdown.materialCount ?? breakdown.materialsCount ?? materialCount,
-      laborCount: breakdown.laborCount ?? breakdown.laborCount ?? laborCount,
-      equipmentCount: breakdown.equipmentCount ?? equipmentCount,
-    };
-  }, [costs, costBreakdown]);
-
   const totalBOQ = boqByCategory.material + boqByCategory.labor + boqByCategory.equipment || budgets.reduce((s, b) => s + (b.amount ?? 0), 0);
   const estimatedTotal = costOverview?.totalBudget ?? totalBOQ ?? budget;
   const actualSpent = costOverview?.totalCosts ?? spent;
@@ -167,10 +188,6 @@ const ProjectDetail: React.FC = () => {
     { category: 'Labor', budget: boqByCategory.labor, actual: costBreakdown?.actualLabor ?? 0 },
     { category: 'Equipment', budget: boqByCategory.equipment, actual: costBreakdown?.actualEquipment ?? 0 },
   ];
-
-  const [varianceFilter, setVarianceFilter] = useState<'all' | 'material' | 'labor' | 'equipment'>('all');
-  const [boqSearch, setBoqSearch] = useState('');
-  const [varianceSearch, setVarianceSearch] = useState('');
 
   const boqColumns: ColumnsType<Cost> = [
     { title: 'Item Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
@@ -188,12 +205,6 @@ const ProjectDetail: React.FC = () => {
     ) },
   ];
 
-  const filteredBoqCosts = useMemo(() => {
-    if (!boqSearch.trim()) return costs;
-    const q = boqSearch.trim().toLowerCase();
-    return costs.filter(c => (c.name || '').toLowerCase().includes(q) || (c.type || '').toLowerCase().includes(q));
-  }, [costs, boqSearch]);
-
   const varianceTableColumns: ColumnsType<Cost> = [
     { title: 'Item', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
     { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => <Tag color="blue">{t || '—'}</Tag> },
@@ -205,19 +216,6 @@ const ProjectDetail: React.FC = () => {
     { title: 'ActualAmt', key: 'actualAmt', render: () => <Text style={{ color: '#bbb' }}>₱0</Text> },
     { title: 'Status', key: 'status', render: () => <Tag color="green">OK</Tag> },
   ];
-
-  const filteredVarianceCosts = useMemo(() => {
-    let list = costs;
-    if (varianceFilter === 'material') list = list.filter(c => c.type === CostType.MATERIAL);
-    else if (varianceFilter === 'labor') list = list.filter(c => c.type === CostType.LABOR);
-    else if (varianceFilter === 'equipment') list = list.filter(c => c.type === CostType.EQUIPMENT);
-    if (varianceSearch.trim()) {
-      const q = varianceSearch.trim().toLowerCase();
-      list = list.filter(c => (c.name || '').toLowerCase().includes(q) || (c.type || '').toLowerCase().includes(q));
-    }
-    return list;
-  }, [costs, varianceFilter, varianceSearch]);
-
 
   const allocationColumns: ColumnsType<any> = [
     { title: 'Resource', key: 'resource', render: (_, r) => <Text style={{ color: '#fff' }}>{(r.resourceName || r.resourceId || r.id) || '—'}</Text> },
