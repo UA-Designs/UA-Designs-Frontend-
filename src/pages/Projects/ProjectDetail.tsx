@@ -112,16 +112,14 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [labor, setLabor] = useState<Labor[]>([]);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const category = Form.useWatch('category', form) || CostType.MATERIAL;
 
   useEffect(() => {
-    if (category === CostType.LABOR) {
-      form.setFieldValue('materialId', undefined);
+    if (category === CostType.MATERIAL) {
+      form.setFieldValue('itemName', undefined);
     } else {
-      form.setFieldValue('laborName', undefined);
+      form.setFieldValue('materialId', undefined);
     }
   }, [category, form]);
 
@@ -131,37 +129,25 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
     setLoadingOptions(true);
     const load = async () => {
-      // Materials are global (from Materials page); labor/equipment stay project-scoped
-      const [mList, lProj, eProj] = await Promise.all([
-        resourceService.getMaterials().catch(() => []),
-        resourceService.getLabor(projectId).catch(() => []),
-        resourceService.getEquipment(projectId).catch(() => []),
-      ]);
+      const mList = await resourceService.getMaterials().catch(() => []);
       setMaterials(Array.isArray(mList) ? mList : []);
-      setLabor(Array.isArray(lProj) ? lProj : []);
-      setEquipment(Array.isArray(eProj) ? eProj : []);
     };
     load().finally(() => setLoadingOptions(false));
   }, [open, projectId, form]);
 
-  const itemOptions = useMemo(() => {
-    if (category === CostType.MATERIAL) return materials.map(m => ({ id: m.id, name: m.name }));
-    if (category === CostType.LABOR) return labor.map(l => ({ id: l.id, name: l.name }));
-    return equipment.map(e => ({ id: e.id, name: e.name }));
-  }, [category, materials, labor, equipment]);
+  const materialOptions = useMemo(() => materials.map(m => ({ id: m.id, name: m.name })), [materials]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const { category: cat, materialId, laborName, estimatedQty, unitCost, tradeCategory, notes } = values;
+      const { category: cat, materialId, itemName, estimatedQty, unitCost, tradeCategory, notes } = values;
       const name =
-        cat === CostType.LABOR
-          ? (laborName || '').trim() || 'Labor'
-          : (() => {
-              const list = cat === CostType.MATERIAL ? materials : equipment;
-              const item = list.find((x: { id: string }) => x.id === materialId);
+        cat === CostType.MATERIAL
+          ? (() => {
+              const item = materials.find((x: { id: string }) => x.id === materialId);
               return item?.name ?? 'Unnamed item';
-            })();
+            })()
+          : (itemName || '').trim() || cat;
       const totalAmount = Number(estimatedQty) * Number(unitCost);
       setSaving(true);
       await costService.createCost({
@@ -207,6 +193,8 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
               { label: 'Material', value: CostType.MATERIAL },
               { label: 'Labor', value: CostType.LABOR },
               { label: 'Equipment', value: CostType.EQUIPMENT },
+              { label: 'Fuel', value: CostType.FUEL },
+              { label: 'Formworks', value: CostType.FORMWORKS },
             ]}
             block
             style={{ background: '#2a2a2a' }}
@@ -222,27 +210,36 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
             options={TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
           />
         </Form.Item>
-        {category === CostType.LABOR ? (
-          <Form.Item
-            name="laborName"
-            label={<span style={labelStyle}>Labor *</span>}
-            rules={[{ required: true, message: 'Enter labor description' }]}
-          >
-            <Input placeholder="e.g. Masonry labor, Electrical work" style={inputStyle} allowClear />
-          </Form.Item>
-        ) : (
+        {category === CostType.MATERIAL ? (
           <Form.Item
             name="materialId"
-            label={<span style={labelStyle}>{category === CostType.MATERIAL ? 'Material' : 'Equipment'} *</span>}
-            rules={[{ required: true, message: `Select ${category === CostType.MATERIAL ? 'material' : 'equipment'}` }]}
+            label={<span style={labelStyle}>Material *</span>}
+            rules={[{ required: true, message: 'Select material' }]}
           >
             <Select
-              placeholder={category === CostType.MATERIAL ? 'Select material' : 'Select equipment'}
+              placeholder="Select material"
               loading={loadingOptions}
               style={{ width: '100%' }}
               dropdownStyle={{ background: '#1f1f1f' }}
               optionFilterProp="label"
-              options={itemOptions.map(o => ({ label: o.name, value: o.id }))}
+              options={materialOptions.map(o => ({ label: o.name, value: o.id }))}
+            />
+          </Form.Item>
+        ) : (
+          <Form.Item
+            name="itemName"
+            label={<span style={labelStyle}>{category === CostType.LABOR ? 'Labor' : category === CostType.EQUIPMENT ? 'Equipment' : category === CostType.FUEL ? 'Fuel' : 'Formworks'} *</span>}
+            rules={[{ required: true, message: 'Enter description' }]}
+          >
+            <Input
+              placeholder={
+                category === CostType.LABOR ? 'e.g. Masonry labor, Electrical work' :
+                category === CostType.EQUIPMENT ? 'e.g. Excavator, Concrete mixer' :
+                category === CostType.FUEL ? 'e.g. Diesel, Gasoline' :
+                'e.g. Column formwork, Slab formwork'
+              }
+              style={inputStyle}
+              allowClear
             />
           </Form.Item>
         )}

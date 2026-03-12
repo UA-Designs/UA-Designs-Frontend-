@@ -6,6 +6,8 @@ export enum CostType {
   MATERIAL = 'MATERIAL',
   LABOR = 'LABOR',
   EQUIPMENT = 'EQUIPMENT',
+  FUEL = 'FUEL',
+  FORMWORKS = 'FORMWORKS',
   OVERHEAD = 'OVERHEAD',
   OTHER = 'OTHER',
 }
@@ -261,7 +263,8 @@ interface ApiResponse<T> {
 class CostService {
   // ==================== COSTS ====================
 
-  // POST /api/cost/costs
+  // POST /api/cost/costs — body: { name, type, amount, date, projectId?, description? }
+  // type required, one of: MATERIAL, LABOR, EQUIPMENT, OVERHEAD, OTHER, FUEL, FORMWORKS (case-insensitive; stored uppercase)
   async createCost(data: CreateCostData): Promise<Cost> {
     try {
       const response = await apiService.post<ApiResponse<Cost>>('/cost/costs', data);
