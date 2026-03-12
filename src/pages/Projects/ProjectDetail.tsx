@@ -51,7 +51,7 @@ import {
 } from 'recharts';
 import dayjs from 'dayjs';
 import { projectService, ProjectDashboardData } from '../../services/projectService';
-import { costService, Budget, Expense, Cost, CostType } from '../../services/costService';
+import { costService, Budget, Expense, Cost, CostType, ExpenseCategory } from '../../services/costService';
 import { resourceService, Material, Labor, Equipment } from '../../services/resourceService';
 import { Project } from '../../types';
 import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
@@ -308,6 +308,16 @@ const ProjectDetail: React.FC = () => {
     return () => { cancelled = true; };
   }, [projectId]);
 
+  // Expense amounts by category (for actuals when no cost/BOQ items)
+  const expensesByCategory = useMemo(() => {
+    const list = expensesResult.expenses || [];
+    const material = list.filter((e: Expense) => (e.category || '').toUpperCase() === 'MATERIAL').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const labor = list.filter((e: Expense) => (e.category || '').toUpperCase() === 'LABOR').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const equipment = list.filter((e: Expense) => (e.category || '').toUpperCase() === 'EQUIPMENT').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const other = list.filter((e: Expense) => !['MATERIAL', 'LABOR', 'EQUIPMENT'].includes((e.category || '').toUpperCase())).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    return { material, labor, equipment, other };
+  }, [expensesResult.expenses]);
+
   // All hooks must be called before any early return
   const boqByCategory = useMemo(() => {
     const breakdown = costBreakdown || {};
@@ -345,6 +355,18 @@ const ProjectDetail: React.FC = () => {
     return list;
   }, [costs, varianceFilter, varianceSearch]);
 
+  const filteredVarianceExpenses = useMemo(() => {
+    const list = expensesResult.expenses || [];
+    if (varianceFilter === 'material') return list.filter((e: Expense) => (e.category || '').toUpperCase() === 'MATERIAL');
+    if (varianceFilter === 'labor') return list.filter((e: Expense) => (e.category || '').toUpperCase() === 'LABOR');
+    if (varianceFilter === 'equipment') return list.filter((e: Expense) => (e.category || '').toUpperCase() === 'EQUIPMENT');
+    if (varianceSearch.trim()) {
+      const q = varianceSearch.trim().toLowerCase();
+      return list.filter((e: Expense) => (e.name || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q));
+    }
+    return list;
+  }, [expensesResult.expenses, varianceFilter, varianceSearch]);
+
   if (loading || !project) {
     return (
       <div style={{ padding: 24, display: 'flex', justifyContent: 'center', minHeight: 400, alignItems: 'center' }}>
@@ -364,11 +386,12 @@ const ProjectDetail: React.FC = () => {
     (budgetOverview && Number(budgetOverview.budget) > 0 ? Number(budgetOverview.budget) : null) ??
     (project.budget != null && Number(project.budget) > 0 ? Number(project.budget) : null) ??
     (budgetsTotal > 0 ? budgetsTotal : 0);
+  // Prefer backend totalActualCost when > 0; else use sum of fetched expenses so logged expenses show as spent
   const spent =
-    (budgetOverview && budgetOverview.totalActualCost != null ? Number(budgetOverview.totalActualCost) : null) ??
-    (costOverview?.totalCosts != null ? Number(costOverview.totalCosts) : null) ??
-    costsSum ??
-    expensesSum ??
+    Number(budgetOverview?.totalActualCost ?? 0) ||
+    expensesSum ||
+    Number(costOverview?.totalCosts ?? 0) ||
+    costsSum ||
     0;
   const remaining = Math.max(0, budget - spent);
   const pctUsed = budget > 0 ? Math.round((spent / budget) * 100) : 0;
@@ -376,7 +399,7 @@ const ProjectDetail: React.FC = () => {
   const projectStartDate = project.startDate ?? projAny.start_date ?? projAny.planned_start_date ?? '';
   const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
-  const boqCount = costs.length || (dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length);
+  const boqCount = costs.length || expensesResult.expenses?.length || (dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length);
   const expenseCount =
     budgetOverview?.expenseCount ??
     expensesResult.pagination?.totalItems ??
@@ -391,9 +414,9 @@ const ProjectDetail: React.FC = () => {
   const estimatedTotal = Number(costOverview?.totalBudget ?? 0) || budget || totalBOQ;
   const actualSpent = Number(costOverview?.totalCosts ?? 0) || spent;
   const varianceChartData = [
-    { category: 'Materials', budget: boqByCategory.material, actual: costBreakdown?.actualMaterials ?? costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) },
-    { category: 'Labor', budget: boqByCategory.labor, actual: costBreakdown?.actualLabor ?? costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) },
-    { category: 'Equipment', budget: boqByCategory.equipment, actual: costBreakdown?.actualEquipment ?? costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) },
+    { category: 'Materials', budget: boqByCategory.material, actual: Number(costBreakdown?.actualMaterials ?? 0) || costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.material },
+    { category: 'Labor', budget: boqByCategory.labor, actual: Number(costBreakdown?.actualLabor ?? 0) || costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.labor },
+    { category: 'Equipment', budget: boqByCategory.equipment, actual: Number(costBreakdown?.actualEquipment ?? 0) || costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) || expensesByCategory.equipment },
   ];
 
   const boqColumns: ColumnsType<Cost> = [
@@ -501,12 +524,16 @@ const ProjectDetail: React.FC = () => {
           <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
             {costs.length > 0 ? (
               <Table rowKey="id" dataSource={filteredBoqCosts} columns={boqColumns} pagination={{ pageSize: 10 }} size="small" style={{ background: 'transparent' }} />
+            ) : expensesResult.expenses?.length > 0 ? (
+              <>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', display: 'block', padding: '16px 24px 0' }}>No BOQ cost items yet. Showing expenses below.</Text>
+                <Table rowKey="id" dataSource={expensesResult.expenses} columns={expenseColumns} pagination={{ pageSize: 10 }} size="small" style={{ background: 'transparent' }} />
+                <Button type="primary" onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944', margin: 16 }}>Add BOQ Item</Button>
+              </>
             ) : (
               <>
-                <Empty description="No BOQ items yet. Add items below." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
-                <Button type="primary" onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944', marginBottom: 16 }}>
-                  Add Material
-                </Button>
+                <Empty description="No BOQ items yet. Add items below or log expenses in Expenses tab." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
+                <Button type="primary" onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944', marginBottom: 16 }}>Add Material</Button>
               </>
             )}
           </Card>
@@ -518,15 +545,15 @@ const ProjectDetail: React.FC = () => {
       label: <>Variance <LineChartOutlined /></>,
       children: (
         <div style={{ marginTop: 16 }}>
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} md={8}>
               <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
                 <Space><InboxOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Materials</Text></Space>
                 <div style={{ marginTop: 8 }}>
                   <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(boqByCategory.material)}</Text><br />
-                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(costBreakdown?.actualMaterials ?? 0)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>0%</Text>
-                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>+{formatCurrency(boqByCategory.material)}</Text><br />
+                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(varianceChartData[0].actual)}</Text><br />
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{boqByCategory.material ? Math.round((varianceChartData[0].actual / boqByCategory.material) * 100) : 0}%</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>{varianceChartData[0].actual <= (boqByCategory.material || 0) ? '+' : ''}{formatCurrency((boqByCategory.material || 0) - varianceChartData[0].actual)}</Text><br />
                   <Text style={{ color: '#aaa', fontSize: 11 }}>{boqByCategory.materialCount} items in BOQ</Text>
                 </div>
               </Card>
@@ -536,9 +563,9 @@ const ProjectDetail: React.FC = () => {
                 <Space><UserOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
                 <div style={{ marginTop: 8 }}>
                   <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(boqByCategory.labor)}</Text><br />
-                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(costBreakdown?.actualLabor ?? 0)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>0%</Text>
-                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>+{formatCurrency(boqByCategory.labor)}</Text><br />
+                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(varianceChartData[1].actual)}</Text><br />
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{boqByCategory.labor ? Math.round((varianceChartData[1].actual / boqByCategory.labor) * 100) : 0}%</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>{varianceChartData[1].actual <= (boqByCategory.labor || 0) ? '+' : ''}{formatCurrency((boqByCategory.labor || 0) - varianceChartData[1].actual)}</Text><br />
                   <Text style={{ color: '#aaa', fontSize: 11 }}>{boqByCategory.laborCount} items in BOQ</Text>
                 </div>
               </Card>
@@ -548,9 +575,9 @@ const ProjectDetail: React.FC = () => {
                 <Space><ToolOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Equipment</Text></Space>
                 <div style={{ marginTop: 8 }}>
                   <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(boqByCategory.equipment)}</Text><br />
-                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(costBreakdown?.actualEquipment ?? 0)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>0%</Text>
-                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>+{formatCurrency(boqByCategory.equipment)}</Text><br />
+                  <Text style={{ color: '#aaa', fontSize: 12 }}>Actual: {formatCurrency(varianceChartData[2].actual)}</Text><br />
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{boqByCategory.equipment ? Math.round((varianceChartData[2].actual / boqByCategory.equipment) * 100) : 0}%</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13, marginLeft: 8 }}>{varianceChartData[2].actual <= (boqByCategory.equipment || 0) ? '+' : ''}{formatCurrency((boqByCategory.equipment || 0) - varianceChartData[2].actual)}</Text><br />
                   <Text style={{ color: '#aaa', fontSize: 11 }}>{boqByCategory.equipmentCount} items in BOQ</Text>
                 </div>
               </Card>
@@ -588,8 +615,13 @@ const ProjectDetail: React.FC = () => {
             <Input placeholder="Search items..." value={varianceSearch} onChange={e => setVarianceSearch(e.target.value)} style={{ marginBottom: 12, background: '#141414', color: '#fff' }} allowClear />
             {filteredVarianceCosts.length > 0 ? (
               <Table rowKey="id" dataSource={filteredVarianceCosts} columns={varianceTableColumns} pagination={{ pageSize: 5 }} size="small" style={{ background: 'transparent' }} />
+            ) : filteredVarianceExpenses.length > 0 ? (
+              <>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: 12 }}>Showing expenses (no BOQ cost items yet).</Text>
+                <Table rowKey="id" dataSource={filteredVarianceExpenses} columns={expenseColumns} pagination={{ pageSize: 5 }} size="small" style={{ background: 'transparent' }} />
+              </>
             ) : (
-              <Empty description="No variance items" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
+              <Empty description="No variance items. Log expenses in the Expenses tab." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
             )}
           </Card>
         </div>

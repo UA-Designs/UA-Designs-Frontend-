@@ -549,9 +549,10 @@ class CostService {
       });
       const query = params.toString() ? `?${params.toString()}` : '';
       const response = await apiService.get<ApiResponse<PaginatedExpensesResponse>>(`/cost/expenses${query}`);
-      if (response.data.success && response.data.data?.expenses) {
-        return response.data.data;
-      }
+      if (!response.data?.success) return { expenses: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, hasNext: false, hasPrev: false } };
+      const d = response.data.data;
+      if (d?.expenses && Array.isArray(d.expenses)) return { expenses: d.expenses, pagination: d.pagination ?? { currentPage: 1, totalPages: 0, totalItems: d.expenses.length, hasNext: false, hasPrev: false } };
+      if (Array.isArray(d)) return { expenses: d, pagination: { currentPage: 1, totalPages: 0, totalItems: d.length, hasNext: false, hasPrev: false } };
       return { expenses: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, hasNext: false, hasPrev: false } };
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch expenses');
