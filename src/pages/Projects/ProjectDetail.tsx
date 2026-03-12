@@ -245,6 +245,13 @@ const ProjectDetail: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<ProjectDashboardData | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [expensesResult, setExpensesResult] = useState<{ expenses: Expense[]; pagination: { totalItems: number } }>({ expenses: [], pagination: { totalItems: 0 } });
+  const [budgetOverview, setBudgetOverview] = useState<{
+    budget: number;
+    totalActualCost: number;
+    variance: number;
+    isOverBudget: boolean;
+    expenseCount: number;
+  } | null>(null);
   const [costOverview, setCostOverview] = useState<any>(null);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [costBreakdown, setCostBreakdown] = useState<any>(null);
@@ -270,10 +277,11 @@ const ProjectDetail: React.FC = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [proj, dash, budgetsRes, expensesRes, overviewRes, costsRes, breakdownRes] = await Promise.all([
+        const [proj, budgetOv, dash, budgetsRes, expensesRes, overviewRes, costsRes, breakdownRes] = await Promise.all([
           projectService.getProjectById(projectId),
+          projectService.getProjectBudgetOverview(projectId),
           projectService.getProjectDashboard(projectId).catch(() => null),
-          costService.getBudgets().catch(() => []),
+          costService.getBudgets(projectId).catch(() => []),
           costService.getExpensesPaginated({ projectId, limit: 100 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
           costService.getCostOverview(projectId).catch(() => null),
           costService.getCosts().catch(() => []),
@@ -281,9 +289,9 @@ const ProjectDetail: React.FC = () => {
         ]);
         if (!cancelled) {
           setProject(proj);
+          setBudgetOverview(budgetOv);
           setDashboardData(dash);
-          const allBudgets = Array.isArray(budgetsRes) ? budgetsRes : [];
-          setBudgets(allBudgets.filter((b: Budget) => b.projectId === projectId));
+          setBudgets(Array.isArray(budgetsRes) ? budgetsRes : []);
           setExpensesResult(expensesRes);
           setCostOverview(overviewRes);
           const allCosts = Array.isArray(costsRes) ? costsRes : [];
@@ -346,20 +354,35 @@ const ProjectDetail: React.FC = () => {
   }
 
   const statusCfg = statusConfig[project.status] || { color: 'default', label: project.status };
-  const budget = Number(project.budget ?? 0) || 0;
+  const projAny = project as any;
+  const teamMembers = projAny.teamMembers ?? [];
   const costsSum = costs.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const expensesSum = (expensesResult.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  const spent = Number((project as any).actualCost ?? costOverview?.totalCosts ?? 0) || costsSum || expensesSum;
+  const budgetsTotal = budgets.reduce((s, b) => s + (Number(b.amount) ?? 0), 0);
+  // API: GET /projects/:id → data.project.budget (decimal string); GET /projects/:id/budget-overview → data.budget, data.totalActualCost
+  const budget =
+    (budgetOverview && Number(budgetOverview.budget) > 0 ? Number(budgetOverview.budget) : null) ??
+    (project.budget != null && Number(project.budget) > 0 ? Number(project.budget) : null) ??
+    (budgetsTotal > 0 ? budgetsTotal : 0);
+  const spent =
+    (budgetOverview && budgetOverview.totalActualCost != null ? Number(budgetOverview.totalActualCost) : null) ??
+    (costOverview?.totalCosts != null ? Number(costOverview.totalCosts) : null) ??
+    costsSum ??
+    expensesSum ??
+    0;
   const remaining = Math.max(0, budget - spent);
-  const pctUsed = budget ? Math.round((spent / budget) * 100) : 0;
-  const teamMembers = (project as any).teamMembers ?? [];
-  const projAny = project as any;
+  const pctUsed = budget > 0 ? Math.round((spent / budget) * 100) : 0;
   const projectLocation = project.location ?? projAny.location ?? projAny.address ?? projAny.site_address ?? '';
   const projectStartDate = project.startDate ?? projAny.start_date ?? projAny.planned_start_date ?? '';
   const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
   const boqCount = costs.length || (dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length);
-  const expenseCount = expensesResult.expenses?.length ?? (dashboardData as any)?.expenseCount ?? expensesResult.pagination?.totalItems ?? 0;
+  const expenseCount =
+    budgetOverview?.expenseCount ??
+    expensesResult.pagination?.totalItems ??
+    expensesResult.expenses?.length ??
+    (dashboardData as any)?.expenseCount ??
+    0;
   const totalExpenseAmount = expensesSum;
 
   const goToCost = () => navigate('/pmbok/cost', { state: { projectId } });

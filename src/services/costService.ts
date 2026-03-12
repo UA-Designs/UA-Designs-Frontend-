@@ -351,14 +351,15 @@ class CostService {
     }
   }
 
-  // GET /api/cost/budgets
-  async getBudgets(): Promise<Budget[]> {
+  // GET /api/cost/budgets — optional ?projectId= for filter. API returns data: { budgets, pagination }.
+  async getBudgets(projectId?: string): Promise<Budget[]> {
     try {
-      const response = await apiService.get<ApiResponse<any>>('/cost/budgets');
+      const params = projectId ? { projectId } : undefined;
+      const response = await apiService.get<ApiResponse<{ budgets?: Budget[]; pagination?: any }>>('/cost/budgets', { params });
       if (response.data.success) {
         const d = response.data.data;
-        if (d?.budgets && Array.isArray(d.budgets)) return d.budgets;
-        if (Array.isArray(d)) return d;
+        const list = d?.budgets && Array.isArray(d.budgets) ? d.budgets : Array.isArray(d) ? d : [];
+        return list.map((b: any) => ({ ...b, amount: Number(b.amount) || 0 }));
       }
       return [];
     } catch (error: any) {
@@ -623,12 +624,27 @@ class CostService {
   }
 
   // GET /api/cost/analysis/overview/:projectId
+  // GET /api/cost/analysis/overview/:projectId — data has overview: { totalBudget, totalApproved, totalPending, totalPaid, ... }
   async getCostOverview(projectId: string): Promise<CostOverview | null> {
     try {
-      const response = await apiService.get<ApiResponse<CostOverview>>(`/cost/analysis/overview/${projectId}`);
-      return response.data.success ? response.data.data : null;
+      const response = await apiService.get<ApiResponse<any>>(`/cost/analysis/overview/${projectId}`);
+      if (!response.data.success || !response.data.data) return null;
+      const data = response.data.data;
+      const ov = data.overview || data;
+      const totalCosts =
+        Number(ov.totalActualCost ?? ov.totalCosts ?? 0) ||
+        (Number(ov.totalApproved ?? 0) + Number(ov.totalPending ?? 0) + Number(ov.totalPaid ?? 0));
+      return {
+        projectId: data.projectId ?? projectId,
+        totalBudget: Number(ov.totalBudget ?? 0),
+        totalCosts,
+        totalExpenses: data.expenseCount ?? 0,
+        variance: Number(ov.costVariance ?? ov.remaining ?? 0),
+        budgetCount: data.budgetCount,
+        expenseCount: data.expenseCount,
+      } as CostOverview;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch cost overview');
+      return null;
     }
   }
 
@@ -643,12 +659,24 @@ class CostService {
   }
 
   // GET /api/cost/analysis/breakdown/:projectId
+  // GET /api/cost/analysis/breakdown/:projectId — data.breakdown is array of { category, totalAmount, ... }
   async getCostBreakdown(projectId: string): Promise<CostBreakdown | null> {
     try {
-      const response = await apiService.get<ApiResponse<CostBreakdown>>(`/cost/analysis/breakdown/${projectId}`);
-      return response.data.success ? response.data.data : null;
+      const response = await apiService.get<ApiResponse<any>>(`/cost/analysis/breakdown/${projectId}`);
+      if (!response.data.success || !response.data.data) return null;
+      const data = response.data.data;
+      const breakdown = Array.isArray(data.breakdown) ? data.breakdown : [];
+      const byCat = (name: string) =>
+        Number(breakdown.find((b: any) => (b.category || '').toLowerCase() === name.toLowerCase())?.totalAmount ?? 0);
+      return {
+        ...data,
+        actualMaterials: data.actualMaterials ?? byCat('Materials') ?? byCat('MATERIAL'),
+        actualLabor: data.actualLabor ?? byCat('Labor') ?? byCat('LABOR'),
+        actualEquipment: data.actualEquipment ?? byCat('Equipment') ?? byCat('EQUIPMENT'),
+        totalAmount: Number(data.totalAmount ?? 0),
+      } as CostBreakdown;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch cost breakdown');
+      return null;
     }
   }
 

@@ -162,8 +162,8 @@ const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px', background: '#f5f5f5' }}>
-        <Spin size="large" />
+      <div style={{ textAlign: 'center', padding: '50px', background: 'transparent', minHeight: '100vh' }}>
+        <Spin size="large" style={{ color: '#009944' }} />
       </div>
     );
   }
@@ -202,15 +202,32 @@ const Dashboard: React.FC = () => {
       }))
     : ALL_PROJECTS;
 
+  const cardStyle = {
+    background: 'rgba(26, 26, 26, 0.95)',
+    border: '1px solid rgba(0, 153, 68, 0.2)',
+    borderRadius: 12,
+  };
+
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: isMobile ? 16 : 24 }}>
+    <div
+      style={{
+        padding: isMobile ? 16 : 24,
+        minHeight: '100vh',
+        background: `
+          radial-gradient(circle at 20% 50%, rgba(0, 204, 102, 0.08) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(0, 204, 102, 0.05) 0%, transparent 50%),
+          linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #0d0d0d 100%)
+        `,
+        position: 'relative',
+      }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
         <div>
-          <Typography.Title level={3} style={{ margin: 0, color: '#262626', fontWeight: 700 }}>
+          <Typography.Title level={3} style={{ margin: 0, color: '#ffffff', fontWeight: 700 }}>
             Dashboard
           </Typography.Title>
-          <Text type="secondary" style={{ fontSize: 14 }}>
+          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)' }}>
             Overview of all projects and expenses
           </Text>
         </div>
@@ -219,8 +236,8 @@ const Dashboard: React.FC = () => {
           icon={<PlusOutlined />}
           onClick={() => navigate('/pmbok/cost')}
           style={{
-            background: '#fa8c16',
-            borderColor: '#fa8c16',
+            background: '#009944',
+            borderColor: '#009944',
             height: 40,
             fontWeight: 600,
           }}
@@ -232,34 +249,34 @@ const Dashboard: React.FC = () => {
       {/* Summary cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
+          <Card size="small" style={cardStyle}>
             <Statistic
-              title={<Text type="secondary">Total Budget</Text>}
+              title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Total Budget</Text>}
               value={stats?.totalBudget ?? SUMMARY.totalBudget}
-              prefix={<DollarOutlined style={{ color: '#bfbfbf', marginRight: 8 }} />}
+              prefix={<DollarOutlined style={{ color: '#009944', marginRight: 8 }} />}
               formatter={(val) => formatPeso(Number(val))}
-              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#262626' }}
+              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#009944' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
+          <Card size="small" style={cardStyle}>
             <Statistic
-              title={<Text type="secondary">Total Spent</Text>}
+              title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Total Spent</Text>}
               value={stats?.actualCost ?? SUMMARY.totalSpent}
-              prefix={<LineChartOutlined style={{ color: '#bfbfbf', marginRight: 8 }} />}
+              prefix={<LineChartOutlined style={{ color: '#009944', marginRight: 8 }} />}
               formatter={(val) => formatPeso(Number(val))}
-              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#262626' }}
+              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card size="small" style={{ borderRadius: 8 }}>
+          <Card size="small" style={cardStyle}>
             <Statistic
-              title={<Text type="secondary">Active Projects</Text>}
+              title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Active Projects</Text>}
               value={stats?.activeProjects ?? SUMMARY.activeProjects}
-              prefix={<FolderOutlined style={{ color: '#bfbfbf', marginRight: 8 }} />}
-              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#262626' }}
+              prefix={<FolderOutlined style={{ color: '#009944', marginRight: 8 }} />}
+              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
             />
           </Card>
         </Col>
@@ -267,16 +284,16 @@ const Dashboard: React.FC = () => {
           <Card
             size="small"
             style={{
-              borderRadius: 8,
-              background: SUMMARY.budgetAlerts === 0 ? '#f6ffed' : undefined,
-              border: SUMMARY.budgetAlerts === 0 ? '1px solid #b7eb8f' : undefined,
+              ...cardStyle,
+              background: SUMMARY.budgetAlerts === 0 ? 'rgba(0, 153, 68, 0.12)' : cardStyle.background,
+              border: SUMMARY.budgetAlerts === 0 ? '1px solid rgba(0, 153, 68, 0.4)' : cardStyle.border,
             }}
           >
             <Statistic
-              title={<Text type="secondary">Budget Alerts</Text>}
+              title={<Text style={{ color: 'rgba(255,255,255,0.65)' }}>Budget Alerts</Text>}
               value={SUMMARY.budgetAlerts}
               prefix={<WarningOutlined style={{ color: SUMMARY.budgetAlerts === 0 ? '#52c41a' : '#faad14', marginRight: 8 }} />}
-              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#262626' }}
+              valueStyle={{ fontSize: 22, fontWeight: 700, color: '#ffffff' }}
             />
             {SUMMARY.budgetAlerts === 0 && (
               <Text style={{ fontSize: 12, color: '#52c41a', marginTop: 4, display: 'block' }}>
@@ -289,8 +306,8 @@ const Dashboard: React.FC = () => {
 
       {/* BOQ Category Budget Status */}
       <Card
-        title={<span style={{ fontWeight: 600, color: '#262626' }}>BOQ Category Budget Status</span>}
-        style={{ marginBottom: 24, borderRadius: 8 }}
+        title={<span style={{ fontWeight: 600, color: '#ffffff' }}>BOQ Category Budget Status</span>}
+        style={{ marginBottom: 24, ...cardStyle }}
       >
         {BOQ_CATEGORIES.map((cat) => {
           const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0;
@@ -302,19 +319,19 @@ const Dashboard: React.FC = () => {
                 alignItems: 'center',
                 gap: 16,
                 padding: '12px 0',
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: 8, background: `${cat.iconColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: `${cat.iconColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
                 {cat.icon}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <Text strong>{cat.label}</Text>
+                  <Text strong style={{ color: '#fff' }}>{cat.label}</Text>
                   <Tag color={cat.statusColor}>{cat.status}</Tag>
                 </div>
-                <Progress percent={Math.min(100, Math.round(pct * 10) / 10)} showInfo={false} strokeColor="#52c41a" size="small" />
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Progress percent={Math.min(100, Math.round(pct * 10) / 10)} showInfo={false} strokeColor="#009944" size="small" />
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
                   {pct.toFixed(1)}% of budget used · {formatPeso(cat.spent)} / {formatPeso(cat.budget)}
                 </Text>
                 <Text style={{ fontSize: 12, color: '#52c41a', display: 'block', marginTop: 2 }}>{cat.variance}</Text>
@@ -331,11 +348,11 @@ const Dashboard: React.FC = () => {
             title={
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <WarningOutlined style={{ color: '#faad14' }} />
-                <span style={{ fontWeight: 600, color: '#262626' }}>Trade Category Alerts</span>
+                <span style={{ fontWeight: 600, color: '#ffffff' }}>Trade Category Alerts</span>
                 <Tag color="red">4 need attention</Tag>
               </span>
             }
-            style={{ marginBottom: 24, borderRadius: 8, height: '100%' }}
+            style={{ marginBottom: 24, height: '100%', ...cardStyle }}
           >
             <div style={{ maxHeight: 420, overflow: 'auto' }}>
               {TRADE_ALERTS.map((t) => {
@@ -348,25 +365,25 @@ const Dashboard: React.FC = () => {
                       alignItems: 'center',
                       gap: 12,
                       padding: '10px 0',
-                      borderBottom: '1px solid #f0f0f0',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
                     }}
                   >
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                       {t.icon}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <Text strong>{t.name}</Text>
+                        <Text strong style={{ color: '#fff' }}>{t.name}</Text>
                         <Tag color={t.status === 'over budget' ? 'red' : t.status === 'near limit' ? 'orange' : 'green'}>
                           {t.statusTag}
                         </Tag>
                       </div>
                       <Progress percent={Math.round(pct)} showInfo={false} strokeColor={t.color} size="small" style={{ marginTop: 4 }} />
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
                         P{Number(t.spent).toLocaleString()} / P{Number(t.budget).toLocaleString()}
                       </Text>
                     </div>
-                    <DownOutlined style={{ color: '#bfbfbf', fontSize: 12 }} />
+                    <DownOutlined style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
                   </div>
                 );
               })}
@@ -383,7 +400,7 @@ const Dashboard: React.FC = () => {
                 Critical Budget Alerts (4)
               </span>
             }
-            style={{ marginBottom: 24, borderRadius: 8 }}
+            style={{ marginBottom: 24, ...cardStyle }}
           >
             <div style={{ maxHeight: 320, overflow: 'auto' }}>
               {CRITICAL_ALERTS.map((a, i) => (
@@ -391,21 +408,21 @@ const Dashboard: React.FC = () => {
                   key={i}
                   style={{
                     padding: '12px 0',
-                    borderBottom: i < CRITICAL_ALERTS.length - 1 ? '1px solid #f0f0f0' : 'none',
+                    borderBottom: i < CRITICAL_ALERTS.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
                   }}
                 >
                   {a.project && (
-                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>{a.project}</Text>
+                    <Text style={{ fontSize: 12, display: 'block', marginBottom: 4, color: 'rgba(255,255,255,0.65)' }}>{a.project}</Text>
                   )}
-                  <Text strong style={{ fontSize: 13 }}>
+                  <Text strong style={{ fontSize: 13, color: '#fff' }}>
                     {a.type}: {a.item}
                   </Text>
-                  {a.usage && <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{a.usage}</Text>}
-                  {a.detail && <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{a.detail}</Text>}
+                  {a.usage && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.usage}</Text>}
+                  {a.detail && <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>{a.detail}</Text>}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                     <Progress percent={a.percent} showInfo={false} strokeColor={a.barColor} size="small" style={{ flex: 1 }} />
                     {a.status && <Tag color="red">{a.status}</Tag>}
-                    <Text style={{ fontSize: 12, fontWeight: 600 }}>{a.percent}%</Text>
+                    <Text style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{a.percent}%</Text>
                   </div>
                 </div>
               ))}
@@ -413,23 +430,23 @@ const Dashboard: React.FC = () => {
           </Card>
 
           <Card
-            title={<span style={{ fontWeight: 600, color: '#262626' }}>Budget vs Actual by Category</span>}
-            style={{ borderRadius: 8 }}
+            title={<span style={{ fontWeight: 600, color: '#ffffff' }}>Budget vs Actual by Category</span>}
+            style={cardStyle}
           >
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barGap={4} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#666', fontSize: 11 }} tickFormatter={formatPesoK} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 11 }} tickFormatter={formatPesoK} axisLine={false} tickLine={false} />
                 <Tooltip
                   formatter={(val: number) => formatPeso(val)}
                   labelFormatter={(label) => label}
-                  contentStyle={{ borderRadius: 8 }}
+                  contentStyle={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.3)', borderRadius: 8, color: '#fff' }}
                 />
-                <Legend />
-                <Bar dataKey="budget" name="Budget" fill="#d9d9d9" radius={[4, 4, 0, 0]} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Bar dataKey="budget" name="Budget" fill="#555" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="materials" name="Materials" fill="#1890ff" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="labor" name="Labor" fill="#52c41a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="labor" name="Labor" fill="#009944" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="equipment" name="Equipment" fill="#fa8c16" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="other" name="Other" fill="#722ed1" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -439,34 +456,34 @@ const Dashboard: React.FC = () => {
       </Row>
 
       {/* All Projects */}
-      <Card title={<span style={{ fontWeight: 600, color: '#262626' }}>All Projects</span>} style={{ marginTop: 24, borderRadius: 8 }}>
+      <Card title={<span style={{ fontWeight: 600, color: '#ffffff' }}>All Projects</span>} style={{ marginTop: 24, ...cardStyle }}>
         <Row gutter={[16, 16]}>
           {projectsDisplay.map((p, i) => (
             <Col xs={24} md={12} key={i}>
               <Card
                 size="small"
-                style={{ borderRadius: 8 }}
+                style={cardStyle}
                 actions={[
-                  <Button key="view" type="link" icon={<EyeOutlined />} onClick={() => navigate('/projects')}>
+                  <Button key="view" type="link" icon={<EyeOutlined />} onClick={() => navigate('/projects')} style={{ color: '#009944' }}>
                     View Details
                   </Button>,
                 ]}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <Text strong style={{ fontSize: 15 }}>{p.name}</Text>
+                  <Text strong style={{ fontSize: 15, color: '#fff' }}>{p.name}</Text>
                   <Tag color="green">{p.status}</Tag>
                 </div>
-                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                <Text style={{ fontSize: 12, display: 'block', marginBottom: 8, color: 'rgba(255,255,255,0.65)' }}>
                   👥 {p.assigned} assigned
                 </Text>
-                <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>
                   Budget: {formatPeso(p.budget)}
                 </Text>
-                <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                <Text style={{ fontSize: 12, display: 'block', color: 'rgba(255,255,255,0.65)' }}>
                   Remaining: {formatPeso(p.remaining)}
                 </Text>
-                <Progress percent={p.percentUsed} showInfo={false} strokeColor="#52c41a" size="small" style={{ marginTop: 8 }} />
-                <Text type="secondary" style={{ fontSize: 12 }}>{p.percentUsed}% used</Text>
+                <Progress percent={p.percentUsed} showInfo={false} strokeColor="#009944" size="small" style={{ marginTop: 8 }} />
+                <Text style={{ fontSize: 12, color: '#52c41a' }}>{p.percentUsed}% used</Text>
               </Card>
             </Col>
           ))}

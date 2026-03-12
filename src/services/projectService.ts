@@ -38,7 +38,21 @@ export interface ProjectDashboardData {
 export interface ProjectResponse {
   success: boolean;
   message?: string;
-  data: Project;
+  data: { project?: Project } | Project;
+}
+
+export interface ProjectBudgetOverviewResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    budget: number;
+    totalActualCost: number;
+    variance: number;
+    isOverBudget: boolean;
+    expenseCount: number;
+  };
 }
 
 export interface ProjectsResponse {
@@ -94,24 +108,37 @@ class ProjectService {
   async getProjectById(id: string): Promise<Project> {
     try {
       const response = await apiService.get<ProjectResponse>(`/projects/${id}`);
-      const raw = response.data.success ? response.data.data : null;
-      if (!raw) throw new Error('Project not found');
-      // Normalize snake_case from API to camelCase for UI
+      const data = response.data?.data;
+      if (!response.data?.success || !data) throw new Error('Project not found');
+      // API returns { success, data: { project } } — project is under data.project
+      const raw = (data as any).project ?? data;
       const p = raw as any;
+      const budgetVal = raw.budget ?? p.budget_amount ?? p.budget;
+      const budgetNum = budgetVal != null ? parseFloat(String(budgetVal)) : 0;
       return {
         ...raw,
         id: raw.id ?? p._id,
-        location: raw.location ?? p.location ?? p.address ?? p.site_address ?? '',
-        startDate: raw.startDate ?? p.start_date ?? p.planned_start_date ?? raw.start_date,
-        endDate: raw.endDate ?? p.end_date ?? p.planned_end_date ?? raw.end_date,
-        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? p.end_date ?? raw.planned_end_date,
-        actualEndDate: raw.actualEndDate ?? p.actual_end_date ?? raw.actual_end_date,
-        clientName: raw.clientName ?? p.client_name ?? raw.client_name,
-        budget: Number(raw.budget ?? p.budget_amount ?? p.budget ?? 0) || 0,
-        actualCost: Number(raw.actualCost ?? p.actual_cost ?? p.spent ?? p.actualCost ?? 0) || undefined,
+        location: raw.location ?? p.location ?? p.address ?? '',
+        startDate: raw.startDate ?? p.start_date ?? null,
+        endDate: raw.endDate ?? p.end_date ?? null,
+        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? raw.endDate ?? null,
+        actualEndDate: raw.actualEndDate ?? p.actual_end_date ?? null,
+        clientName: raw.clientName ?? p.client_name ?? null,
+        budget: Number.isFinite(budgetNum) ? budgetNum : 0,
+        actualCost: undefined, // use getProjectBudgetOverview for spent
       } as Project;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch project');
+    }
+  }
+
+  /** GET /api/projects/:id/budget-overview — project-level budget vs actual (total spent) */
+  async getProjectBudgetOverview(projectId: string): Promise<ProjectBudgetOverviewResponse['data'] | null> {
+    try {
+      const response = await apiService.get<ProjectBudgetOverviewResponse>(`/projects/${projectId}/budget-overview`);
+      return response.data?.success && response.data?.data ? response.data.data : null;
+    } catch (error: any) {
+      return null;
     }
   }
 

@@ -96,12 +96,14 @@ interface ApiResponse<T> {
 class ResourceService {
   // ==================== MATERIALS ====================
 
-  // GET /api/resources/materials (backend may require projectId; use project_id for snake_case APIs)
+  // GET /api/resources/materials — optional ?projectId= (camelCase). API returns data: array, pagination.
   async getMaterials(projectId?: string): Promise<Material[]> {
     try {
-      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const params = projectId ? { projectId } : undefined;
       const response = await apiService.get<ApiResponse<Material[]>>('/resources/materials', { params });
-      return response.data.success ? response.data.data : [];
+      const d = response.data?.data;
+      const list = Array.isArray(d) ? d : [];
+      return response.data?.success ? list : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch materials');
     }
@@ -150,12 +152,14 @@ class ResourceService {
 
   // ==================== LABOR ====================
 
-  // GET /api/resources/labor (backend may require projectId; use project_id for snake_case APIs)
+  // GET /api/resources/labor — optional ?projectId= (camelCase). API returns data: array, pagination.
   async getLabor(projectId?: string): Promise<Labor[]> {
     try {
-      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const params = projectId ? { projectId } : undefined;
       const response = await apiService.get<ApiResponse<Labor[]>>('/resources/labor', { params });
-      return response.data.success ? response.data.data : [];
+      const d = response.data?.data;
+      const list = Array.isArray(d) ? d : [];
+      return response.data?.success ? list : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch labor');
     }
@@ -205,11 +209,14 @@ class ResourceService {
   // ==================== EQUIPMENT ====================
 
   // GET /api/resources/equipment
+  // GET /api/resources/equipment — optional ?projectId= (camelCase). API returns data: array, pagination.
   async getEquipment(projectId?: string): Promise<Equipment[]> {
     try {
-      const params = projectId ? { projectId, project_id: projectId } : undefined;
+      const params = projectId ? { projectId } : undefined;
       const response = await apiService.get<ApiResponse<Equipment[]>>('/resources/equipment', { params });
-      return response.data.success ? response.data.data : [];
+      const d = response.data?.data;
+      const list = Array.isArray(d) ? d : [];
+      return response.data?.success ? list : [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch equipment');
     }
