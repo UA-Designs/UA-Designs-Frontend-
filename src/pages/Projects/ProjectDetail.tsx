@@ -72,7 +72,23 @@ const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
 const TRADE_CATEGORIES = [
-  'General', 'Electrical', 'Plumbing', 'Structural', 'Finishing', 'HVAC', 'Earthwork', 'Formworks', 'Fuel',
+  'Gen Requirements',
+  'Earthworks',
+  'Concrete Work',
+  'RSB Works',
+  'Masonry Works',
+  'Plastering Works',
+  'Roofing',
+  'Ceiling Works',
+  'Tiles Works',
+  'Paint Works',
+  'Doors & Windows',
+  'Electrical Works',
+  'Plumbing Works',
+  'Formworks',
+  'Labor',
+  'Equipment',
+  'Custom',
 ];
 
 // ── Add BOQ Item Modal ─────────────────────────────────────────────────────
@@ -101,15 +117,27 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.resetFields();
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
     setLoadingOptions(true);
-    Promise.all([
-      resourceService.getMaterials(projectId).catch(() => []),
-      resourceService.getLabor(projectId).catch(() => []),
-      resourceService.getEquipment(projectId).catch(() => []),
-    ]).then(([m, l, e]) => {
-      setMaterials(Array.isArray(m) ? m : []);
-      setLabor(Array.isArray(l) ? l : []);
-      setEquipment(Array.isArray(e) ? e : []);
-    }).finally(() => setLoadingOptions(false));
+    const load = async () => {
+      const [mProj, lProj, eProj] = await Promise.all([
+        resourceService.getMaterials(projectId).catch(() => []),
+        resourceService.getLabor(projectId).catch(() => []),
+        resourceService.getEquipment(projectId).catch(() => []),
+      ]);
+      const [mGlobal, lGlobal, eGlobal] = await Promise.all([
+        resourceService.getMaterials().catch(() => []),
+        resourceService.getLabor().catch(() => []),
+        resourceService.getEquipment().catch(() => []),
+      ]);
+      const merge = (a: any[], b: any[]) => {
+        const byId = new Map(a.map((x: any) => [x.id, x]));
+        b.forEach((x: any) => { if (!byId.has(x.id)) byId.set(x.id, x); });
+        return Array.from(byId.values());
+      };
+      setMaterials(merge(Array.isArray(mProj) ? mProj : [], Array.isArray(mGlobal) ? mGlobal : []));
+      setLabor(merge(Array.isArray(lProj) ? lProj : [], Array.isArray(lGlobal) ? lGlobal : []));
+      setEquipment(merge(Array.isArray(eProj) ? eProj : [], Array.isArray(eGlobal) ? eGlobal : []));
+    };
+    load().finally(() => setLoadingOptions(false));
   }, [open, projectId, form]);
 
   const itemOptions = useMemo(() => {
@@ -177,10 +205,11 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
         </Form.Item>
         <Form.Item name="tradeCategory" label={<span style={labelStyle}>Trade Category (optional)</span>}>
           <Select
-            placeholder="Select trade category"
+            placeholder="Select trade category (optional)"
             allowClear
             style={{ width: '100%' }}
             dropdownStyle={{ background: '#1f1f1f' }}
+            optionFilterProp="label"
             options={TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
           />
         </Form.Item>

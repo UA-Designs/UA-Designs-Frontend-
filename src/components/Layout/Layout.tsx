@@ -129,7 +129,7 @@ const Layout: React.FC = () => {
     {
       key: '/pmbok/cost',
       icon: <DollarOutlined />,
-      label: 'Cost Management',
+      label: 'Expenses',
     },
     {
       key: '/pmbok/resources',

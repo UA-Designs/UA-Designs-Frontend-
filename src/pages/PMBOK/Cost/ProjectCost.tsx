@@ -703,7 +703,7 @@ const ProjectCost: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('costs');
+  const [activeTab, setActiveTab] = useState('expenses');
 
   // ── Cost / Budget data ─────────────────────────────────
   const [costs, setCosts] = useState<Cost[]>([]);
@@ -1093,12 +1093,6 @@ const ProjectCost: React.FC = () => {
       ),
     },
     {
-      title: 'Status', dataIndex: 'status', key: 'status', width: 95,
-      render: (s: ExpenseStatus) => (
-        <Tag color={STATUS_COLOR[s]} style={{ fontWeight: 600, fontSize: 11 }}>{s}</Tag>
-      ),
-    },
-    {
       title: '', key: 'delete', width: 48, align: 'center',
       render: (_: any, record: Expense) => (
         <Popconfirm
@@ -1139,12 +1133,18 @@ const ProjectCost: React.FC = () => {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           <div>
-            <Title level={2} style={{ color: '#fff', marginBottom: 4 }}>Cost Management</Title>
-            <Text style={{ color: '#8c8c8c' }}>Manage project budgets, work costs, and expense tracking in one place</Text>
+            <Title level={2} style={{ color: '#fff', marginBottom: 4 }}>
+              {activeTab === 'expenses' ? 'Expenses' : 'Cost Management'}
+            </Title>
+            <Text style={{ color: '#8c8c8c' }}>
+              {activeTab === 'expenses' ? 'Track and export project expenses' : 'Manage project budgets, work costs, and expense tracking in one place'}
+            </Text>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title level={4} style={{ margin: 0 }}>Cost Management</Title>
+            <Title level={4} style={{ margin: 0, color: '#fff' }}>
+              {activeTab === 'expenses' ? 'Expenses' : 'Cost Management'}
+            </Title>
             <Button
               icon={<ReloadOutlined style={{ color: '#009944' }} />}
               onClick={() => { loadCostData(); loadExpenses(expensePage); }}
