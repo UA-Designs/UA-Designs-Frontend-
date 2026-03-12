@@ -71,6 +71,15 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
+/** Show % used; use decimals or "<1%" when small so we don't show 0% for non-zero actual. */
+const formatPctUsed = (actual: number, budget: number): string => {
+  if (!budget) return actual ? '100' : '0';
+  const pct = (actual / budget) * 100;
+  if (pct === 0 && actual > 0) return '<1';
+  if (pct > 0 && pct < 1) return pct.toFixed(1);
+  return String(Math.round(pct));
+};
+
 const TRADE_CATEGORIES = [
   'Gen Requirements',
   'Earthworks',
@@ -321,9 +330,18 @@ const ProjectDetail: React.FC = () => {
   // All hooks must be called before any early return
   const boqByCategory = useMemo(() => {
     const breakdown = costBreakdown || {};
-    const material = breakdown.materials ?? breakdown.Material ?? costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const labor = breakdown.labor ?? breakdown.Labor ?? costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0);
-    const equipment = breakdown.equipment ?? breakdown.Equipment ?? costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0);
+    // Some APIs return 0 for breakdown fields even when costs exist; only trust breakdown when > 0.
+    const materialFromBreakdown = Number((breakdown as any).materials ?? (breakdown as any).Material ?? 0);
+    const laborFromBreakdown = Number((breakdown as any).labor ?? (breakdown as any).Labor ?? 0);
+    const equipmentFromBreakdown = Number((breakdown as any).equipment ?? (breakdown as any).Equipment ?? 0);
+
+    const materialFromCosts = costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const laborFromCosts = costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0);
+    const equipmentFromCosts = costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0);
+
+    const material = materialFromBreakdown > 0 ? materialFromBreakdown : materialFromCosts;
+    const labor = laborFromBreakdown > 0 ? laborFromBreakdown : laborFromCosts;
+    const equipment = equipmentFromBreakdown > 0 ? equipmentFromBreakdown : equipmentFromCosts;
     const materialCount = costs.filter(c => c.type === CostType.MATERIAL).length;
     const laborCount = costs.filter(c => c.type === CostType.LABOR).length;
     const equipmentCount = costs.filter(c => c.type === CostType.EQUIPMENT).length;
@@ -427,6 +445,8 @@ const ProjectDetail: React.FC = () => {
     { category: 'Labor', budget: laborBudget, actual: actualByCat.labor },
     { category: 'Equipment', budget: equipmentBudget, actual: actualByCat.equipment },
   ];
+  const chartMaxBudget = Math.max(...varianceChartData.map(d => d.budget), 1);
+  const chartMaxActual = Math.max(...varianceChartData.map(d => d.actual), 1);
 
   const boqColumns: ColumnsType<Cost> = [
     { title: 'Item Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
@@ -512,19 +532,31 @@ const ProjectDetail: React.FC = () => {
           </Text>
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} md={8}>
-              <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
+              <Card
+                size="small"
+                style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 92 }}
+                bodyStyle={{ padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92 }}
+              >
                 <Space><InboxOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Material</Text></Space>
                 <div style={{ color: '#00ff88', fontSize: 18, fontWeight: 600, marginTop: 8 }}>{formatCurrency(boqByCategory.material)}</div>
               </Card>
             </Col>
             <Col xs={24} md={8}>
-              <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
+              <Card
+                size="small"
+                style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 92 }}
+                bodyStyle={{ padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92 }}
+              >
                 <Space><UserOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Labor</Text></Space>
                 <div style={{ color: '#00ff88', fontSize: 18, fontWeight: 600, marginTop: 8 }}>{formatCurrency(boqByCategory.labor)}</div>
               </Card>
             </Col>
             <Col xs={24} md={8}>
-              <Card size="small" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
+              <Card
+                size="small"
+                style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, minHeight: 92 }}
+                bodyStyle={{ padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92 }}
+              >
                 <Space><ToolOutlined style={{ color: '#009944' }} /><Text strong style={{ color: '#fff' }}>Equipment</Text></Space>
                 <div style={{ color: '#00ff88', fontSize: 18, fontWeight: 600, marginTop: 8 }}>{formatCurrency(boqByCategory.equipment)}</div>
               </Card>
@@ -561,7 +593,7 @@ const ProjectDetail: React.FC = () => {
                 <div style={{ marginTop: 8 }}>
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Budget: </Text><Text style={{ color: '#009944', fontSize: 13 }}>{formatCurrency(varianceChartData[0].budget)}</Text><br />
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Actual: </Text><Text style={{ color: '#fff', fontSize: 13 }}>{formatCurrency(varianceChartData[0].actual)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{varianceChartData[0].budget ? Math.round((varianceChartData[0].actual / varianceChartData[0].budget) * 100) : (varianceChartData[0].actual ? 100 : 0)}% used</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{formatPctUsed(varianceChartData[0].actual, varianceChartData[0].budget)}% used</Text>
                   <Text style={{ color: varianceChartData[0].actual > varianceChartData[0].budget ? '#ff4d4f' : '#52c41a', fontSize: 13, marginLeft: 8 }}>{varianceChartData[0].actual <= varianceChartData[0].budget ? '+' : ''}{formatCurrency(varianceChartData[0].budget - varianceChartData[0].actual)} variance</Text><br />
                   <Tag color={varianceChartData[0].actual > varianceChartData[0].budget ? 'red' : 'green'} style={{ marginTop: 4 }}>{varianceChartData[0].actual > varianceChartData[0].budget ? 'Over budget' : 'On track'}</Tag>
                   <Text style={{ color: '#aaa', fontSize: 11, display: 'block', marginTop: 4 }}>{boqByCategory.materialCount} items in BOQ</Text>
@@ -574,7 +606,7 @@ const ProjectDetail: React.FC = () => {
                 <div style={{ marginTop: 8 }}>
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Budget: </Text><Text style={{ color: '#009944', fontSize: 13 }}>{formatCurrency(varianceChartData[1].budget)}</Text><br />
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Actual: </Text><Text style={{ color: '#fff', fontSize: 13 }}>{formatCurrency(varianceChartData[1].actual)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{varianceChartData[1].budget ? Math.round((varianceChartData[1].actual / varianceChartData[1].budget) * 100) : (varianceChartData[1].actual ? 100 : 0)}% used</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{formatPctUsed(varianceChartData[1].actual, varianceChartData[1].budget)}% used</Text>
                   <Text style={{ color: varianceChartData[1].actual > varianceChartData[1].budget ? '#ff4d4f' : '#52c41a', fontSize: 13, marginLeft: 8 }}>{varianceChartData[1].actual <= varianceChartData[1].budget ? '+' : ''}{formatCurrency(varianceChartData[1].budget - varianceChartData[1].actual)} variance</Text><br />
                   <Tag color={varianceChartData[1].actual > varianceChartData[1].budget ? 'red' : 'green'} style={{ marginTop: 4 }}>{varianceChartData[1].actual > varianceChartData[1].budget ? 'Over budget' : 'On track'}</Tag>
                   <Text style={{ color: '#aaa', fontSize: 11, display: 'block', marginTop: 4 }}>{boqByCategory.laborCount} items in BOQ</Text>
@@ -587,7 +619,7 @@ const ProjectDetail: React.FC = () => {
                 <div style={{ marginTop: 8 }}>
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Budget: </Text><Text style={{ color: '#009944', fontSize: 13 }}>{formatCurrency(varianceChartData[2].budget)}</Text><br />
                   <Text strong style={{ color: '#fff', fontSize: 12 }}>Actual: </Text><Text style={{ color: '#fff', fontSize: 13 }}>{formatCurrency(varianceChartData[2].actual)}</Text><br />
-                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{varianceChartData[2].budget ? Math.round((varianceChartData[2].actual / varianceChartData[2].budget) * 100) : (varianceChartData[2].actual ? 100 : 0)}% used</Text>
+                  <Text style={{ color: '#00ff88', fontSize: 13 }}>{formatPctUsed(varianceChartData[2].actual, varianceChartData[2].budget)}% used</Text>
                   <Text style={{ color: varianceChartData[2].actual > varianceChartData[2].budget ? '#ff4d4f' : '#52c41a', fontSize: 13, marginLeft: 8 }}>{varianceChartData[2].actual <= varianceChartData[2].budget ? '+' : ''}{formatCurrency(varianceChartData[2].budget - varianceChartData[2].actual)} variance</Text><br />
                   <Tag color={varianceChartData[2].actual > varianceChartData[2].budget ? 'red' : 'green'} style={{ marginTop: 4 }}>{varianceChartData[2].actual > varianceChartData[2].budget ? 'Over budget' : 'On track'}</Tag>
                   <Text style={{ color: '#aaa', fontSize: 11, display: 'block', marginTop: 4 }}>{boqByCategory.equipmentCount} items in BOQ</Text>
@@ -598,14 +630,15 @@ const ProjectDetail: React.FC = () => {
           <Card title="Budget vs Actual by Category" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginBottom: 24 }}>
             <ChartErrorBoundary height={280}>
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={varianceChartData} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
+                <BarChart data={varianceChartData} margin={{ top: 16, right: 48, left: 48, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                   <XAxis dataKey="category" tick={{ fill: '#bbb', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <YAxis yAxisId="left" orientation="left" domain={[0, chartMaxBudget]} tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
+                  <YAxis yAxisId="right" orientation="right" domain={[0, chartMaxActual]} tick={{ fill: '#aaa', fontSize: 11 }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                   <Tooltip contentStyle={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.3)' }} formatter={(v: number) => [formatCurrency(v), '']} />
                   <Legend />
-                  <Bar dataKey="budget" name="Budget" fill="#009944" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="actual" name="Actual" fill="#333" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="budget" name="Budget" fill="#009944" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="actual" name="Actual" fill="#888" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartErrorBoundary>
@@ -626,7 +659,39 @@ const ProjectDetail: React.FC = () => {
             </Row>
             <Input placeholder="Search items..." value={varianceSearch} onChange={e => setVarianceSearch(e.target.value)} style={{ marginBottom: 12, background: '#141414', color: '#fff' }} allowClear />
             {filteredVarianceCosts.length > 0 ? (
-              <Table rowKey="id" dataSource={filteredVarianceCosts} columns={varianceTableColumns} pagination={{ pageSize: 5 }} size="small" style={{ background: 'transparent' }} />
+              <>
+                <Text style={{ color: '#aaa', fontSize: 12, display: 'block', marginBottom: 8 }}>BOQ items (budget). Item-level actuals may be 0 until linked to expenses.</Text>
+                <Table rowKey="id" dataSource={filteredVarianceCosts} columns={varianceTableColumns} pagination={{ pageSize: 5 }} size="small" style={{ background: 'transparent' }} />
+                {(expensesResult.expenses?.length ?? 0) > 0 && (
+                  <>
+                    <Text strong style={{ color: '#fff', display: 'block', marginTop: 24, marginBottom: 8 }}>Actual spend (from logged expenses)</Text>
+                    <Text style={{ color: '#aaa', fontSize: 12, display: 'block', marginBottom: 8 }}>These logged expenses make up the &quot;Actual Spent&quot; total above. Sum of listed expenses below.</Text>
+                    {(() => {
+                      const varianceReportExpenses = varianceFilter === 'all' ? (expensesResult.expenses || []) : filteredVarianceExpenses;
+                      const varianceReportExpensesSum = varianceReportExpenses.reduce((s, e) => s + (Number((e as Expense).amount) || 0), 0);
+                      return (
+                        <Table
+                          rowKey="id"
+                          dataSource={varianceReportExpenses}
+                          columns={expenseColumns}
+                          pagination={{ pageSize: 5 }}
+                          size="small"
+                          style={{ background: 'transparent' }}
+                          summary={() => (
+                            <Table.Summary fixed>
+                              <Table.Summary.Row>
+                                <Table.Summary.Cell index={0}><Text strong style={{ color: '#fff' }}>Total (listed)</Text></Table.Summary.Cell>
+                                <Table.Summary.Cell index={1}><Text strong style={{ color: '#00ff88' }}>{formatCurrency(varianceReportExpensesSum)}</Text></Table.Summary.Cell>
+                                <Table.Summary.Cell index={2} colSpan={2} />
+                              </Table.Summary.Row>
+                            </Table.Summary>
+                          )}
+                        />
+                      );
+                    })()}
+                  </>
+                )}
+              </>
             ) : filteredVarianceExpenses.length > 0 ? (
               <>
                 <Text style={{ color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: 12 }}>Showing expenses (no BOQ cost items yet).</Text>
@@ -725,6 +790,7 @@ const ProjectDetail: React.FC = () => {
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
               <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 600 }}>{formatCurrency(budget)}</Text>
               <Text style={{ color: '#aaa', fontSize: 13 }}>Spent: {formatCurrency(spent)}</Text>
+              <Text style={{ color: '#aaa', fontSize: 13 }}>Committed (BOQ): {formatCurrency(totalBOQ || budget)}</Text>
               <Text style={{ color: '#00ff88', fontSize: 15, fontWeight: 600 }}>Remaining: {formatCurrency(remaining)}</Text>
               <Progress percent={pctUsed} strokeColor="#009944" showInfo={false} size="small" />
               <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsed}% used</Text>

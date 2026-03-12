@@ -490,7 +490,13 @@ const Projects: React.FC = () => {
             const cfg = statusConfig[record.status] || { color: 'default', icon: null, label: record.status };
             const spent = (record as any).actualCost ?? 0;
             const remaining = Math.max(0, (record.budget ?? 0) - spent);
-            const pctUsed = record.budget ? Math.round((spent / record.budget) * 100) : 0;
+            const pctUsed = record.budget ? (spent / record.budget) * 100 : 0;
+            const pctUsedLabel = record.budget
+              ? (pctUsed === 0 && spent > 0 ? '<1' : (pctUsed > 0 && pctUsed < 1 ? pctUsed.toFixed(1) : String(Math.round(pctUsed))))
+              : '0';
+            const pctUsedProgress = record.budget
+              ? Math.max(0, Math.min(100, Math.round(pctUsed === 0 && spent > 0 ? 1 : pctUsed)))
+              : 0;
             const assignedCount = (record as any).teamMembers?.length ?? 0;
 
             const menuItems = [
@@ -554,8 +560,8 @@ const Projects: React.FC = () => {
                   <Space direction="vertical" size={4} style={{ width: '100%' }}>
                     <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(record.budget)}</Text>
                     <Text style={{ color: '#aaa', fontSize: 12 }}>Remaining: {formatCurrency(remaining)}</Text>
-                    <Progress percent={pctUsed} size="small" strokeColor="#009944" showInfo={false} />
-                    <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsed}% used</Text>
+                    <Progress percent={pctUsedProgress} size="small" strokeColor="#009944" showInfo={false} />
+                    <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsedLabel}% used</Text>
                   </Space>
                   <Button
                     type="default"
