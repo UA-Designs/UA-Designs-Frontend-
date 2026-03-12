@@ -172,6 +172,10 @@ const ProjectDetail: React.FC = () => {
   const remaining = Math.max(0, budget - spent);
   const pctUsed = budget ? Math.round((spent / budget) * 100) : 0;
   const teamMembers = (project as any).teamMembers ?? [];
+  const projAny = project as any;
+  const projectLocation = project.location ?? projAny.location ?? '';
+  const projectStartDate = project.startDate ?? projAny.start_date ?? '';
+  const projectEndDate = project.endDate ?? project.plannedEndDate ?? projAny.end_date ?? projAny.planned_end_date ?? '';
 
   const boqCount = dashboardData?.pmbokCoreAreas?.cost?.count ?? dashboardData?.budgetCount ?? budgets.length;
   const usageCount = (dashboardData as any)?.usageRecordsCount ?? allocations.length;
@@ -490,15 +494,15 @@ const ProjectDetail: React.FC = () => {
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               <Text style={{ color: '#bbb', fontSize: 13 }}>
                 <EnvironmentOutlined style={{ marginRight: 8 }} />
-                {project.location || '—'}
+                {projectLocation || '—'}
               </Text>
               <Text style={{ color: '#bbb', fontSize: 13 }}>
                 <CalendarOutlined style={{ marginRight: 8 }} />
-                Started: {project.startDate ? dayjs(project.startDate).format('M/D/YYYY') : '—'}
+                Started: {projectStartDate ? dayjs(projectStartDate).format('M/D/YYYY') : '—'}
               </Text>
               <Text style={{ color: '#bbb', fontSize: 13 }}>
                 <CalendarOutlined style={{ marginRight: 8 }} />
-                Due: {project.endDate || project.plannedEndDate ? dayjs(project.endDate || project.plannedEndDate).format('M/D/YYYY') : '—'}
+                Due: {projectEndDate ? dayjs(projectEndDate).format('M/D/YYYY') : '—'}
               </Text>
             </Space>
           </Card>

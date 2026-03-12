@@ -94,12 +94,19 @@ class ProjectService {
   async getProjectById(id: string): Promise<Project> {
     try {
       const response = await apiService.get<ProjectResponse>(`/projects/${id}`);
-      
-      if (response.data.success) {
-        return response.data.data;
-      }
-      
-      throw new Error('Project not found');
+      const raw = response.data.success ? response.data.data : null;
+      if (!raw) throw new Error('Project not found');
+      // Normalize snake_case from API to camelCase for UI
+      const p = raw as any;
+      return {
+        ...raw,
+        id: raw.id ?? p._id,
+        location: raw.location ?? p.location ?? '',
+        startDate: raw.startDate ?? p.start_date ?? raw.start_date,
+        endDate: raw.endDate ?? p.end_date ?? raw.end_date,
+        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? raw.planned_end_date,
+        clientName: raw.clientName ?? p.client_name ?? raw.client_name,
+      } as Project;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch project');
     }
