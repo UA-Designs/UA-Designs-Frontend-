@@ -21,6 +21,7 @@ import {
   Progress,
   Badge,
   Grid,
+  Dropdown,
 } from 'antd';
 import {
   PlusOutlined,
@@ -34,6 +35,9 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   SafetyOutlined,
+  MoreOutlined,
+  FlagOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ProjectSelector from '../../../components/common/ProjectSelector';
@@ -402,59 +406,27 @@ const ProjectRisk: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: Risk) => (
-        <Space size="small">
-          {can('ENGINEER_AND_ABOVE') && (
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEditRisk(record)}
-            >
-              Edit
-            </Button>
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleAssessRisk(record)}
-            >
-              Assess
-            </Button>
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleAddMitigation(record)}
-            >
-              Mitigate
-            </Button>
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Button
-              type="link"
-              size="small"
-              danger
-              onClick={() => handleEscalateRisk(record)}
-            >
-              Escalate
-            </Button>
-          )}
-          {can('MANAGER_AND_ABOVE') && (
-            <Button
-              type="link"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDeleteRisk(record.id)}
-            >
-              Delete
-            </Button>
-          )}
-        </Space>
-      ),
+      width: 80,
+      render: (_: any, record: Risk) => {
+        const menuItems: { key: string; label: string; icon?: React.ReactNode; danger?: boolean; onClick: () => void }[] = [];
+        if (can('ENGINEER_AND_ABOVE')) menuItems.push({ key: 'edit', label: 'Edit', icon: <EditOutlined />, onClick: () => handleEditRisk(record) });
+        if (can('MANAGER_AND_ABOVE')) {
+          menuItems.push({ key: 'assess', label: 'Assess', icon: <AuditOutlined />, onClick: () => handleAssessRisk(record) });
+          menuItems.push({ key: 'mitigate', label: 'Add mitigation', icon: <CheckCircleOutlined />, onClick: () => handleAddMitigation(record) });
+          menuItems.push({ key: 'escalate', label: 'Escalate', icon: <FlagOutlined />, danger: true, onClick: () => handleEscalateRisk(record) });
+          menuItems.push({ key: 'delete', label: 'Delete', icon: <DeleteOutlined />, danger: true, onClick: () => handleDeleteRisk(record.id) });
+        }
+        if (menuItems.length === 0) return null;
+        return (
+          <Dropdown
+            menu={{ items: menuItems.map(({ key, label, icon, danger, onClick }) => ({ key, label, icon, danger, onClick })) }}
+            trigger={['click']}
+            placement="bottomRight"
+          >
+            <Button type="text" size="small" icon={<MoreOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -552,29 +524,22 @@ const ProjectRisk: React.FC = () => {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           <div>
-            <Title level={2} style={{ marginBottom: 4 }}>Project Risk Management</Title>
-            <Text type="secondary">Identify, analyze, and manage project risks</Text>
+            <Title level={2} style={{ marginBottom: 4 }}>Risk Management</Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>Log risks, add mitigations, and track severity. Select a project to get started.</Text>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title level={4} style={{ margin: 0 }}>Risk Management</Title>
-            <Button
-              icon={<ReloadOutlined style={{ color: '#009944' }} />}
-              onClick={handleRefresh}
-              style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
-            >
-              Refresh
-            </Button>
-          </div>
-
-          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: 16 }}>
-            <ProjectSelector />
+          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 8, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <Text style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#9ca3af' }}>Project</Text>
+              <ProjectSelector />
+            </div>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>Refresh</Button>
           </div>
 
           {!selectedProject && !projectsLoading && (
             <Alert
-              message={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>No Project Selected</span>}
-              description={<span style={{ color: '#94a3b8' }}>Please select a project from the dropdown above to manage its risks, mitigation strategies, and contingency plans.</span>}
+              message="Choose a project first"
+              description="Select a project above to add risks, mitigation actions, and view the risk matrix."
               type="info"
               showIcon
               style={{
@@ -637,63 +602,85 @@ const ProjectRisk: React.FC = () => {
                 {/* Risks */}
                 {activeTab === 'risks' && (
                   <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>Potential issues that could affect the project. Use the ⋮ menu on each row to assess, mitigate, or escalate.</Text>
                       {can('ENGINEER_AND_ABOVE') && (
                         <Button icon={<PlusOutlined />} onClick={handleAddRisk}
                           style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                          Add Risk
+                          Add risk
                         </Button>
                       )}
                     </div>
-                    <Table columns={riskColumns} dataSource={safeRisks} rowKey="id" pagination={{ pageSize: 10 }} scroll={{ x: 1400 }} />
+                    <Table
+                      columns={riskColumns}
+                      dataSource={safeRisks}
+                      rowKey="id"
+                      pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} risk${t !== 1 ? 's' : ''}` }}
+                      scroll={{ x: 1200 }}
+                      locale={{ emptyText: 'No risks yet. Click "Add risk" to log the first risk (e.g. weather delay, material shortage).' }}
+                    />
                   </>
                 )}
 
                 {/* Mitigations */}
                 {activeTab === 'mitigations' && (
                   <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>Actions taken to reduce or respond to risks.</Text>
                       {can('MANAGER_AND_ABOVE') && (
                         <Button icon={<PlusOutlined />} onClick={() => handleAddMitigation()}
                           style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                          Add Mitigation
+                          Add mitigation
                         </Button>
                       )}
                     </div>
-                    <Table columns={mitigationColumns} dataSource={safeMitigations} rowKey="id" pagination={{ pageSize: 10 }} scroll={{ x: 1000 }} />
+                    <Table
+                      columns={mitigationColumns}
+                      dataSource={safeMitigations}
+                      rowKey="id"
+                      pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} mitigation${t !== 1 ? 's' : ''}` }}
+                      scroll={{ x: 1000 }}
+                      locale={{ emptyText: 'No mitigations yet. Add a risk first, then use "Add mitigation" or the risk menu to link an action.' }}
+                    />
                   </>
                 )}
 
                 {/* Risk Matrix */}
                 {activeTab === 'matrix' && (
                   <div style={{ padding: 16 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Risks plotted by probability and impact. Focus on high-probability, high-impact items first.</Text>
                     {riskMatrix && <RiskMatrix data={riskMatrix} />}
-                    {!riskMatrix && <Alert message="No risk matrix data available" type="info" />}
+                    {!riskMatrix && <Alert message="No matrix data yet" description="Add risks with probability and impact set to see the risk matrix." type="info" showIcon />}
                   </div>
                 )}
 
                 {/* Overview */}
                 {activeTab === 'overview' && (
                   <div style={{ padding: 16 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Summary of risks by severity and top items to watch.</Text>
                     <Row gutter={[16, 16]}>
                       <Col xs={24} lg={12}>
-                        <Card title="Risk Distribution by Severity">
-                          <Space direction="vertical" style={{ width: '100%' }}>
-                            {monitoring && Object.entries(monitoring.bySeverity || {}).map(([severity, count]) => (
-                              <div key={severity}>
-                                <Text>{severity}: {count as number}</Text>
-                                <Progress
-                                  percent={monitoring.summary.total > 0 ? ((count as number) / monitoring.summary.total) * 100 : 0}
-                                  strokeColor={getSeverityColor(severity as RiskSeverity)}
-                                  showInfo={false}
-                                />
-                              </div>
-                            ))}
-                          </Space>
+                        <Card title="By severity">
+                          {monitoring && Object.keys(monitoring.bySeverity || {}).length > 0 ? (
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              {Object.entries(monitoring.bySeverity || {}).map(([severity, count]) => (
+                                <div key={severity}>
+                                  <Text>{severity}: {count as number}</Text>
+                                  <Progress
+                                    percent={monitoring.summary.total > 0 ? ((count as number) / monitoring.summary.total) * 100 : 0}
+                                    strokeColor={getSeverityColor(severity as RiskSeverity)}
+                                    showInfo={false}
+                                  />
+                                </div>
+                              ))}
+                            </Space>
+                          ) : (
+                            <Text type="secondary">No severity breakdown yet. Add risks to see distribution.</Text>
+                          )}
                         </Card>
                       </Col>
                       <Col xs={24} lg={12}>
-                        <Card title="Top Risks">
+                        <Card title="Top risks">
                           {monitoring?.topRisks && monitoring.topRisks.length > 0 ? (
                             monitoring.topRisks.map((risk, index) => (
                               <div key={risk.id} style={{ marginBottom: 12 }}>
@@ -705,7 +692,7 @@ const ProjectRisk: React.FC = () => {
                               </div>
                             ))
                           ) : (
-                            <Text type="secondary">No high-risk items</Text>
+                            <Text type="secondary">No high-priority risks. Add risks and set probability/impact to see top items here.</Text>
                           )}
                         </Card>
                       </Col>
@@ -744,30 +731,31 @@ const ProjectRisk: React.FC = () => {
 
       {/* Risk Modal */}
       <Modal
-        title={editingRisk ? 'Edit Risk' : 'Create Risk'}
+        title={editingRisk ? 'Edit risk' : 'Add risk'}
         open={riskModalVisible}
         onOk={handleRiskSubmit}
         onCancel={() => {
           setRiskModalVisible(false);
           riskForm.resetFields();
         }}
-        width={700}
+        width={640}
+        okText={editingRisk ? 'Save changes' : 'Add risk'}
       >
         <Form form={riskForm} layout="vertical">
           <Form.Item
             name="title"
             label="Title"
-            rules={[{ required: true, message: 'Please enter risk title' }]}
+            rules={[{ required: true, message: 'Enter a short title' }]}
           >
-            <Input placeholder="Enter risk title" />
+            <Input placeholder="e.g. Material price increase, Weather delay" />
           </Form.Item>
 
           <Form.Item
             name="description"
             label="Description"
-            rules={[{ required: true, message: 'Please enter description' }]}
+            rules={[{ required: true, message: 'Describe the risk' }]}
           >
-            <TextArea rows={3} placeholder="Describe the risk" />
+            <TextArea rows={3} placeholder="What could go wrong and how it might affect the project?" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -775,9 +763,9 @@ const ProjectRisk: React.FC = () => {
               <Form.Item
                 name="status"
                 label="Status"
-                rules={[{ required: true, message: 'Please select status' }]}
+                rules={[{ required: true, message: 'Select status' }]}
               >
-                <Select placeholder="Select status">
+                <Select placeholder="Current status">
                   {Object.values(RiskStatus).map(status => (
                     <Option key={status} value={status}>{status}</Option>
                   ))}
@@ -785,8 +773,8 @@ const ProjectRisk: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="severity" label="Severity">
-                <Select placeholder="Select severity" allowClear>
+              <Form.Item name="severity" label="Severity" tooltip="Overall severity (can be derived from probability × impact)">
+                <Select placeholder="Low / Medium / High / Critical" allowClear>
                   {Object.values(RiskSeverity).map(s => (
                     <Option key={s} value={s}>{s}</Option>
                   ))}
@@ -800,14 +788,15 @@ const ProjectRisk: React.FC = () => {
               <Form.Item
                 name="probability"
                 label="Probability"
-                rules={[{ required: true, message: 'Please select probability' }]}
+                rules={[{ required: true, message: 'Select likelihood' }]}
+                tooltip="How likely is this to happen?"
               >
-                <Select placeholder="Select probability">
-                  <Option value={0.1}>Very Low</Option>
+                <Select placeholder="Likelihood">
+                  <Option value={0.1}>Very low</Option>
                   <Option value={0.25}>Low</Option>
                   <Option value={0.5}>Medium</Option>
                   <Option value={0.75}>High</Option>
-                  <Option value={1.0}>Very High</Option>
+                  <Option value={1.0}>Very high</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -815,21 +804,22 @@ const ProjectRisk: React.FC = () => {
               <Form.Item
                 name="impact"
                 label="Impact"
-                rules={[{ required: true, message: 'Please select impact' }]}
+                rules={[{ required: true, message: 'Select impact' }]}
+                tooltip="How much would it affect cost, schedule, or quality?"
               >
-                <Select placeholder="Select impact">
-                  <Option value={0.1}>Very Low</Option>
+                <Select placeholder="Impact if it occurs">
+                  <Option value={0.1}>Very low</Option>
                   <Option value={0.25}>Low</Option>
                   <Option value={0.5}>Medium</Option>
                   <Option value={0.75}>High</Option>
-                  <Option value={1.0}>Very High</Option>
+                  <Option value={1.0}>Very high</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="responseStrategy" label="Response Strategy">
-            <Select placeholder="Select response strategy" allowClear>
+          <Form.Item name="responseStrategy" label="Response strategy" tooltip="How you plan to deal with it">
+            <Select placeholder="Avoid / Mitigate / Transfer / Accept" allowClear>
               <Option value="AVOID">Avoid</Option>
               <Option value="MITIGATE">Mitigate</Option>
               <Option value="TRANSFER">Transfer</Option>
@@ -841,40 +831,42 @@ const ProjectRisk: React.FC = () => {
 
       {/* Assess Risk Modal */}
       <Modal
-        title="Assess Risk"
+        title="Assess risk"
         open={assessModalVisible}
         onOk={handleAssessSubmit}
         onCancel={() => {
           setAssessModalVisible(false);
           assessForm.resetFields();
         }}
+        okText="Save assessment"
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Update probability and impact after mitigation or new information.</Text>
         <Form form={assessForm} layout="vertical">
           <Form.Item
             name="residualProbability"
-            label="Residual Probability"
-            rules={[{ required: true, message: 'Please select residual probability' }]}
+            label="Residual probability"
+            rules={[{ required: true, message: 'Select probability' }]}
           >
-            <Select placeholder="Select residual probability">
-              <Option value={0.1}>Very Low</Option>
+            <Select placeholder="Likelihood after controls">
+              <Option value={0.1}>Very low</Option>
               <Option value={0.25}>Low</Option>
               <Option value={0.5}>Medium</Option>
               <Option value={0.75}>High</Option>
-              <Option value={1.0}>Very High</Option>
+              <Option value={1.0}>Very high</Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="residualImpact"
-            label="Residual Impact"
-            rules={[{ required: true, message: 'Please select residual impact' }]}
+            label="Residual impact"
+            rules={[{ required: true, message: 'Select impact' }]}
           >
-            <Select placeholder="Select residual impact">
-              <Option value={0.1}>Very Low</Option>
+            <Select placeholder="Impact after controls">
+              <Option value={0.1}>Very low</Option>
               <Option value={0.25}>Low</Option>
               <Option value={0.5}>Medium</Option>
               <Option value={0.75}>High</Option>
-              <Option value={1.0}>Very High</Option>
+              <Option value={1.0}>Very high</Option>
             </Select>
           </Form.Item>
         </Form>
@@ -882,21 +874,23 @@ const ProjectRisk: React.FC = () => {
 
       {/* Escalate Risk Modal */}
       <Modal
-        title="Escalate Risk"
+        title="Escalate risk"
         open={escalateModalVisible}
         onOk={handleEscalateSubmit}
         onCancel={() => {
           setEscalateModalVisible(false);
           escalateForm.resetFields();
         }}
+        okText="Escalate"
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Escalate to higher authority when the risk is outside your control or budget.</Text>
         <Form form={escalateForm} layout="vertical">
           <Form.Item
             name="level"
-            label="Escalation Level"
-            rules={[{ required: true, message: 'Please select escalation level' }]}
+            label="Escalation level"
+            rules={[{ required: true, message: 'Select level' }]}
           >
-            <Select placeholder="Select level">
+            <Select placeholder="Who should this go to?">
               {Object.values(EscalationLevel).map(level => (
                 <Option key={level} value={level}>{level}</Option>
               ))}
@@ -906,31 +900,33 @@ const ProjectRisk: React.FC = () => {
           <Form.Item
             name="reason"
             label="Reason"
-            rules={[{ required: true, message: 'Please enter escalation reason' }]}
+            rules={[{ required: true, message: 'Explain why you are escalating' }]}
           >
-            <TextArea rows={4} placeholder="Explain why this risk needs escalation" />
+            <TextArea rows={4} placeholder="Why does this need escalation? What support or decision do you need?" />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* Mitigation Modal */}
       <Modal
-        title="Create Mitigation Action"
+        title="Add mitigation"
         open={mitigationModalVisible}
         onOk={handleMitigationSubmit}
         onCancel={() => {
           setMitigationModalVisible(false);
           mitigationForm.resetFields();
         }}
-        width={600}
+        width={560}
+        okText="Add mitigation"
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Define an action to reduce or respond to the risk.</Text>
         <Form form={mitigationForm} layout="vertical">
           <Form.Item
             name="riskId"
             label="Risk"
-            rules={[{ required: true, message: 'Please select risk' }]}
+            rules={[{ required: true, message: 'Select the risk' }]}
           >
-            <Select placeholder="Select risk">
+            <Select placeholder="Which risk is this for?" showSearch optionFilterProp="children">
               {safeRisks.map(risk => (
                 <Option key={risk.id} value={risk.id}>{risk.title}</Option>
               ))}
@@ -940,57 +936,57 @@ const ProjectRisk: React.FC = () => {
           <Form.Item
             name="action"
             label="Action"
-            rules={[{ required: true, message: 'Please enter action' }]}
+            rules={[{ required: true, message: 'Enter the action' }]}
           >
-            <Input placeholder="Enter mitigation action" />
+            <Input placeholder="e.g. Order materials early, Add buffer to schedule" />
           </Form.Item>
 
-          <Form.Item name="description" label="Description">
-            <TextArea rows={2} placeholder="Describe the mitigation action" />
+          <Form.Item name="description" label="Description (optional)">
+            <TextArea rows={2} placeholder="More details" />
           </Form.Item>
 
           <Form.Item
             name="strategy"
             label="Strategy"
-            rules={[{ required: true, message: 'Please enter strategy' }]}
+            rules={[{ required: true, message: 'Describe the approach' }]}
           >
-            <TextArea rows={2} placeholder="Describe the mitigation strategy" />
+            <TextArea rows={2} placeholder="How will this reduce the risk?" />
           </Form.Item>
 
           <Form.Item
             name="status"
             label="Status"
-            rules={[{ required: true, message: 'Please select status' }]}
+            rules={[{ required: true, message: 'Select status' }]}
           >
-            <Select placeholder="Select status">
+            <Select placeholder="Planned / In progress / Completed">
               {Object.values(MitigationStatus).map(status => (
-                <Option key={status} value={status}>{status}</Option>
+                <Option key={status} value={status}>{status.replace('_', ' ')}</Option>
               ))}
             </Select>
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="startDate" label="Start Date">
-                <DatePicker style={{ width: '100%' }} />
+              <Form.Item name="startDate" label="Start date">
+                <DatePicker style={{ width: '100%' }} placeholder="When started" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="targetDate" label="Target Date">
-                <DatePicker style={{ width: '100%' }} />
+              <Form.Item name="targetDate" label="Target date">
+                <DatePicker style={{ width: '100%' }} placeholder="Due by" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="estimatedCost" label="Estimated Cost (₱)">
-                <InputNumber min={0} style={{ width: '100%' }} placeholder="0.00" />
+              <Form.Item name="estimatedCost" label="Estimated cost (₱)">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="effectiveness" label="Effectiveness">
-                <Select placeholder="Select effectiveness" allowClear>
+                <Select placeholder="Low / Medium / High" allowClear>
                   <Option value="LOW">Low</Option>
                   <Option value="MEDIUM">Medium</Option>
                   <Option value="HIGH">High</Option>
@@ -999,10 +995,9 @@ const ProjectRisk: React.FC = () => {
             </Col>
           </Row>
 
-          <Form.Item name="assignedToId" label="Assigned To">
-            <Select placeholder="Select assignee (optional)" allowClear showSearch
-              optionFilterProp="label"
-              options={users.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName} (${u.email})` }))}
+          <Form.Item name="assignedToId" label="Assigned to">
+            <Select placeholder="Optional" allowClear showSearch optionFilterProp="label"
+              options={users.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
             />
           </Form.Item>
         </Form>

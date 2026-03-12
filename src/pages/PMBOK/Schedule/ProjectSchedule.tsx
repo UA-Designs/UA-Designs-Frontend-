@@ -235,13 +235,20 @@ const ProjectSchedule: React.FC = () => {
 
   const taskColumns = [
     {
-      title: 'Name',
+      title: 'Task',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: ScheduleTask) => (
         <Space>
-          {record.isCritical && <Badge color="red" title="Critical" />}
-          <Text>{name}</Text>
+          {record.isCritical && <Badge color="red" title="On critical path" />}
+          <div>
+            <Text strong>{name}</Text>
+            {record.assignedTo && (
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                {(() => { const u = users.find(x => x.id === record.assignedTo); return u ? `${u.firstName} ${u.lastName}` : null; })() || '—'}
+              </div>
+            )}
+          </div>
         </Space>
       ),
     },
@@ -380,34 +387,23 @@ const ProjectSchedule: React.FC = () => {
 
         {/* Page title */}
         <div>
-          <Title level={2} style={{ marginBottom: 4 }}>Project Schedule Management</Title>
-          <Text type="secondary" style={{ fontSize: 14 }}>Plan, develop, and control the project schedule</Text>
-        </div>
-
-        {/* "Project Management" action row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>Project Management</Title>
-          <Space>
-            <Button
-              icon={<ReloadOutlined style={{ color: '#009944' }} />}
-              onClick={loadScheduleData}
-              style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
-            >
-              Refresh
-            </Button>
-
-          </Space>
+          <Title level={2} style={{ marginBottom: 4 }}>Schedule</Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>Manage tasks, dependencies, and timeline. Select a project to get started.</Text>
         </div>
 
         {/* Project selector card */}
-        <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: 16 }}>
-          <ProjectSelector />
+        <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 8, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Text style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#9ca3af' }}>Project</Text>
+            <ProjectSelector />
+          </div>
+          <Button icon={<ReloadOutlined />} onClick={loadScheduleData}>Refresh</Button>
         </div>
 
         {!selectedProject && !projectsLoading && (
           <Alert
-            message={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>No Project Selected</span>}
-            description={<span style={{ color: '#94a3b8' }}>Please select a project to manage its schedule, tasks, and dependencies.</span>}
+            message="Choose a project first"
+            description="Select a project from the dropdown above to view and manage its tasks, dependencies, Gantt chart, and critical path."
             type="info"
             showIcon
             style={{
@@ -494,8 +490,9 @@ const ProjectSchedule: React.FC = () => {
                     columns={taskColumns}
                     dataSource={tasks}
                     rowKey="id"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} task${total !== 1 ? 's' : ''}` }}
                     size="small"
+                    locale={{ emptyText: 'No tasks yet. Click "Add Task" to create your first task.' }}
                   />
                 </>
               )}
@@ -518,8 +515,9 @@ const ProjectSchedule: React.FC = () => {
                     columns={dependencyColumns}
                     dataSource={dependencies}
                     rowKey="id"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `${total} dependenc${total !== 1 ? 'ies' : 'y'}` }}
                     size="small"
+                    locale={{ emptyText: 'No dependencies yet. Add links between tasks (e.g. Task B starts after Task A finishes).' }}
                   />
                 </>
               )}
@@ -527,10 +525,11 @@ const ProjectSchedule: React.FC = () => {
               {/* ── Critical Path ── */}
               {activeTab === 'critical-path' && (
                 <div style={{ padding: 24 }}>
-                  {criticalPathData ? (
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Longest chain of dependent tasks; delays here affect the project end date.</Text>
+                  {criticalPathData && criticalPathData.criticalPath?.length > 0 ? (
                     <>
                       <Alert
-                        message={<span style={{ color: '#1a1a1a', fontWeight: 600 }}>{`Total Duration: ${criticalPathData.totalDuration} days`}</span>}
+                        message={`Total duration: ${criticalPathData.totalDuration} days`}
                         type="warning"
                         showIcon
                         style={{ marginBottom: 20 }}
@@ -569,7 +568,12 @@ const ProjectSchedule: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <Alert message="No critical path data available" type="info" showIcon />
+                    <Alert
+                      message="No critical path yet"
+                      description="Add tasks and dependencies (e.g. Finish-to-Start) so the system can compute the critical path."
+                      type="info"
+                      showIcon
+                    />
                   )}
                 </div>
               )}
@@ -577,7 +581,17 @@ const ProjectSchedule: React.FC = () => {
               {/* ── Gantt Chart ── */}
               {activeTab === 'gantt' && (
                 <div style={{ padding: 16 }}>
-                  <GanttChart tasks={tasks} dependencies={dependencies} />
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Visual timeline of tasks and their dependencies.</Text>
+                  {tasks.length === 0 ? (
+                    <Alert
+                      message="No tasks to display"
+                      description="Add tasks in the Tasks tab to see them on the Gantt chart."
+                      type="info"
+                      showIcon
+                    />
+                  ) : (
+                    <GanttChart tasks={tasks} dependencies={dependencies} />
+                  )}
                 </div>
               )}
 
@@ -648,20 +662,20 @@ const ProjectSchedule: React.FC = () => {
         open={taskModalVisible}
         onOk={handleTaskSubmit}
         onCancel={() => setTaskModalVisible(false)}
-        width={600}
-        okText={editingTask ? 'Update' : 'Create'}
+        width={560}
+        okText={editingTask ? 'Save changes' : 'Add task'}
       >
         <Form form={taskForm} layout="vertical">
-          <Form.Item name="name" label="Task Name" rules={[{ required: true, message: 'Required' }]}>
-            <Input placeholder="Enter task name" />
+          <Form.Item name="name" label="Task name" rules={[{ required: true, message: 'Enter a task name' }]}>
+            <Input placeholder="e.g. Install foundation" />
           </Form.Item>
-          <Form.Item name="description" label="Description">
-            <TextArea rows={2} placeholder="Description" />
+          <Form.Item name="description" label="Description (optional)">
+            <TextArea rows={2} placeholder="Brief description or notes" />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="status" label="Status" initialValue={TaskStatus.NOT_STARTED}>
-                <Select>
+                <Select placeholder="Current status">
                   {Object.values(TaskStatus).map(s => (
                     <Option key={s} value={s}>{s.replace('_', ' ')}</Option>
                   ))}
@@ -670,7 +684,7 @@ const ProjectSchedule: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="priority" label="Priority" initialValue={TaskPriority.MEDIUM}>
-                <Select>
+                <Select placeholder="Priority level">
                   {Object.values(TaskPriority).map(p => (
                     <Option key={p} value={p}>{p}</Option>
                   ))}
@@ -680,53 +694,56 @@ const ProjectSchedule: React.FC = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="startDate" label="Start Date">
-                <DatePicker style={{ width: '100%' }} />
+              <Form.Item name="startDate" label="Start date">
+                <DatePicker style={{ width: '100%' }} placeholder="Select date" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="endDate" label="End Date">
-                <DatePicker style={{ width: '100%' }} />
+              <Form.Item name="endDate" label="End date">
+                <DatePicker style={{ width: '100%' }} placeholder="Select date" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="progress" label="Progress (%)" initialValue={0}>
-                <InputNumber min={0} max={100} style={{ width: '100%' }} />
+              <Form.Item name="progress" label="Progress %" initialValue={0} tooltip="0–100">
+                <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="0" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="assignedTo" label="Assigned to">
+                <Select
+                  placeholder="Choose team member"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  options={users.map(u => ({
+                    value: u.id,
+                    label: `${u.firstName} ${u.lastName}`,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="assignedTo" label="Assigned To">
-            <Select
-              placeholder="Select team member"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              options={users.map(u => ({
-                value: u.id,
-                label: `${u.firstName} ${u.lastName}`,
-              }))}
-            />
-          </Form.Item>
         </Form>
       </Modal>
 
       {/* Dependency Modal */}
       <Modal
-        title="Add Dependency"
+        title="Add dependency"
         open={dependencyModalVisible}
         onOk={handleDepSubmit}
         onCancel={() => setDependencyModalVisible(false)}
-        okText="Create"
+        okText="Add dependency"
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Link two tasks so the successor depends on the predecessor (e.g. "Pour concrete" after "Install formwork").</Text>
         <Form form={depForm} layout="vertical">
           <Form.Item
             name="predecessorTaskId"
-            label="Predecessor Task"
-            rules={[{ required: true, message: 'Required' }]}
+            label="Predecessor (first task)"
+            rules={[{ required: true, message: 'Select the task that must be done first' }]}
           >
-            <Select placeholder="Select predecessor task" showSearch>
+            <Select placeholder="Select task" showSearch optionFilterProp="children">
               {tasks.map(t => (
                 <Option key={t.id} value={t.id}>{t.name}</Option>
               ))}
@@ -734,21 +751,21 @@ const ProjectSchedule: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="successorTaskId"
-            label="Successor Task"
-            rules={[{ required: true, message: 'Required' }]}
+            label="Successor (task that follows)"
+            rules={[{ required: true, message: 'Select the task that depends on the first' }]}
           >
-            <Select placeholder="Select successor task" showSearch>
+            <Select placeholder="Select task" showSearch optionFilterProp="children">
               {tasks.map(t => (
                 <Option key={t.id} value={t.id}>{t.name}</Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="type" label="Dependency Type" initialValue={DependencyType.FS} rules={[{ required: true }]}>
-            <Select>
-              <Option value={DependencyType.FS}>FS — Finish-to-Start</Option>
-              <Option value={DependencyType.SS}>SS — Start-to-Start</Option>
-              <Option value={DependencyType.FF}>FF — Finish-to-Finish</Option>
-              <Option value={DependencyType.SF}>SF — Start-to-Finish</Option>
+          <Form.Item name="type" label="Type" initialValue={DependencyType.FS} rules={[{ required: true }]} tooltip="FS = successor starts when predecessor finishes (most common).">
+            <Select placeholder="Choose type">
+              <Option value={DependencyType.FS}>Finish-to-Start (most common)</Option>
+              <Option value={DependencyType.SS}>Start-to-Start</Option>
+              <Option value={DependencyType.FF}>Finish-to-Finish</Option>
+              <Option value={DependencyType.SF}>Start-to-Finish</Option>
             </Select>
           </Form.Item>
         </Form>

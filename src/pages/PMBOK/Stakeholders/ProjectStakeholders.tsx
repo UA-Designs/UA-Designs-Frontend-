@@ -406,29 +406,22 @@ const ProjectStakeholders: React.FC = () => {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           <div>
-            <Title level={2} style={{ marginBottom: 4 }}>Project Stakeholder Management</Title>
-            <Text type="secondary">Identify, analyze, and engage project stakeholders</Text>
+            <Title level={2} style={{ marginBottom: 4 }}>Stakeholders</Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>Manage people and groups involved in the project: register contacts, log communications, and track engagement.</Text>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title level={4} style={{ margin: 0 }}>Stakeholder Management</Title>
-            <Button
-              icon={<ReloadOutlined style={{ color: '#009944' }} />}
-              onClick={loadData}
-              style={{ background: 'transparent', borderColor: '#333333', color: '#ffffff' }}
-            >
-              Refresh
-            </Button>
-          </div>
-
-          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 6, padding: 16 }}>
-            <ProjectSelector />
+          <div style={{ background: '#1a1a1a', border: '1px solid #333333', borderRadius: 8, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <Text style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#9ca3af' }}>Project</Text>
+              <ProjectSelector />
+            </div>
+            <Button icon={<ReloadOutlined />} onClick={loadData}>Refresh</Button>
           </div>
 
           {!selectedProject && !projectsLoading && (
             <Alert
-              message={<span style={{ color: '#e2e8f0', fontWeight: 600 }}>No Project Selected</span>}
-              description={<span style={{ color: '#94a3b8' }}>Please select a project to manage its stakeholders, communications, and engagement strategies.</span>}
+              message="Choose a project first"
+              description="Select a project above to add stakeholders, log communications, and view the influence matrix."
               type="info"
               showIcon
               style={{
@@ -471,41 +464,58 @@ const ProjectStakeholders: React.FC = () => {
                 {/* Register */}
                 {activeTab === 'register' && (
                   <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>People and organizations with an interest in the project.</Text>
                       {can('MANAGER_AND_ABOVE') && (
                         <Button icon={<PlusOutlined />} onClick={() => openStakeholderModal()}
                           style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                          Add Stakeholder
+                          Add stakeholder
                         </Button>
                       )}
                     </div>
-                    <Table columns={stakeholderColumns} dataSource={stakeholders} rowKey="id" pagination={{ pageSize: 10 }} size="small" />
+                    <Table
+                      columns={stakeholderColumns}
+                      dataSource={stakeholders}
+                      rowKey="id"
+                      pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} stakeholder${t !== 1 ? 's' : ''}` }}
+                      size="small"
+                      locale={{ emptyText: 'No stakeholders yet. Click "Add stakeholder" to add contacts (e.g. client, suppliers, team).' }}
+                    />
                   </>
                 )}
 
                 {/* Communications */}
                 {activeTab === 'communications' && (
                   <>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>Record meetings, emails, and other interactions with stakeholders.</Text>
                       <Button icon={<PlusOutlined />} onClick={() => openCommModal()}
                         style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                        Log Communication
+                        Log communication
                       </Button>
                     </div>
-                    <Table columns={commColumns} dataSource={communications} rowKey="id" pagination={{ pageSize: 10 }} size="small" />
+                    <Table
+                      columns={commColumns}
+                      dataSource={communications}
+                      rowKey="id"
+                      pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} communication${t !== 1 ? 's' : ''}` }}
+                      size="small"
+                      locale={{ emptyText: 'No communications logged. Click "Log communication" to record a meeting, email, or call.' }}
+                    />
                   </>
                 )}
 
                 {/* Engagement */}
                 {activeTab === 'engagement' && (
                   <div style={{ padding: 16 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Track how supportive each stakeholder is and record feedback over time.</Text>
                     <Row gutter={[16, 16]}>
                       <Col xs={24} md={12}>
-                        <Card title="Record Engagement" size="small">
+                        <Card title="Record engagement" size="small">
                           <Form form={engagementForm} layout="vertical">
                             <Form.Item label="Stakeholder" required>
                               <Select
-                                placeholder="Select stakeholder"
+                                placeholder="Select a stakeholder"
                                 value={selectedStakeholderForEng || undefined}
                                 onChange={v => { setSelectedStakeholderForEng(v); loadEngagement(v); }}
                                 style={{ width: '100%' }}
@@ -515,7 +525,7 @@ const ProjectStakeholders: React.FC = () => {
                                 ))}
                               </Select>
                             </Form.Item>
-                            <Form.Item name="engagementLevel" label="Engagement Level" rules={[{ required: true, message: 'Please select an engagement level' }]}>
+                            <Form.Item name="engagementLevel" label="Engagement level" rules={[{ required: true, message: 'Select a level' }]} tooltip="Unaware → Resistant → Neutral → Supportive → Leading">
                               <Select placeholder="Select level">
                                 <Option value="UNAWARE">Unaware</Option>
                                 <Option value="RESISTANT">Resistant</Option>
@@ -534,29 +544,29 @@ const ProjectStakeholders: React.FC = () => {
                           </Form>
                         </Card>
 
-                        <Card title="Record Feedback" size="small" style={{ marginTop: 16 }}>
+                        <Card title="Record feedback" size="small" style={{ marginTop: 16 }}>
                           <Form form={feedbackForm} layout="vertical">
-                            <Form.Item name="feedback" label="Feedback Comments" rules={[{ required: true, message: 'Please enter feedback' }]}>
-                              <TextArea rows={3} />
+                            <Form.Item name="feedback" label="Comments" rules={[{ required: true, message: 'Enter feedback' }]}>
+                              <TextArea rows={3} placeholder="What did the stakeholder say or request?" />
                             </Form.Item>
-                            <Form.Item name="rating" label="Rating (1–5)">
-                              <Select placeholder="Select rating">
+                            <Form.Item name="rating" label="Rating (1–5)" tooltip="Optional satisfaction score">
+                              <Select placeholder="Optional">
                                 {[1, 2, 3, 4, 5].map(n => (
-                                  <Option key={n} value={n}>{n}</Option>
+                                  <Option key={n} value={n}>{n} {n === 1 ? '— Poor' : n === 5 ? '— Excellent' : ''}</Option>
                                 ))}
                               </Select>
                             </Form.Item>
-                            <Button onClick={handleFeedbackSubmit} loading={feedbackSubmitting}>
-                              Submit Feedback
+                            <Button type="primary" onClick={handleFeedbackSubmit} loading={feedbackSubmitting}>
+                              Save feedback
                             </Button>
                           </Form>
                         </Card>
                       </Col>
 
                       <Col xs={24} md={12}>
-                        <Card title="Engagement History" size="small" style={{ maxHeight: 520, overflowY: 'auto' }}>
+                        <Card title="Engagement history" size="small" style={{ maxHeight: 520, overflowY: 'auto' }}>
                           {!selectedStakeholderForEng ? (
-                            <Empty description="Select a stakeholder to view engagement history" />
+                            <Empty description="Select a stakeholder above to see their engagement history" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                           ) : (
                             <List
                               size="small"
@@ -590,11 +600,12 @@ const ProjectStakeholders: React.FC = () => {
                 {/* Influence Matrix */}
                 {activeTab === 'matrix' && (
                   <div style={{ padding: 16 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>Stakeholders plotted by influence (power) and interest. Use this to prioritize who to engage and how.</Text>
                     <Row gutter={[16, 16]}>
                       <Col xs={24} lg={16}>
-                        <Card title="Power vs Interest Matrix" size="small">
+                        <Card title="Power vs interest" size="small">
                           {matrixPoints.length === 0 ? (
-                            <Empty description="No influence matrix data available" />
+                            <Empty description="Add stakeholders with Influence and Interest set to see the matrix" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                           ) : (
                             <ChartErrorBoundary height={380}>
                               <ResponsiveContainer width="100%" height={380}>
@@ -724,36 +735,45 @@ const ProjectStakeholders: React.FC = () => {
 
       {/* Stakeholder Modal */}
       <Modal
-        title={editingStakeholder ? 'Edit Stakeholder' : 'Add Stakeholder'}
+        title={editingStakeholder ? 'Edit stakeholder' : 'Add stakeholder'}
         open={stakeholderModalVisible}
         onOk={handleStakeholderSubmit}
         onCancel={() => setStakeholderModalVisible(false)}
         width={520}
+        okText={editingStakeholder ? 'Save changes' : 'Add stakeholder'}
       >
         <Form form={stakeholderForm} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}>
-            <Input />
+          <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Enter name' }]}>
+            <Input placeholder="Full name or company name" />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="organization" label="Organization"><Input /></Form.Item>
+              <Form.Item name="organization" label="Organization">
+                <Input placeholder="Company or group" />
+              </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="role" label="Role"><Input /></Form.Item>
+              <Form.Item name="role" label="Role">
+                <Input placeholder="e.g. Client, Supplier" />
+              </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="email" label="Email"><Input /></Form.Item>
+              <Form.Item name="email" label="Email">
+                <Input placeholder="email@example.com" type="email" />
+              </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+              <Form.Item name="phone" label="Phone">
+                <Input placeholder="Phone number" />
+              </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="influence" label="Influence">
-                <Select placeholder="Select">
+              <Form.Item name="influence" label="Influence" tooltip="How much they can affect the project">
+                <Select placeholder="High / Medium / Low">
                   <Option value="HIGH">High</Option>
                   <Option value="MEDIUM">Medium</Option>
                   <Option value="LOW">Low</Option>
@@ -761,8 +781,8 @@ const ProjectStakeholders: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="interest" label="Interest">
-                <Select placeholder="Select">
+              <Form.Item name="interest" label="Interest" tooltip="How much they care about the outcome">
+                <Select placeholder="High / Medium / Low">
                   <Option value="HIGH">High</Option>
                   <Option value="MEDIUM">Medium</Option>
                   <Option value="LOW">Low</Option>
@@ -771,7 +791,7 @@ const ProjectStakeholders: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="type" label="Type">
-                <Select placeholder="Select">
+                <Select placeholder="Internal or external">
                   <Option value="INTERNAL">Internal</Option>
                   <Option value="EXTERNAL">External</Option>
                 </Select>
@@ -783,39 +803,48 @@ const ProjectStakeholders: React.FC = () => {
 
       {/* Communication Modal */}
       <Modal
-        title={editingComm ? 'Edit Communication' : 'Log Communication'}
+        title={editingComm ? 'Edit communication' : 'Log communication'}
         open={commModalVisible}
         onOk={handleCommSubmit}
         onCancel={() => setCommModalVisible(false)}
+        okText={editingComm ? 'Save changes' : 'Log communication'}
       >
         <Form form={commForm} layout="vertical">
           {!editingComm && (
             <Form.Item label="Stakeholder" required>
               <Select
-                placeholder="Select stakeholder"
+                placeholder="Who did you communicate with?"
                 value={selectedStakeholderForComm || undefined}
                 onChange={setSelectedStakeholderForComm}
                 style={{ width: '100%' }}
+                showSearch
+                optionFilterProp="children"
               >
                 {stakeholders.map(s => (
-                  <Option key={s.id} value={s.id}>{s.name}</Option>
+                  <Option key={s.id} value={s.id}>{s.name}{s.organization ? ` (${s.organization})` : ''}</Option>
                 ))}
               </Select>
             </Form.Item>
           )}
-          <Form.Item name="subject" label="Subject"><Input /></Form.Item>
-          <Form.Item name="type" label="Type" rules={[{ required: true, message: 'Please select a type' }]}>
-            <Select placeholder="Select type">
+          <Form.Item name="subject" label="Subject">
+            <Input placeholder="e.g. Weekly sync, Budget review" />
+          </Form.Item>
+          <Form.Item name="type" label="Type" rules={[{ required: true, message: 'Select type' }]}>
+            <Select placeholder="How did you communicate?">
               <Option value="EMAIL">Email</Option>
               <Option value="MEETING">Meeting</Option>
-              <Option value="PHONE_CALL">Phone Call</Option>
+              <Option value="PHONE_CALL">Phone call</Option>
               <Option value="REPORT">Report</Option>
-              <Option value="SITE_VISIT">Site Visit</Option>
+              <Option value="SITE_VISIT">Site visit</Option>
               <Option value="LETTER">Letter</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="message" label="Message"><TextArea rows={3} /></Form.Item>
-          <Form.Item name="date" label="Date"><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="message" label="Notes (optional)">
+            <TextArea rows={3} placeholder="Key points or summary" />
+          </Form.Item>
+          <Form.Item name="date" label="Date">
+            <DatePicker style={{ width: '100%' }} placeholder="When did this happen?" />
+          </Form.Item>
         </Form>
       </Modal>
     </>

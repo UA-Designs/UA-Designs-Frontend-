@@ -12,6 +12,7 @@ import {
   Spin,
   Drawer,
   Grid,
+  ConfigProvider,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -37,12 +38,14 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useProject } from '../../contexts/ProjectContext';
-import Logo from '../Logo/Logo';
-import { TierBadge } from '../ui/TierBadge';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
+
+const SIDEBAR_BG = '#0f1f14';
+const SIDEBAR_ACCENT = '#009944';
+const SIDEBAR_HEADING = '#7a9b85';
 
 const Layout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -100,69 +103,29 @@ const Layout: React.FC = () => {
     );
   }
 
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/projects',
-      icon: <ProjectOutlined />,
-      label: 'Projects',
-    },
-    {
-      key: '/materials',
-      icon: <AppstoreOutlined />,
-      label: 'Materials',
-    },
-    {
-      key: '/analytics',
-      icon: <BarChartOutlined />,
-      label: 'Analytics',
-    },
-    {
-      key: '/pmbok/schedule',
-      icon: <CalendarOutlined />,
-      label: 'Schedule',
-    },
-    {
-      key: '/pmbok/cost',
-      icon: <DollarOutlined />,
-      label: 'Expenses',
-    },
-    {
-      key: '/pmbok/risk',
-      icon: <ExclamationCircleOutlined />,
-      label: 'Risk Management',
-    },
-    {
-      key: '/pmbok/stakeholders',
-      icon: <UsergroupAddOutlined />,
-      label: 'Stakeholders',
-    },
-    {
-      key: '/reports',
-      icon: <FileTextOutlined />,
-      label: 'Reports',
-    },
+  const navigationItems = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+    { key: '/projects', icon: <ProjectOutlined />, label: 'Projects' },
+    { key: '/materials', icon: <AppstoreOutlined />, label: 'Materials' },
+    { key: '/pmbok/cost', icon: <DollarOutlined />, label: 'Expenses' },
+    { key: '/analytics', icon: <BarChartOutlined />, label: 'Analytics' },
+    { key: '/pmbok/schedule', icon: <CalendarOutlined />, label: 'Schedule' },
+    { key: '/pmbok/risk', icon: <ExclamationCircleOutlined />, label: 'Risk Management' },
+    { key: '/pmbok/stakeholders', icon: <UsergroupAddOutlined />, label: 'Stakeholders' },
+    { key: '/reports', icon: <FileTextOutlined />, label: 'Reports' },
+    { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
+  ];
+
+  const administrationItems = [
     ...(can('ENGINEER_AND_ABOVE') ? [
-      {
-        key: '/users',
-        icon: <TeamOutlined />,
-        label: 'Users',
-      },
-      {
-        key: '/audit-log',
-        icon: <AuditOutlined />,
-        label: 'Audit Log',
-      },
+      { key: '/users', icon: <TeamOutlined />, label: 'User Management' as const },
+      { key: '/audit-log', icon: <AuditOutlined />, label: 'Activity Log' as const },
     ] : []),
-    {
-      key: '/settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
-    },
+  ];
+
+  const menuItems: any[] = [
+    { key: 'nav', type: 'group', label: <span style={{ color: SIDEBAR_HEADING, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 16px', marginBottom: 4 }}>Navigation</span>, children: navigationItems },
+    ...(administrationItems.length > 0 ? [{ key: 'admin', type: 'group' as const, label: <span style={{ color: SIDEBAR_HEADING, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 16px', marginBottom: 4 }}>Administration</span>, children: administrationItems }] : []),
   ];
 
   const userMenuItems = [
@@ -210,38 +173,46 @@ const Layout: React.FC = () => {
   };
 
   const sidebarContent = (
-    <>
-      <div
-        style={{
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderBottom: '1px solid rgba(0, 204, 102, 0.2)',
-          background: 'rgba(0, 204, 102, 0.05)',
-          padding: '8px',
-          margin: '8px',
-          borderRadius: '12px',
-        }}
-      >
-        <Logo
-          size={isMobile ? 'medium' : (collapsed ? 'small' : 'medium')}
-          showText={isMobile || !collapsed}
-          className="sidebar-logo"
-        />
+    <ConfigProvider theme={{ token: { colorPrimary: SIDEBAR_ACCENT } }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: SIDEBAR_BG }}>
+        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 6, background: SIDEBAR_ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileTextOutlined style={{ color: '#fff', fontSize: 18 }} />
+            </div>
+            <div>
+              <Text strong style={{ color: 'rgba(255,255,255,0.95)', fontSize: 16, display: 'block', lineHeight: 1.2 }}>{import.meta.env.VITE_APP_NAME || 'UA Designs PMS'}</Text>
+              {user && (
+                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{(user as any).role ?? 'User'}</Text>
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', paddingTop: 8 }}>
+          <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            items={menuItems}
+            onClick={handleMenuClick}
+            style={{ borderRight: 0, background: 'transparent' }}
+          />
+        </div>
+        <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+          {user && (user as any).email && (
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, display: 'block', marginBottom: 8 }}>{(user as any).email}</Text>
+          )}
+          <button
+            type="button"
+            onClick={() => logout()}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 14, padding: 0 }}
+          >
+            <LogoutOutlined />
+            Sign Out
+          </button>
+        </div>
       </div>
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={handleMenuClick}
-        style={{
-          borderRight: 0,
-          background: 'transparent',
-          margin: '8px',
-        }}
-      />
-    </>
+    </ConfigProvider>
   );
 
   return (
@@ -263,10 +234,8 @@ const Layout: React.FC = () => {
           width={256}
           collapsedWidth={64}
           style={{
-            background: 'rgba(13, 13, 13, 0.95)',
-            borderRight: '1px solid rgba(0, 204, 102, 0.2)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
+            background: SIDEBAR_BG,
+            borderRight: '1px solid rgba(255,255,255,0.08)',
           }}
         >
           {sidebarContent}
@@ -282,7 +251,7 @@ const Layout: React.FC = () => {
           styles={{
             body: {
               padding: 0,
-              background: 'rgba(13, 13, 13, 0.98)',
+              background: SIDEBAR_BG,
             },
             header: { display: 'none' },
           }}
