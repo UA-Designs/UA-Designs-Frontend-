@@ -151,11 +151,14 @@ class ResourceService {
       if (response.data.success) return response.data.data;
       throw new Error('Failed to create material');
     } catch (error: any) {
+      const status = error.response?.status;
       const err = error.response?.data;
       const msg = err?.message ?? err?.error ?? error.message;
       const details = Array.isArray(err?.errors) ? err.errors.map((e: any) => `${e.field ?? e.param}: ${e.message ?? e.msg}`).join('; ') : '';
       const body = typeof err === 'string' ? err : null;
-      throw new Error(details ? `${msg || 'Validation error'} — ${details}` : body || msg || 'Failed to create material');
+      const prefix = status === 500 ? 'Server error (500). Check backend logs. ' : '';
+      const fallback = status === 500 ? (msg || body || 'Backend failed while creating material.') : 'Failed to create material';
+      throw new Error(prefix + (details ? `${msg || 'Validation error'} — ${details}` : body || msg || fallback));
     }
   }
 
