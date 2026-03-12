@@ -26,6 +26,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { resourceService, Material } from '../../services/resourceService';
+import { projectService } from '../../services/projectService';
+import type { Project } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -72,6 +74,7 @@ const Materials: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [materials, setMaterials] = useState<MaterialCatalogItem[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
@@ -83,6 +86,10 @@ const Materials: React.FC = () => {
 
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  useEffect(() => {
+    projectService.getProjects().then(setProjects).catch(() => setProjects([]));
+  }, []);
 
   const fetchMaterials = async () => {
     setLoading(true);
@@ -135,13 +142,16 @@ const Materials: React.FC = () => {
     try {
       await resourceService.createMaterial({
         name: values.name,
-        unit: values.unit,
+        projectId: values.projectId,
+        unit: values.unit ?? 'Pieces (pc)',
+        unitCost: Number(values.defaultCost ?? values.unitCost ?? 0),
+        quantity: Number(values.quantity ?? 0),
         category: values.category || 'Other',
-        defaultCost: values.defaultCost ?? 0,
         description: values.description,
       });
       message.success('Material added');
       setAddModalVisible(false);
+      addForm.resetFields();
       fetchMaterials();
     } catch (err: any) {
       message.error(err.message || 'Failed to add material');
@@ -408,6 +418,19 @@ const Materials: React.FC = () => {
           onFinish={handleAdd}
         >
           <Form.Item
+            name="projectId"
+            label="Project"
+            rules={[{ required: true, message: 'Select a project' }]}
+          >
+            <Select
+              placeholder="Select project"
+              showSearch
+              optionFilterProp="label"
+              style={{ width: '100%' }}
+              options={projects.map((p) => ({ label: p.name, value: p.id }))}
+            />
+          </Form.Item>
+          <Form.Item
             name="name"
             label="Material Name"
             rules={[{ required: true, message: 'Required' }]}
@@ -427,9 +450,24 @@ const Materials: React.FC = () => {
             />
           </Form.Item>
           <Form.Item
+            name="defaultCost"
+            label="Unit Cost (₱)"
+            rules={[{ required: true, message: 'Required' }]}
+            initialValue={0}
+          >
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            name="quantity"
+            label="Quantity"
+            rules={[{ required: true, message: 'Required' }]}
+            initialValue={0}
+          >
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
             name="category"
             label="Category"
-            rules={[{ required: true, message: 'Required' }]}
             initialValue="Other"
           >
             <Select
@@ -438,11 +476,8 @@ const Materials: React.FC = () => {
               options={MATERIAL_CATEGORIES.map((c) => ({ label: c, value: c }))}
             />
           </Form.Item>
-          <Form.Item name="defaultCost" label="Default Unit Cost (₱)" initialValue={0}>
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
           <Form.Item name="description" label="Description">
-            <TextArea rows={3} placeholder="Optional description or specifications" style={{ background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }} />
+            <TextArea rows={2} placeholder="Optional" style={{ background: '#141414', borderColor: 'rgba(0,153,68,0.3)', color: '#fff' }} />
           </Form.Item>
           <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <Space>

@@ -10,6 +10,17 @@ export interface Material {
 
 export interface CreateMaterialData {
   name: string;
+  projectId: string;
+  unit: string;
+  unitCost: number;
+  quantity: number;
+  description?: string;
+  category?: string;
+  supplier?: string;
+  status?: string;
+  deliveryDate?: string;
+  location?: string;
+  notes?: string;
   [key: string]: any;
 }
 
@@ -119,14 +130,31 @@ class ResourceService {
     }
   }
 
-  // POST /api/resources/materials
+  // POST /api/resources/materials — required: name, projectId, unit, unitCost, quantity (camelCase; backend also accepts snake_case)
   async createMaterial(data: CreateMaterialData): Promise<Material> {
     try {
-      const response = await apiService.post<ApiResponse<Material>>('/resources/materials', data);
+      const payload: Record<string, unknown> = {
+        name: String(data.name).trim(),
+        projectId: data.projectId,
+        unit: data.unit ?? 'pcs',
+        unitCost: Number(data.unitCost ?? data.defaultCost ?? 0),
+        quantity: Number(data.quantity ?? 0),
+      };
+      if (data.description != null && data.description !== '') payload.description = data.description;
+      if (data.category != null && data.category !== '') payload.category = data.category;
+      if (data.supplier != null && data.supplier !== '') payload.supplier = data.supplier;
+      if (data.status != null && data.status !== '') payload.status = data.status;
+      if (data.deliveryDate != null && data.deliveryDate !== '') payload.deliveryDate = data.deliveryDate;
+      if (data.location != null && data.location !== '') payload.location = data.location;
+      if (data.notes != null && data.notes !== '') payload.notes = data.notes;
+      const response = await apiService.post<ApiResponse<Material>>('/resources/materials', payload);
       if (response.data.success) return response.data.data;
       throw new Error('Failed to create material');
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create material');
+      const err = error.response?.data;
+      const msg = err?.message ?? err?.error ?? error.message;
+      const details = Array.isArray(err?.errors) ? err.errors.map((e: any) => `${e.field}: ${e.message}`).join('; ') : '';
+      throw new Error(details ? `${msg} — ${details}` : msg || 'Failed to create material');
     }
   }
 
