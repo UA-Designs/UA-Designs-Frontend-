@@ -41,27 +41,42 @@ export enum ExpenseStatus {
 export interface Cost {
   id: string;
   name: string;
-  type: CostType;
+  type: CostType | string;
   amount: number;
   currency?: string;
   date: string;
   description?: string;
   projectId?: string;
   taskId?: string;
-  status?: string;
+  status?: string; // payment/approval status from backend
+  // BOQ-specific and variance fields (optional, when backend supports them)
+  estimatedQty?: number;
+  unitCost?: number;
+  unit?: string;
+  actualQty?: number;
+  actualAmount?: number;
+  varianceStatus?: 'OK' | 'CRITICAL' | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateCostData {
   name: string;
-  type: CostType;
-  amount: number;
+  type: CostType | string;
+  // If amount is omitted but estimatedQty and unitCost are provided,
+  // the backend will compute amount = estimatedQty * unitCost.
+  amount?: number;
   date: string;
   currency?: string;
   description?: string;
   projectId?: string;
   taskId?: string;
+  // Optional BOQ-specific fields
+  estimatedQty?: number;
+  unitCost?: number;
+  unit?: string;
+  actualQty?: number;
+  actualAmount?: number;
 }
 
 export interface CostSummary {

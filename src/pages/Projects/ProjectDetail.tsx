@@ -148,15 +148,20 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
               return item?.name ?? 'Unnamed item';
             })()
           : (itemName || '').trim() || cat;
-      const totalAmount = Number(estimatedQty) * Number(unitCost);
+      const qty = Number(estimatedQty) || 0;
+      const unitCostNum = Number(unitCost) || 0;
+      const totalAmount = qty * unitCostNum;
       setSaving(true);
       await costService.createCost({
         name,
         type: cat,
-        amount: totalAmount,
+        // Let backend compute amount if desired; send all components explicitly.
+        amount: totalAmount || undefined,
         date: new Date().toISOString().split('T')[0],
         projectId,
         description: [tradeCategory, notes].filter(Boolean).join(' — ') || undefined,
+        estimatedQty: qty,
+        unitCost: unitCostNum,
       });
       message.success('BOQ item added');
       onAdded();
@@ -488,31 +493,167 @@ const ProjectDetail: React.FC = () => {
   );
 
   const boqColumns: ColumnsType<Cost> = [
-    { title: 'Item Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
-    { title: 'Category', dataIndex: 'type', key: 'type', render: (t: string) => <Tag color="blue">{t || '—'}</Tag> },
-    { title: 'Trade', key: 'trade', render: () => <Tag style={{ background: 'rgba(255,255,255,0.1)' }}>—</Tag> },
-    { title: 'Unit', key: 'unit', render: () => <Text style={{ color: '#bbb' }}>—</Text> },
-    { title: 'Est. Qty', key: 'qty', render: () => <Text style={{ color: '#bbb' }}>1</Text> },
-    { title: 'Unit Cost', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#fff' }}>{formatCurrency(v)}</Text> },
-    { title: 'Total Amount', dataIndex: 'amount', key: 'total', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
-    { title: 'Actions', key: 'actions', width: 80, render: (_, record) => (
-      <Space>
-        <Button type="text" icon={<EditOutlined />} style={{ color: '#009944' }} onClick={goToCost} />
-        <Button type="text" icon={<DeleteOutlined />} danger onClick={goToCost} />
-      </Space>
-    ) },
+    {
+      title: 'Item Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text>,
+    },
+    {
+      title: 'Category',
+      dataIndex: 'type',
+      key: 'type',
+      render: (t: string) => <Tag color="blue">{t || '—'}</Tag>,
+    },
+    {
+      title: 'Trade',
+      key: 'trade',
+      render: () => (
+        <Tag style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.16)', color: '#fff' }}>
+          —
+        </Tag>
+      ),
+    },
+    {
+      title: 'Unit',
+      key: 'unit',
+      render: () => <Text style={{ color: '#bbb' }}>—</Text>,
+    },
+    {
+      title: 'Est. Qty',
+      key: 'qty',
+      render: (_, record) => {
+        const qty = record.estimatedQty != null ? record.estimatedQty : 1;
+        return <Text style={{ color: '#bbb' }}>{qty}</Text>;
+      },
+    },
+    {
+      title: 'Unit Cost',
+      key: 'unitCost',
+      render: (_, record) => {
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        return <Text style={{ color: '#fff' }}>{formatCurrency(unitCost)}</Text>;
+      },
+    },
+    {
+      title: 'Total Amount',
+      key: 'total',
+      render: (_, record) => {
+        const qty = record.estimatedQty != null ? record.estimatedQty : 1;
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        const total = qty * unitCost || record.amount;
+        return <Text style={{ color: '#00ff88' }}>{formatCurrency(total)}</Text>;
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 80,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            style={{ color: '#009944' }}
+            // For now, editing of BOQ items stays in this tab; a full edit modal can be added here.
+            onClick={() => message.info('Editing BOQ items will be available here.')}
+          />
+          <Button
+            type="text"
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => {
+              Modal.confirm({
+                title: 'Delete BOQ item?',
+                content: 'This will remove the BOQ item from this project. This cannot be undone.',
+                okText: 'Delete',
+                okType: 'danger',
+                cancelText: 'Cancel',
+                onOk: async () => {
+                  try {
+                    await costService.deleteCost(record.id);
+                    message.success('BOQ item deleted');
+                    refetchCosts();
+                  } catch (err: any) {
+                    message.error(err.message || 'Failed to delete BOQ item');
+                  }
+                },
+              });
+            }}
+          />
+        </Space>
+      ),
+    },
   ];
 
   const varianceTableColumns: ColumnsType<Cost> = [
-    { title: 'Item', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
-    { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => <Tag color="blue">{t || '—'}</Tag> },
-    { title: 'UM', key: 'um', render: () => <Text style={{ color: '#bbb' }}>—</Text> },
-    { title: 'Cost', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#fff' }}>{formatCurrency(v)}</Text> },
-    { title: 'Qty', key: 'qty', render: () => <Text style={{ color: '#bbb' }}>1</Text> },
-    { title: 'ActualQty', key: 'actualQty', render: () => <Text style={{ color: '#bbb' }}>0</Text> },
-    { title: 'Amount', dataIndex: 'amount', key: 'amt', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
-    { title: 'ActualAmt', key: 'actualAmt', render: () => <Text style={{ color: '#bbb' }}>₱0</Text> },
-    { title: 'Status', key: 'status', render: () => <Tag color="green">OK</Tag> },
+    {
+      title: 'Item',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text>,
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (t: string) => <Tag color="blue">{t || '—'}</Tag>,
+    },
+    {
+      title: 'UM',
+      key: 'um',
+      render: () => <Text style={{ color: '#bbb' }}>—</Text>,
+    },
+    {
+      title: 'Cost',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (v: number) => <Text style={{ color: '#fff' }}>{formatCurrency(v)}</Text>,
+    },
+    {
+      title: 'Qty',
+      key: 'qty',
+      render: (_, record) => {
+        const qty = record.estimatedQty != null ? record.estimatedQty : 1;
+        return <Text style={{ color: '#bbb' }}>{qty}</Text>;
+      },
+    },
+    {
+      title: 'ActualQty',
+      key: 'actualQty',
+      render: (_, record) => {
+        const actualQty = record.actualQty != null ? record.actualQty : 0;
+        return <Text style={{ color: '#bbb' }}>{actualQty}</Text>;
+      },
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'amount',
+      key: 'amt',
+      render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text>,
+    },
+    {
+      title: 'ActualAmt',
+      key: 'actualAmt',
+      render: (_, record) => {
+        const actualAmount = record.actualAmount != null ? record.actualAmount : 0;
+        return <Text style={{ color: '#bbb' }}>{formatCurrency(actualAmount)}</Text>;
+      },
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_, record) => {
+        const varianceStatus = record.varianceStatus;
+        if (varianceStatus === 'CRITICAL') {
+          return <Tag color="red">Critical</Tag>;
+        }
+        if (varianceStatus === 'OK') {
+          return <Tag color="green">OK</Tag>;
+        }
+        return <Tag color="default">N/A</Tag>;
+      },
+    },
   ];
 
   const expenseColumns: ColumnsType<Expense> = [
