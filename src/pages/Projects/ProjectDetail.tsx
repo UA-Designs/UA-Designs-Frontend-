@@ -303,9 +303,15 @@ const ProjectDetail: React.FC = () => {
   }, [projectId]);
 
   useEffect(() => {
-    if (!projectId) return;
     let cancelled = false;
+
     const load = async () => {
+      if (!projectId) {
+        setProject(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const [proj, budgetOv, dash, budgetsRes, expensesRes, overviewRes, costsRes, breakdownRes] = await Promise.all([
@@ -335,8 +341,12 @@ const ProjectDetail: React.FC = () => {
         if (!cancelled) setLoading(false);
       }
     };
+
     load();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   // Expense amounts by category (for actuals when no cost/BOQ items)
@@ -600,8 +610,8 @@ const ProjectDetail: React.FC = () => {
       render: (t: string) => <Tag color="blue">{t || '—'}</Tag>,
     },
     {
-      title: 'UM',
-      key: 'um',
+      title: 'UNIT',
+      key: 'unit',
       render: (_, record) => <Text style={{ color: '#bbb' }}>{record.unit || '—'}</Text>,
     },
     {
@@ -629,20 +639,23 @@ const ProjectDetail: React.FC = () => {
       },
     },
     {
-      title: 'Qty Rcvd (Site Usage)',
-      key: 'qtyRcvd',
+      title: 'Qty Rem',
+      key: 'qtyRem',
       render: (_, record) => {
-        const qtyRcvd = record.actualQty != null ? record.actualQty : 0;
-        return <Text style={{ color: '#bbb' }}>{qtyRcvd}</Text>;
+        const planned = record.estimatedQty != null ? record.estimatedQty : 0;
+        const used = record.actualQty != null ? record.actualQty : 0;
+        const remaining = Math.max(0, planned - used);
+        return <Text style={{ color: '#bbb' }}>{remaining}</Text>;
       },
     },
     {
-      title: 'Qty % Rcvd',
-      key: 'qtyPctRcvd',
+      title: 'Qty Rem %',
+      key: 'qtyRemPct',
       render: (_, record) => {
-        const qty = record.estimatedQty || 0;
-        const rcvd = record.actualQty || 0;
-        const pct = qty > 0 ? Math.round((rcvd / qty) * 100) : 0;
+        const planned = record.estimatedQty || 0;
+        const used = record.actualQty || 0;
+        const remaining = Math.max(0, planned - used);
+        const pct = planned > 0 ? Math.round((remaining / planned) * 100) : 100;
         return <Text style={{ color: '#bbb' }}>{pct}%</Text>;
       },
     },
