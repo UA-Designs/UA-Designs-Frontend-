@@ -37,6 +37,7 @@ import {
   InboxOutlined,
   UserOutlined,
   ToolOutlined,
+  CarryOutOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -105,7 +106,8 @@ interface AddBOQModalProps {
   open: boolean;
   projectId: string;
   onClose: () => void;
-  onAdded: () => void;
+  /** Called after a BOQ item is created; receives the created cost so the list can be updated optimistically. */
+  onAdded: (createdCost?: Cost) => void;
 }
 
 const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onAdded }) => {
@@ -152,7 +154,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
       const unitCostNum = Number(unitCost) || 0;
       const totalAmount = qty * unitCostNum;
       setSaving(true);
-      await costService.createCost({
+      const created = await costService.createCost({
         name,
         type: cat,
         // Let backend compute amount if desired; send all components explicitly.
@@ -164,7 +166,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
         unitCost: unitCostNum,
       });
       message.success('BOQ item added');
-      onAdded();
+      onAdded(created);
       onClose();
       form.resetFields();
     } catch (err: any) {
@@ -298,7 +300,7 @@ const ProjectDetail: React.FC = () => {
       const projectCosts = (list || []).filter((c: Cost) => (c.projectId ?? (c as any).project_id) === projectId);
       setCosts(projectCosts);
     } catch {
-      // ignore
+      message.warning('Could not refresh BOQ list. Your new item may still appear below.');
     }
   }, [projectId]);
 
@@ -829,6 +831,28 @@ const ProjectDetail: React.FC = () => {
       ),
     },
     {
+      key: 'site-usage',
+      label: <>Site Usage <CarryOutOutlined /></>,
+      children: (
+        <div style={{ marginTop: 16 }}>
+          <Typography.Title level={4} style={{ color: '#ffffff', marginBottom: 16 }}>
+            Site Usage
+          </Typography.Title>
+          <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}>
+            <Empty
+              description={
+                <span style={{ color: '#b3b3b3' }}>
+                  Record material usage from the BOQ here. Once the backend supports site usage, you can log quantities used per BOQ item.
+                </span>
+              }
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: 48 }}
+            />
+          </Card>
+        </div>
+      ),
+    },
+    {
       key: 'variance',
       label: <>Variance <LineChartOutlined /></>,
       children: (
@@ -1086,7 +1110,12 @@ const ProjectDetail: React.FC = () => {
         open={addBOQModalOpen}
         projectId={projectId!}
         onClose={() => setAddBOQModalOpen(false)}
-        onAdded={refetchCosts}
+        onAdded={(createdCost) => {
+          if (createdCost) {
+            setCosts(prev => [...prev, { ...createdCost, projectId: projectId! }]);
+          }
+          refetchCosts();
+        }}
       />
     </div>
   );
