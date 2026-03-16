@@ -55,7 +55,10 @@ export interface Cost {
   unit?: string;
   actualQty?: number;
   actualAmount?: number;
-  varianceStatus?: 'OK' | 'CRITICAL' | null;
+  /** Optional amount derived from site usage (e.g. qtyReceived * unitCost) */
+  amountReceived?: number;
+  /** Backend- or frontend-computed variance status */
+  varianceStatus?: 'OK' | 'LOW' | 'CRITICAL' | null;
   createdAt: string;
   updatedAt: string;
 }

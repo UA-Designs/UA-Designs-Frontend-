@@ -602,56 +602,110 @@ const ProjectDetail: React.FC = () => {
     {
       title: 'UM',
       key: 'um',
-      render: () => <Text style={{ color: '#bbb' }}>—</Text>,
+      render: (_, record) => <Text style={{ color: '#bbb' }}>{record.unit || '—'}</Text>,
     },
     {
       title: 'Cost',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (v: number) => <Text style={{ color: '#fff' }}>{formatCurrency(v)}</Text>,
+      key: 'unitCost',
+      render: (_, record) => {
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        return <Text style={{ color: '#fff' }}>{formatCurrency(unitCost)}</Text>;
+      },
     },
     {
       title: 'Qty',
       key: 'qty',
       render: (_, record) => {
-        const qty = record.estimatedQty != null ? record.estimatedQty : 1;
+        const qty = record.estimatedQty != null ? record.estimatedQty : 0;
         return <Text style={{ color: '#bbb' }}>{qty}</Text>;
       },
     },
     {
-      title: 'ActualQty',
+      title: 'ACT Qty',
       key: 'actualQty',
       render: (_, record) => {
-        const actualQty = record.actualQty != null ? record.actualQty : 0;
-        return <Text style={{ color: '#bbb' }}>{actualQty}</Text>;
+        const qty = record.estimatedQty != null ? record.estimatedQty : 0;
+        return <Text style={{ color: '#bbb' }}>{qty}</Text>;
+      },
+    },
+    {
+      title: 'Qty Rcvd (Site Usage)',
+      key: 'qtyRcvd',
+      render: (_, record) => {
+        const qtyRcvd = record.actualQty != null ? record.actualQty : 0;
+        return <Text style={{ color: '#bbb' }}>{qtyRcvd}</Text>;
+      },
+    },
+    {
+      title: 'Qty % Rcvd',
+      key: 'qtyPctRcvd',
+      render: (_, record) => {
+        const qty = record.estimatedQty || 0;
+        const rcvd = record.actualQty || 0;
+        const pct = qty > 0 ? Math.round((rcvd / qty) * 100) : 0;
+        return <Text style={{ color: '#bbb' }}>{pct}%</Text>;
       },
     },
     {
       title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amt',
-      render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text>,
+      key: 'amount',
+      render: (_, record) => <Text style={{ color: '#00ff88' }}>{formatCurrency(record.amount)}</Text>,
     },
     {
-      title: 'ActualAmt',
-      key: 'actualAmt',
+      title: 'Actual Amount',
+      key: 'actualAmount',
       render: (_, record) => {
         const actualAmount = record.actualAmount != null ? record.actualAmount : 0;
         return <Text style={{ color: '#bbb' }}>{formatCurrency(actualAmount)}</Text>;
       },
     },
     {
+      title: 'Amount Rem',
+      key: 'amountRem',
+      render: (_, record) => {
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        const qtyRcvd = record.actualQty != null ? record.actualQty : 0;
+        const amountRcvd = record.amountReceived != null ? record.amountReceived : unitCost * qtyRcvd;
+        const amount = record.amount || 0;
+        const remaining = Math.max(0, amount - amountRcvd);
+        return <Text style={{ color: '#bbb' }}>{formatCurrency(remaining)}</Text>;
+      },
+    },
+    {
+      title: 'Amount Rem %',
+      key: 'amountRemPct',
+      render: (_, record) => {
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        const qtyRcvd = record.actualQty != null ? record.actualQty : 0;
+        const amountRcvd = record.amountReceived != null ? record.amountReceived : unitCost * qtyRcvd;
+        const amount = record.amount || 0;
+        const remaining = Math.max(0, amount - amountRcvd);
+        const pct = amount > 0 ? Math.round((remaining / amount) * 100) : 100;
+        return <Text style={{ color: '#bbb' }}>{pct}%</Text>;
+      },
+    },
+    {
       title: 'Status',
       key: 'status',
       render: (_, record) => {
-        const varianceStatus = record.varianceStatus;
-        if (varianceStatus === 'CRITICAL') {
-          return <Tag color="red">Critical</Tag>;
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        const qtyRcvd = record.actualQty != null ? record.actualQty : 0;
+        const amountRcvd = record.amountReceived != null ? record.amountReceived : unitCost * qtyRcvd;
+        const amount = record.amount || 0;
+        const remaining = Math.max(0, amount - amountRcvd);
+        const remainingPct = amount > 0 ? (remaining / amount) * 100 : 100;
+
+        let label: 'CRITICAL' | 'LOW' | 'OK' = 'OK';
+        let color: string = 'green';
+        if (remainingPct <= 10) {
+          label = 'CRITICAL';
+          color = 'red';
+        } else if (remainingPct < 20) {
+          label = 'LOW';
+          color = 'orange';
         }
-        if (varianceStatus === 'OK') {
-          return <Tag color="green">OK</Tag>;
-        }
-        return <Tag color="default">N/A</Tag>;
+
+        return <Tag color={color}>{label}</Tag>;
       },
     },
   ];
