@@ -293,12 +293,17 @@ const ProjectDetail: React.FC = () => {
   const [varianceSearch, setVarianceSearch] = useState('');
   const [addBOQModalOpen, setAddBOQModalOpen] = useState(false);
 
+  const projectIdNorm = (c: Cost) => String((c.projectId ?? (c as any).project_id) ?? '').toLowerCase();
   const refetchCosts = useCallback(async () => {
     if (!projectId) return;
+    const pid = String(projectId).toLowerCase();
     try {
       const list = await costService.getCosts();
-      const projectCosts = (list || []).filter((c: Cost) => (c.projectId ?? (c as any).project_id) === projectId);
-      setCosts(projectCosts);
+      const projectCosts = (list || []).filter((c: Cost) => projectIdNorm(c) === pid);
+      setCosts(prev => {
+        if (projectCosts.length === 0 && prev.length > 0) return prev;
+        return projectCosts;
+      });
     } catch {
       message.warning('Could not refresh BOQ list. Your new item may still appear below.');
     }
@@ -334,7 +339,8 @@ const ProjectDetail: React.FC = () => {
           setExpensesResult(expensesRes);
           setCostOverview(overviewRes);
           const allCosts = Array.isArray(costsRes) ? costsRes : [];
-          setCosts(allCosts.filter((c: Cost) => (c.projectId ?? (c as any).project_id) === projectId));
+          const pid = String(projectId).toLowerCase();
+          setCosts(allCosts.filter((c: Cost) => String((c.projectId ?? (c as any).project_id) ?? '').toLowerCase() === pid));
           setCostBreakdown(breakdownRes);
         }
       } catch (err: any) {

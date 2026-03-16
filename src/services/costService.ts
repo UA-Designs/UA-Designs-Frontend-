@@ -278,33 +278,47 @@ interface ApiResponse<T> {
   data: T;
 }
 
+/** Parse numeric cost fields from backend (may be strings e.g. "0.00") into numbers. */
+function normalizeCost(c: any): Cost {
+  const num = (v: any): number => (v === null || v === undefined) ? 0 : Number(v);
+  return {
+    ...c,
+    projectId: c.projectId ?? c.project_id,
+    type: (c.type != null && c.type !== '') ? String(c.type).toUpperCase() : c.type,
+    amount: num(c.amount),
+    estimatedQty: c.estimatedQty != null ? num(c.estimatedQty) : undefined,
+    unitCost: c.unitCost != null ? num(c.unitCost) : undefined,
+    actualQty: c.actualQty != null ? num(c.actualQty) : undefined,
+    actualAmount: c.actualAmount != null ? num(c.actualAmount) : undefined,
+    amountReceived: c.amountReceived != null ? num(c.amountReceived) : undefined,
+    varianceStatus: c.varianceStatus === 'OK' || c.varianceStatus === 'LOW' || c.varianceStatus === 'CRITICAL' ? c.varianceStatus : null,
+  };
+}
+
 class CostService {
   // ==================== COSTS ====================
 
-  // POST /api/cost/costs — body: { name, type, amount, date, projectId?, description? }
-  // type required, one of: MATERIAL, LABOR, EQUIPMENT, OVERHEAD, OTHER, FUEL, FORMWORKS (case-insensitive; stored uppercase)
+  // POST /api/cost/costs — response.data is the created cost object (camelCase)
   async createCost(data: CreateCostData): Promise<Cost> {
     try {
-      const response = await apiService.post<ApiResponse<Cost>>('/cost/costs', data);
-      if (response.data.success) return response.data.data;
-      throw new Error('Failed to create cost');
+      const response = await apiService.post<ApiResponse<any>>('/cost/costs', data);
+      if (!response.data.success) throw new Error('Failed to create cost');
+      const cost = response.data.data;
+      if (!cost || typeof cost !== 'object') throw new Error('Invalid cost response');
+      return normalizeCost(cost);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to create cost');
     }
   }
 
-  // GET /api/cost/costs — normalize projectId and type (API may return project_id, type in any case)
+  // GET /api/cost/costs — response.data.costs (array), response.data.pagination; camelCase; numerics may be strings
   async getCosts(): Promise<Cost[]> {
     try {
       const response = await apiService.get<ApiResponse<any>>('/cost/costs');
       if (!response.data.success) return [];
       const d = response.data.data;
       const raw = (d?.costs && Array.isArray(d.costs)) ? d.costs : (Array.isArray(d) ? d : []);
-      return raw.map((c: any) => ({
-        ...c,
-        projectId: c.projectId ?? c.project_id,
-        type: (c.type != null && c.type !== '') ? String(c.type).toUpperCase() : c.type,
-      }));
+      return raw.map((c: any) => normalizeCost(c));
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch costs');
     }
