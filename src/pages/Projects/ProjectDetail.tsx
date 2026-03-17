@@ -694,8 +694,10 @@ const ProjectDetail: React.FC = () => {
       title: 'Actual Amount',
       key: 'actualAmount',
       render: (_, record) => {
-        const actualAmount = record.actualAmount != null ? record.actualAmount : 0;
-        return <Text style={{ color: '#bbb' }}>{formatCurrency(actualAmount)}</Text>;
+        const unitCost = record.unitCost != null ? record.unitCost : record.amount;
+        const qtyUsed = record.actualQty != null ? record.actualQty : 0;
+        const amountFromUsage = record.amountReceived != null ? record.amountReceived : unitCost * qtyUsed;
+        return <Text style={{ color: '#bbb' }}>{formatCurrency(amountFromUsage)}</Text>;
       },
     },
     {
