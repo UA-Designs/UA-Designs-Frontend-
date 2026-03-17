@@ -486,18 +486,26 @@ const ProjectDetail: React.FC = () => {
   const estimatedTotal = Number.isFinite(rawEstimatedTotal) ? Number(rawEstimatedTotal) : 0;
   const rawActualSpent = Number(costOverview?.totalCosts ?? 0) || spent;
   const actualSpent = Number.isFinite(rawActualSpent) ? Number(rawActualSpent) : 0;
+  // Actual spend per category: from backend breakdown, or sum of (amountReceived / actualQty*unitCost) per BOQ line, or expenses
+  const actualFromCosts = (type: string) => {
+    const list = costs.filter(c => (c.type || '').toString().toUpperCase() === type);
+    return list.reduce((s, c) => {
+      const received = c.amountReceived ?? (Number(c.actualQty ?? 0) * Number(c.unitCost ?? c.amount ?? 0));
+      return s + (received || 0);
+    }, 0);
+  };
   const actualByCat = {
     material:
       Number(costBreakdown?.actualMaterials ?? 0) ||
-      costs.filter(c => c.type === CostType.MATERIAL).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      actualFromCosts('MATERIAL') ||
       expensesByCategory.material,
     labor:
       Number(costBreakdown?.actualLabor ?? 0) ||
-      costs.filter(c => c.type === CostType.LABOR).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      actualFromCosts('LABOR') ||
       expensesByCategory.labor,
     equipment:
       Number(costBreakdown?.actualEquipment ?? 0) ||
-      costs.filter(c => c.type === CostType.EQUIPMENT).reduce((s, c) => s + (c.amount ?? 0), 0) ||
+      actualFromCosts('EQUIPMENT') ||
       expensesByCategory.equipment,
   };
   // When BOQ/costs don't set category budget (0), use project budget for categories that have actual spend so chart and cards show budget vs actual
@@ -652,7 +660,7 @@ const ProjectDetail: React.FC = () => {
       title: 'ACT Qty',
       key: 'actualQty',
       render: (_, record) => {
-        const qty = record.estimatedQty != null ? record.estimatedQty : 0;
+        const qty = record.actualQty != null ? record.actualQty : 0;
         return <Text style={{ color: '#bbb' }}>{qty}</Text>;
       },
     },
