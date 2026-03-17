@@ -34,6 +34,7 @@ import {
 } from 'recharts';
 import { dashboardService } from '../../services/dashboardService';
 import { projectService } from '../../services/projectService';
+import { costService } from '../../services/costService';
 import type { DashboardStats } from '../../types';
 
 const { useBreakpoint } = Grid;
@@ -49,6 +50,7 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projectStats, setProjectStats] = useState<any | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
+  const [boqTotalByProject, setBoqTotalByProject] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,14 +58,25 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [statsData, projectStatsData, projectsResp] = await Promise.all([
+      const [statsData, projectStatsData, projectsResp, costs] = await Promise.all([
         dashboardService.getStats().catch(() => null),
         projectService.getProjectStats().catch(() => null),
         projectService.getProjectsFiltered().catch(() => ({ projects: [], pagination: { total: 0 } })),
+        costService.getCosts().catch(() => []),
       ]);
       if (statsData) setStats(statsData);
       if (projectStatsData) setProjectStats(projectStatsData);
       setProjects((projectsResp as any).projects || []);
+      // BOQ total per project (so dashboard shows % used when only BOQ is added)
+      const byProject: Record<string, number> = {};
+      (costs || []).forEach((c: any) => {
+        const id = c.projectId ?? c.project_id;
+        if (id) {
+          const key = String(id).toLowerCase();
+          byProject[key] = (byProject[key] ?? 0) + (Number(c.amount) || 0);
+        }
+      });
+      setBoqTotalByProject(byProject);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
     } finally {
@@ -83,6 +96,14 @@ const Dashboard: React.FC = () => {
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [fetchData]);
+
+  // Spent = API actualCost when present, else BOQ total so adding BOQ updates dashboard %
+  const getSpent = (p: any) => {
+    const apiSpent = Number(p?.actualCost ?? 0);
+    if (apiSpent > 0) return apiSpent;
+    const pid = String(p?.id ?? p?._id ?? '').toLowerCase();
+    return boqTotalByProject[pid] ?? 0;
+  };
 
   if (isLoading) {
     return (
@@ -111,7 +132,7 @@ const Dashboard: React.FC = () => {
           const short =
             name.length > 18 ? `${name.slice(0, 15)}...` : name;
           const budget = Number(p.budget ?? 0);
-          const spent = Number((p as any).actualCost ?? 0);
+          const spent = getSpent(p);
           return {
             name: short,
             budget,
@@ -123,7 +144,7 @@ const Dashboard: React.FC = () => {
   const projectsDisplay =
     projects.length > 0
       ? projects.map((p) => {
-          const spent = Number((p as any).actualCost ?? 0);
+          const spent = getSpent(p);
           const budget = Number(p.budget ?? 0);
           const remaining = Math.max(0, budget - spent);
           const pctUsedRaw = budget > 0 ? (spent / budget) * 100 : 0;
@@ -166,7 +187,7 @@ const Dashboard: React.FC = () => {
 
   // Prefer totals derived from the projects list so cards stay in sync with what we display
   const derivedBudget = projects.reduce((sum, p) => sum + (Number(p.budget ?? 0) || 0), 0);
-  const derivedSpent = projects.reduce((sum, p) => sum + (Number((p as any).actualCost ?? 0) || 0), 0);
+  const derivedSpent = projects.reduce((sum, p) => sum + getSpent(p), 0);
   const derivedActive = projects.filter((p) => {
     const s = String((p as any).status ?? '').toLowerCase();
     const inactive = ['completed', 'cancelled', 'closed', 'done', 'terminated'];
@@ -178,7 +199,7 @@ const Dashboard: React.FC = () => {
   const activeProjects = projects.length > 0 ? derivedActive : (projectStats?.activeProjects ?? stats?.activeProjects ?? 0);
   const overBudgetCount = projects.filter((p) => {
     const b = Number(p.budget ?? 0);
-    const s = Number((p as any).actualCost ?? 0);
+    const s = getSpent(p);
     return b > 0 && s > b;
   }).length;
 
@@ -205,7 +226,7 @@ const Dashboard: React.FC = () => {
   const NEAR_LIMIT_PCT = 80;
   const tradeAlertsFromData = projects.map((p) => {
     const budget = Number(p.budget ?? 0);
-    const spent = Number((p as any).actualCost ?? 0);
+    const spent = getSpent(p);
     const pct = budget > 0 ? (spent / budget) * 100 : 0;
     const over = budget > 0 && spent > budget;
     const near = budget > 0 && !over && pct >= NEAR_LIMIT_PCT;
@@ -227,12 +248,12 @@ const Dashboard: React.FC = () => {
   const criticalAlertsFromData = projects
     .filter((p) => {
       const b = Number(p.budget ?? 0);
-      const s = Number((p as any).actualCost ?? 0);
+      const s = getSpent(p);
       return b > 0 && s > b;
     })
     .map((p) => {
       const budget = Number(p.budget ?? 0);
-      const spent = Number((p as any).actualCost ?? 0);
+      const spent = getSpent(p);
       const overBy = spent - budget;
       const percent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
       return {

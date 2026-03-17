@@ -48,6 +48,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { projectService, ProjectFilters, ProjectDashboardData } from '../../services/projectService';
+import { costService } from '../../services/costService';
 import { authService } from '../../services/authService';
 import { Project, ProjectStatus, ProjectType, ProjectPhase, UserRole } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -106,6 +107,7 @@ const Projects: React.FC = () => {
   const [selectedProject, setSelectedProject]         = useState<Project | null>(null);
   const [dashboardData, setDashboardData]             = useState<ProjectDashboardData | null>(null);
   const [dashboardLoading, setDashboardLoading]       = useState(false);
+  const [boqTotalByProject, setBoqTotalByProject]     = useState<Record<string, number>>({});
 
   const [pmUsers, setPmUsers]         = useState<any[]>([]);
   const [pmLoading, setPmLoading]     = useState(false);
@@ -125,9 +127,21 @@ const Projects: React.FC = () => {
       if (filterStatus) filters.status      = filterStatus;
       if (filterType)   filters.projectType = filterType;
 
-      const result = await projectService.getProjectsFiltered(filters);
+      const [result, costs] = await Promise.all([
+        projectService.getProjectsFiltered(filters),
+        costService.getCosts().catch(() => []),
+      ]);
       setProjects(result.projects);
       setTotalCount(result.pagination.total);
+      const byProject: Record<string, number> = {};
+      (costs || []).forEach((c: any) => {
+        const id = c.projectId ?? c.project_id;
+        if (id) {
+          const key = String(id).toLowerCase();
+          byProject[key] = (byProject[key] ?? 0) + (Number(c.amount) || 0);
+        }
+      });
+      setBoqTotalByProject(byProject);
     } catch (err: any) {
       message.error(err.message || 'Failed to load projects');
     } finally {
@@ -488,7 +502,9 @@ const Projects: React.FC = () => {
         <Row gutter={[16, 16]}>
           {projects.map((record) => {
             const cfg = statusConfig[record.status] || { color: 'default', icon: null, label: record.status };
-            const spent = (record as any).actualCost ?? 0;
+            const apiSpent = Number((record as any).actualCost ?? 0);
+            const boqSpent = boqTotalByProject[String(record.id ?? (record as any)._id ?? '').toLowerCase()] ?? 0;
+            const spent = apiSpent > 0 ? apiSpent : boqSpent;
             const remaining = Math.max(0, (record.budget ?? 0) - spent);
             const pctUsed = record.budget ? (spent / record.budget) * 100 : 0;
             const pctUsedLabel = record.budget

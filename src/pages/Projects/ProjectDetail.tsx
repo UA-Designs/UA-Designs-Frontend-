@@ -21,7 +21,9 @@ import {
   InputNumber,
   Segmented,
   DatePicker,
+  Upload,
 } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
 import {
   ArrowLeftOutlined,
   EnvironmentOutlined,
@@ -39,6 +41,7 @@ import {
   UserOutlined,
   ToolOutlined,
   CarryOutOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -60,6 +63,7 @@ import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
 
 const { Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   planning:    { color: 'blue',    label: 'Planning' },
@@ -295,6 +299,11 @@ const ProjectDetail: React.FC = () => {
   const [addBOQModalOpen, setAddBOQModalOpen] = useState(false);
   const [logUsageModalOpen, setLogUsageModalOpen] = useState(false);
   const [logUsageForm] = Form.useForm();
+  const [logExpenseModalOpen, setLogExpenseModalOpen] = useState(false);
+  const [logExpenseForm] = Form.useForm();
+  const [logExpenseSaving, setLogExpenseSaving] = useState(false);
+  const [logExpenseReceiptFile, setLogExpenseReceiptFile] = useState<File | null>(null);
+  const [logExpenseFileList, setLogExpenseFileList] = useState<UploadFile[]>([]);
 
   useEffect(() => {
     if (logUsageModalOpen) {
@@ -318,6 +327,66 @@ const ProjectDetail: React.FC = () => {
       message.warning('Could not refresh BOQ list. Your new item may still appear below.');
     }
   }, [projectId]);
+
+  const refetchExpenses = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const [expensesRes, budgetOv] = await Promise.all([
+        costService.getExpensesPaginated({ projectId, limit: 100 }).catch(() => ({ expenses: [], pagination: { totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false } })),
+        projectService.getProjectBudgetOverview(projectId).catch(() => null),
+      ]);
+      setExpensesResult(expensesRes);
+      if (budgetOv) setBudgetOverview(budgetOv);
+    } catch {
+      message.warning('Could not refresh expenses.');
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (logExpenseModalOpen) {
+      logExpenseForm.resetFields();
+      logExpenseForm.setFieldsValue({
+        projectId,
+        date: dayjs(),
+      });
+      setLogExpenseReceiptFile(null);
+      setLogExpenseFileList([]);
+    }
+  }, [logExpenseModalOpen, projectId, logExpenseForm]);
+
+  const handleLogExpenseSubmit = useCallback(async (values: any) => {
+    if (!projectId) return;
+    setLogExpenseSaving(true);
+    try {
+      const payload = {
+        name: values.name || `${values.category ?? 'Expense'} — ₱${Number(values.amount || 0).toLocaleString()}`,
+        amount: Number(values.amount) || 0,
+        category: values.category as ExpenseCategory,
+        date: (values.date as dayjs.Dayjs).format('YYYY-MM-DD'),
+        projectId,
+        budgetId: values.budgetId || undefined,
+        vendor: values.vendor || undefined,
+        invoiceNumber: values.invoiceNumber || undefined,
+        description: values.notes || undefined,
+      };
+      const saved = await costService.createExpense(payload);
+      if (logExpenseReceiptFile) {
+        try {
+          await costService.uploadReceipt(saved.id, logExpenseReceiptFile);
+        } catch {
+          message.warning('Expense saved but receipt upload failed.');
+        }
+      }
+      await refetchExpenses();
+      message.success('Expense logged successfully.');
+      setLogExpenseModalOpen(false);
+      logExpenseForm.resetFields();
+    } catch (err: any) {
+      message.error(err?.message || 'Failed to log expense.');
+    } finally {
+      setLogExpenseSaving(false);
+    }
+  }, [projectId, logExpenseReceiptFile, logExpenseForm, refetchExpenses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1018,7 +1087,7 @@ const ProjectDetail: React.FC = () => {
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
             <Typography.Title level={4} style={{ color: '#ffffff', margin: 0 }}>Project Expenses</Typography.Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setLogExpenseModalOpen(true)} style={{ background: '#009944', borderColor: '#009944' }}>
               Log Expense
             </Button>
           </div>
@@ -1033,7 +1102,7 @@ const ProjectDetail: React.FC = () => {
               </>
             ) : (
               <Empty description="No expenses found" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 48 }}>
-                <Button type="primary" onClick={goToCost} style={{ background: '#009944', borderColor: '#009944' }}>Log Expense</Button>
+                <Button type="primary" onClick={() => setLogExpenseModalOpen(true)} style={{ background: '#009944', borderColor: '#009944' }}>Log Expense</Button>
               </Empty>
             )}
           </Card>
@@ -1241,6 +1310,125 @@ const ProjectDetail: React.FC = () => {
               <Button onClick={() => setLogUsageModalOpen(false)}>Cancel</Button>
               <Button type="primary" htmlType="submit" style={{ background: '#009944', borderColor: '#009944' }}>
                 Log Usage
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Log Expense modal — in-place, no redirect */}
+      <Modal
+        open={logExpenseModalOpen}
+        title={
+          <div>
+            <Text strong style={{ color: '#fff', display: 'block' }}>Log Expense</Text>
+            <Text style={{ color: '#8c8c8c', fontSize: 12 }}>Record a new expense for a project.</Text>
+          </div>
+        }
+        onCancel={() => { setLogExpenseModalOpen(false); logExpenseForm.resetFields(); }}
+        footer={null}
+        width={560}
+        destroyOnClose
+        styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
+      >
+        <Form
+          form={logExpenseForm}
+          layout="vertical"
+          onFinish={handleLogExpenseSubmit}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item name="projectId" label={<Text style={{ color: '#d9d9d9' }}>Project *</Text>}>
+            <Select
+              disabled
+              style={{ width: '100%' }}
+              dropdownStyle={{ background: '#1f1f1f' }}
+              options={project ? [{ label: project.name || 'Current project', value: projectId }] : []}
+            />
+          </Form.Item>
+          <Form.Item name="budgetId" label={<Text style={{ color: '#d9d9d9' }}>Budget Allocation (Optional)</Text>}>
+            <Select
+              allowClear
+              placeholder="Link to BOQ item..."
+              style={{ width: '100%' }}
+              dropdownStyle={{ background: '#1f1f1f' }}
+              options={budgets.map(b => ({ label: b.name || `Budget — ${formatCurrency(b.amount)}`, value: b.id }))}
+            />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="category" label={<Text style={{ color: '#d9d9d9' }}>Category *</Text>} rules={[{ required: true, message: 'Select category' }]}>
+                <Select
+                  placeholder="Select category"
+                  style={{ width: '100%' }}
+                  dropdownStyle={{ background: '#1f1f1f' }}
+                  options={Object.values(ExpenseCategory).map(c => ({ label: c, value: c }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="amount" label={<Text style={{ color: '#d9d9d9' }}>Amount (₱) *</Text>} rules={[{ required: true, message: 'Enter amount' }]}>
+                <InputNumber
+                  min={0.01}
+                  precision={2}
+                  placeholder="0"
+                  style={{ width: '100%', background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="vendor" label={<Text style={{ color: '#d9d9d9' }}>Vendor/Supplier</Text>}>
+            <Input
+              placeholder="e.g. Home Depot"
+              style={{ background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+            />
+          </Form.Item>
+          <Form.Item name="date" label={<Text style={{ color: '#d9d9d9' }}>Date *</Text>} rules={[{ required: true, message: 'Select date' }]}>
+            <DatePicker
+              style={{ width: '100%', background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)' }}
+              format="MM/DD/YYYY"
+            />
+          </Form.Item>
+          <Form.Item name="notes" label={<Text style={{ color: '#d9d9d9' }}>Notes</Text>}>
+            <TextArea
+              rows={3}
+              placeholder="Additional details about this expense..."
+              style={{ background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', resize: 'none' }}
+            />
+          </Form.Item>
+          <Form.Item label={<Text style={{ color: '#d9d9d9' }}>Receipt (optional)</Text>}>
+            <Upload
+              beforeUpload={(file) => {
+                if (file.size > 5 * 1024 * 1024) {
+                  message.error('File must be under 5 MB');
+                  return false;
+                }
+                setLogExpenseReceiptFile(file);
+                setLogExpenseFileList([{ uid: file.name, name: file.name, status: 'done' }]);
+                return false;
+              }}
+              onRemove={() => { setLogExpenseReceiptFile(null); setLogExpenseFileList([]); }}
+              fileList={logExpenseFileList}
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              maxCount={1}
+            >
+              <Button icon={<UploadOutlined />} style={{ color: '#009944', borderColor: '#009944' }}>
+                Upload Receipt
+              </Button>
+            </Upload>
+            <Text style={{ color: '#595959', fontSize: 11 }}>JPG, PNG, WebP, or PDF. Max 5MB.</Text>
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => { setLogExpenseModalOpen(false); logExpenseForm.resetFields(); }} disabled={logExpenseSaving}>
+                Cancel
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={logExpenseSaving}
+                style={{ background: '#ff8c00', borderColor: '#ff8c00' }}
+              >
+                Log Expense
               </Button>
             </Space>
           </Form.Item>
