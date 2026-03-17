@@ -365,6 +365,7 @@ const ProjectDetail: React.FC = () => {
         date: (values.date as dayjs.Dayjs).format('YYYY-MM-DD'),
         projectId,
         budgetId: values.budgetId || undefined,
+        costId: values.costId || undefined,
         vendor: values.vendor || undefined,
         invoiceNumber: values.invoiceNumber || undefined,
         description: values.notes || undefined,
@@ -1345,13 +1346,17 @@ const ProjectDetail: React.FC = () => {
               options={project ? [{ label: project.name || 'Current project', value: projectId }] : []}
             />
           </Form.Item>
-          <Form.Item name="budgetId" label={<Text style={{ color: '#d9d9d9' }}>Budget Allocation (Optional)</Text>}>
+          <Form.Item name="costId" label={<Text style={{ color: '#d9d9d9' }}>Budget Allocation (Optional)</Text>}>
             <Select
               allowClear
               placeholder="Link to BOQ item..."
               style={{ width: '100%' }}
               dropdownStyle={{ background: '#1f1f1f' }}
-              options={budgets.map(b => ({ label: b.name || `Budget — ${formatCurrency(b.amount)}`, value: b.id }))}
+              optionFilterProp="label"
+              options={costs.map(c => ({
+                label: `${c.name || 'Item'} — ${c.type || '—'} — ${formatCurrency(c.amount ?? 0)}`,
+                value: c.id,
+              }))}
             />
           </Form.Item>
           <Row gutter={16}>

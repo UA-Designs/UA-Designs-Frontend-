@@ -221,6 +221,8 @@ export interface CreateExpenseData {
   date: string;
   projectId: string;
   budgetId?: string;
+  /** Link expense to a BOQ item (cost) */
+  costId?: string;
   taskId?: string;
   vendor?: string;
   invoiceNumber?: string;
