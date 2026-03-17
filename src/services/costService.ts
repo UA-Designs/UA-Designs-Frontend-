@@ -364,6 +364,21 @@ class CostService {
     }
   }
 
+  // POST /api/cost/site-usage — log material usage (quantity used for a BOQ item). Backend may aggregate to update cost.actualQty.
+  async createSiteUsage(params: {
+    projectId: string;
+    costId: string;
+    quantityUsed: number;
+    date: string;
+    notes?: string;
+  }): Promise<void> {
+    try {
+      await apiService.post('/cost/site-usage', params);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to log usage');
+    }
+  }
+
   // PATCH /api/cost/costs/:id/status
   async updateCostStatus(id: string, status: string): Promise<Cost> {
     try {

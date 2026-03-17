@@ -20,6 +20,7 @@ import {
   Form,
   InputNumber,
   Segmented,
+  DatePicker,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -292,6 +293,15 @@ const ProjectDetail: React.FC = () => {
   const [boqSearch, setBoqSearch] = useState('');
   const [varianceSearch, setVarianceSearch] = useState('');
   const [addBOQModalOpen, setAddBOQModalOpen] = useState(false);
+  const [logUsageModalOpen, setLogUsageModalOpen] = useState(false);
+  const [logUsageForm] = Form.useForm();
+
+  useEffect(() => {
+    if (logUsageModalOpen) {
+      logUsageForm.resetFields();
+      logUsageForm.setFieldsValue({ quantityUsed: 0, dateUsed: dayjs() });
+    }
+  }, [logUsageModalOpen, logUsageForm]);
 
   const projectIdNorm = (c: Cost) => String((c.projectId ?? (c as any).project_id) ?? '').toLowerCase();
   const refetchCosts = useCallback(async () => {
@@ -841,15 +851,26 @@ const ProjectDetail: React.FC = () => {
       label: <>Site Usage <CarryOutOutlined /></>,
       children: (
         <div style={{ marginTop: 16 }}>
-          <Typography.Title level={4} style={{ color: '#ffffff', marginBottom: 16 }}>
-            Site Usage
-          </Typography.Title>
-          <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}>
+          <Card style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }} bodyStyle={{ padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+              <Typography.Title level={4} style={{ color: '#ffffff', margin: 0 }}>
+                Site Material Usage
+              </Typography.Title>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setLogUsageModalOpen(true)}
+                style={{ background: '#009944', borderColor: '#009944' }}
+              >
+                Log Usage
+              </Button>
+            </div>
             <Empty
               description={
-                <span style={{ color: '#b3b3b3' }}>
-                  Record material usage from the BOQ here. Once the backend supports site usage, you can log quantities used per BOQ item.
-                </span>
+                <Space direction="vertical" size={4} style={{ textAlign: 'center' }}>
+                  <Text style={{ color: '#b3b3b3', display: 'block' }}>No material usage logged yet.</Text>
+                  <Text style={{ color: '#888', fontSize: 13 }}>Log daily consumption to track variance.</Text>
+                </Space>
               }
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               style={{ padding: 48 }}
@@ -1123,6 +1144,98 @@ const ProjectDetail: React.FC = () => {
           refetchCosts();
         }}
       />
+
+      <Modal
+        title="Log Material Usage"
+        open={logUsageModalOpen}
+        onCancel={() => setLogUsageModalOpen(false)}
+        footer={null}
+        width={480}
+        destroyOnClose
+        styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
+      >
+        <Form
+          form={logUsageForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            if (!projectId) return;
+            const costId = values.material;
+            const quantityUsed = Number(values.quantityUsed) || 0;
+            const dateUsed = values.dateUsed ? dayjs(values.dateUsed).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+            const notes = values.notes?.trim() || undefined;
+            try {
+              await costService.createSiteUsage({
+                projectId,
+                costId,
+                quantityUsed,
+                date: dateUsed,
+                notes,
+              });
+              message.success('Usage logged');
+              setLogUsageModalOpen(false);
+              logUsageForm.resetFields();
+              refetchCosts();
+            } catch (err: any) {
+              message.error(err.message || 'Failed to log usage');
+            }
+          }}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="material"
+            label={<span style={{ color: '#d9d9d9' }}>Material *</span>}
+            rules={[{ required: true, message: 'Select material' }]}
+          >
+            <Select
+              placeholder="Select material"
+              allowClear
+              style={{ width: '100%' }}
+              dropdownStyle={{ background: '#1f1f1f' }}
+              optionFilterProp="label"
+              options={costs.map(c => ({ label: c.name, value: c.id }))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="quantityUsed"
+            label={<span style={{ color: '#d9d9d9' }}>Quantity Used *</span>}
+            rules={[{ required: true, message: 'Enter quantity' }]}
+            initialValue={0}
+          >
+            <InputNumber
+              min={0}
+              step={0.01}
+              style={{ width: '100%', background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+              placeholder="0.00"
+            />
+          </Form.Item>
+          <Form.Item
+            name="dateUsed"
+            label={<span style={{ color: '#d9d9d9' }}>Date Used *</span>}
+            rules={[{ required: true, message: 'Select date' }]}
+            initialValue={dayjs()}
+          >
+            <DatePicker
+              style={{ width: '100%', background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)' }}
+              format="MMM D, YYYY"
+            />
+          </Form.Item>
+          <Form.Item name="notes" label={<span style={{ color: '#d9d9d9' }}>Notes</span>}>
+            <Input.TextArea
+              rows={3}
+              placeholder="Optional notes (e.g., work area, reason)..."
+              style={{ background: '#2a2a2a', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', resize: 'none' }}
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => setLogUsageModalOpen(false)}>Cancel</Button>
+              <Button type="primary" htmlType="submit" style={{ background: '#009944', borderColor: '#009944' }}>
+                Log Usage
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
