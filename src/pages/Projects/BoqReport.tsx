@@ -14,10 +14,16 @@ function formatPhp(n: number): string {
   return `Php ${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/** One display row for the BOQ table — labor/material split uses API fields when present. */
+/**
+ * BOQ report row mapping:
+ * - Labor & equipment → lump sum (lot / l.s.): one package price, qty usually 1.
+ * - Materials → per piece / per unit (pc, sheet, sq.m., etc.): qty × unit reflects takeoff.
+ * API laborEquipmentCost / materialCost override inference when both are set.
+ */
 export function mapCostToBoqReportRow(cost: Cost, index: number) {
-  const qty = cost.estimatedQty != null && cost.estimatedQty > 0 ? cost.estimatedQty : 1;
-  const unit = (cost.unit && String(cost.unit).trim()) || 'lot';
+  let qty = cost.estimatedQty != null && cost.estimatedQty > 0 ? cost.estimatedQty : 1;
+  let unit = (cost.unit && String(cost.unit).trim()) || '';
+
   const lineAmount =
     Number(cost.amount) > 0
       ? Number(cost.amount)
@@ -29,14 +35,53 @@ export function mapCostToBoqReportRow(cost: Cost, index: number) {
   if (!Number.isFinite(labor)) labor = 0;
   if (!Number.isFinite(material)) material = 0;
 
+  const t = String(cost.type || '').toUpperCase();
+  const isMaterialCategory = t === CostType.MATERIAL || t === 'MATERIAL';
+  const isFuel = t === CostType.FUEL || t === 'FUEL';
+  const isLaborEquipmentCategory =
+    t === CostType.LABOR ||
+    t === 'LABOR' ||
+    t === CostType.EQUIPMENT ||
+    t === 'EQUIPMENT' ||
+    t === CostType.FORMWORKS ||
+    t === 'FORMWORKS' ||
+    t === CostType.OVERHEAD ||
+    t === 'OVERHEAD' ||
+    t === CostType.OTHER ||
+    t === 'OTHER';
+
   if (labor === 0 && material === 0 && lineAmount > 0) {
-    const t = String(cost.type || '').toUpperCase();
-    if (t === CostType.LABOR || t === 'LABOR') {
-      labor = lineAmount;
-    } else if (t === CostType.EQUIPMENT || t === 'EQUIPMENT') {
+    if (isMaterialCategory || isFuel) {
+      material = lineAmount;
+    } else if (isLaborEquipmentCategory) {
       labor = lineAmount;
     } else {
       material = lineAmount;
+    }
+  }
+
+  const materialOnly = material > 0 && labor === 0;
+  const laborOnly = labor > 0 && material === 0;
+  const mixedLaborAndMaterial = labor > 0 && material > 0;
+
+  // Units: materials → per piece / measured unit; labor & equipment → lump sum (lot / l.s.)
+  if (!unit) {
+    if (materialOnly) {
+      unit = isFuel ? 'l' : 'pc';
+    } else if (laborOnly) {
+      unit = 'lot';
+    } else if (mixedLaborAndMaterial) {
+      unit = 'lot';
+    } else {
+      unit = 'lot';
+    }
+  }
+
+  // Lump-sum labor & equipment rows: qty 1 unless user explicitly entered another qty
+  if (laborOnly || mixedLaborAndMaterial) {
+    const hasExplicitQty = cost.estimatedQty != null && cost.estimatedQty > 0;
+    if (!hasExplicitQty) {
+      qty = 1;
     }
   }
 
@@ -187,6 +232,10 @@ const BoqReport: React.FC = () => {
 
       <div className="boq-report-document">
         <h1>Bill of Quantities</h1>
+        <p className="boq-report-convention">
+          Labor and equipment costs are shown as <strong>lump sum</strong> (lot / l.s.). Material quantities are{' '}
+          <strong>per piece</strong> or per listed unit (pc, sheet, sq.m., etc.).
+        </p>
 
         <div className="boq-report-meta">
           <div className="boq-report-meta-row">

@@ -1139,14 +1139,6 @@ const ProjectDetail: React.FC = () => {
             {project.name}
           </Typography.Title>
           <Tag color={statusCfg.color}>{statusCfg.label}</Tag>
-          <Button
-            type="primary"
-            icon={<FilePdfOutlined />}
-            onClick={() => navigate(`/projects/${projectId}/boq-report`)}
-            style={{ background: '#009944', borderColor: '#009944' }}
-          >
-            View BOQ report
-          </Button>
         </div>
         {project.clientName && (
           <Text style={{ color: '#aaa', fontSize: 14 }}>{project.clientName}</Text>
