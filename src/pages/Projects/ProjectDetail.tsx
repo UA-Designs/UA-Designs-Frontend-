@@ -61,6 +61,7 @@ import { costService, Budget, Expense, Cost, CostType, ExpenseCategory } from '.
 import { resourceService, Material, Labor, Equipment } from '../../services/resourceService';
 import { Project } from '../../types';
 import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
+import { BOQ_TRADE_CATEGORIES, getEffectiveTradeCategory } from '../../constants/boqTradeCategories';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -86,26 +87,6 @@ const formatPctUsed = (actual: number, budget: number): string => {
   if (pct > 0 && pct < 1) return pct.toFixed(1);
   return String(Math.round(pct));
 };
-
-const TRADE_CATEGORIES = [
-  'Gen Requirements',
-  'Earthworks',
-  'Concrete Work',
-  'RSB Works',
-  'Masonry Works',
-  'Plastering Works',
-  'Roofing',
-  'Ceiling Works',
-  'Tiles Works',
-  'Paint Works',
-  'Doors & Windows',
-  'Electrical Works',
-  'Plumbing Works',
-  'Formworks',
-  'Labor',
-  'Equipment',
-  'Custom',
-];
 
 // ── Add BOQ Item Modal ─────────────────────────────────────────────────────
 interface AddBOQModalProps {
@@ -134,7 +115,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
   useEffect(() => {
     if (!open || !projectId) return;
     form.resetFields();
-    form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0 });
+    form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0, tradeCategory: undefined });
     setLoadingOptions(true);
     const load = async () => {
       const mList = await resourceService.getMaterials().catch(() => []);
@@ -148,7 +129,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const { category: cat, materialId, itemName, estimatedQty, unitCost, tradeCategory, notes } = values;
+      const { category: cat, materialId, itemName, estimatedQty, unitCost, tradeCategory, notes, scopeLines, exclusionNotes, unit: unitOverride } = values;
       const name =
         cat === CostType.MATERIAL
           ? (() => {
@@ -159,17 +140,39 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
       const qty = Number(estimatedQty) || 0;
       const unitCostNum = Number(unitCost) || 0;
       const totalAmount = qty * unitCostNum;
+
+      const mat = cat === CostType.MATERIAL ? materials.find((x: { id: string }) => x.id === materialId) : null;
+      const unitFromMaterial = mat && (mat as { unit?: string }).unit ? String((mat as { unit?: string }).unit).trim() : '';
+      let unit = (unitOverride && String(unitOverride).trim()) || unitFromMaterial;
+      if (!unit) {
+        if (cat === CostType.MATERIAL) unit = 'pc';
+        else if (cat === CostType.FUEL) unit = 'l';
+        else unit = 'lot';
+      }
+
+      const scopeOfWorks =
+        typeof scopeLines === 'string'
+          ? scopeLines.split(/\n/).map((s: string) => s.trim()).filter(Boolean)
+          : [];
+      const exclusionNotesArr =
+        typeof exclusionNotes === 'string'
+          ? exclusionNotes.split(/\n/).map((s: string) => s.trim()).filter(Boolean)
+          : [];
+
       setSaving(true);
       const created = await costService.createCost({
         name,
         type: cat,
-        // Let backend compute amount if desired; send all components explicitly.
         amount: totalAmount || undefined,
         date: new Date().toISOString().split('T')[0],
         projectId,
-        description: [tradeCategory, notes].filter(Boolean).join(' — ') || undefined,
+        description: notes?.trim() || undefined,
         estimatedQty: qty,
         unitCost: unitCostNum,
+        unit,
+        tradeCategory: tradeCategory as string,
+        scopeOfWorks: scopeOfWorks.length ? scopeOfWorks : undefined,
+        exclusionNotes: exclusionNotesArr.length ? exclusionNotesArr : undefined,
       });
       message.success('BOQ item added');
       onAdded(created);
@@ -195,12 +198,26 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
       okText="Add to BOQ"
       okButtonProps={{ loading: saving, disabled: saving, style: { background: '#009944', borderColor: '#009944' } }}
       cancelButtonProps={{ disabled: saving }}
-      width={520}
+      width={560}
       destroyOnClose
       styles={{ content: { background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)' }, header: { background: '#1f1f1f' } }}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
-        <Form.Item name="category" label={<span style={labelStyle}>Category *</span>} rules={[{ required: true }]}>
+        <Form.Item
+          name="tradeCategory"
+          label={<span style={labelStyle}>Trade category *</span>}
+          rules={[{ required: true, message: 'Select the trade for this BOQ line' }]}
+        >
+          <Select
+            placeholder="e.g. Electrical Works, Plumbing Works"
+            showSearch
+            style={{ width: '100%' }}
+            dropdownStyle={{ background: '#1f1f1f' }}
+            optionFilterProp="label"
+            options={BOQ_TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
+          />
+        </Form.Item>
+        <Form.Item name="category" label={<span style={labelStyle}>Line type *</span>} rules={[{ required: true }]}>
           <Segmented
             options={[
               { label: 'Material', value: CostType.MATERIAL },
@@ -211,16 +228,6 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
             ]}
             block
             style={{ background: '#2a2a2a' }}
-          />
-        </Form.Item>
-        <Form.Item name="tradeCategory" label={<span style={labelStyle}>Trade Category (optional)</span>}>
-          <Select
-            placeholder="Select trade category (optional)"
-            allowClear
-            style={{ width: '100%' }}
-            dropdownStyle={{ background: '#1f1f1f' }}
-            optionFilterProp="label"
-            options={TRADE_CATEGORIES.map(t => ({ label: t, value: t }))}
           />
         </Form.Item>
         {category === CostType.MATERIAL ? (
@@ -268,8 +275,29 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="notes" label={<span style={labelStyle}>Notes</span>}>
-          <Input.TextArea rows={2} placeholder="Optional notes..." style={{ ...inputStyle, resize: 'none' }} />
+        <Form.Item name="unit" label={<span style={labelStyle}>Unit (optional)</span>}>
+          <Input
+            style={inputStyle}
+            placeholder="Leave blank to use pc (material), lot (labor/equipment), or l (fuel)"
+            allowClear
+          />
+        </Form.Item>
+        <Form.Item name="scopeLines" label={<span style={labelStyle}>Scope of work (optional)</span>}>
+          <Input.TextArea
+            rows={3}
+            placeholder="One bullet per line — appears under SCOPE OF WORKS for this trade on the BOQ report."
+            style={{ ...inputStyle, resize: 'none' }}
+          />
+        </Form.Item>
+        <Form.Item name="exclusionNotes" label={<span style={labelStyle}>Notes / exclusions (optional)</span>}>
+          <Input.TextArea
+            rows={2}
+            placeholder="One note per line — shown in red on the BOQ report (e.g. exclusions)."
+            style={{ ...inputStyle, resize: 'none' }}
+          />
+        </Form.Item>
+        <Form.Item name="notes" label={<span style={labelStyle}>Internal notes</span>}>
+          <Input.TextArea rows={2} placeholder="Optional — stored in description only." style={{ ...inputStyle, resize: 'none' }} />
         </Form.Item>
       </Form>
     </Modal>
@@ -615,16 +643,16 @@ const ProjectDetail: React.FC = () => {
     {
       title: 'Trade',
       key: 'trade',
-      render: () => (
+      render: (_, record) => (
         <Tag style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.16)', color: '#fff' }}>
-          —
+          {getEffectiveTradeCategory(record, BOQ_TRADE_CATEGORIES)}
         </Tag>
       ),
     },
     {
       title: 'Unit',
       key: 'unit',
-      render: () => <Text style={{ color: '#bbb' }}>—</Text>,
+      render: (_, record) => <Text style={{ color: '#bbb' }}>{record.unit?.trim() || '—'}</Text>,
     },
     {
       title: 'Est. Qty',

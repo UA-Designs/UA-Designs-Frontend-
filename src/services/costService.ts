@@ -67,6 +67,8 @@ export interface Cost {
   scopeOfWorks?: string[];
   materialLines?: { name: string; quantity?: number; unit?: string }[];
   exclusionNotes?: string[];
+  /** BOQ trade section (e.g. Electrical Works) — required in UI for new items */
+  tradeCategory?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +90,9 @@ export interface CreateCostData {
   unit?: string;
   actualQty?: number;
   actualAmount?: number;
+  tradeCategory?: string;
+  scopeOfWorks?: string[];
+  exclusionNotes?: string[];
 }
 
 export interface CostSummary {
@@ -309,6 +314,7 @@ function normalizeCost(c: any): Cost {
     scopeOfWorks: Array.isArray(c.scopeOfWorks) ? c.scopeOfWorks : Array.isArray(c.scope_of_works) ? c.scope_of_works : undefined,
     materialLines: Array.isArray(c.materialLines) ? c.materialLines : Array.isArray(c.material_lines) ? c.material_lines : undefined,
     exclusionNotes: Array.isArray(c.exclusionNotes) ? c.exclusionNotes : Array.isArray(c.exclusion_notes) ? c.exclusion_notes : undefined,
+    tradeCategory: c.tradeCategory ?? c.trade_category,
   };
 }
 

@@ -157,6 +157,31 @@
   font-size: 9px;
 }
 
+/* Thick rule between scope and materials (formal BOQ style) */
+.boq-report-scope-mat-divider {
+  border: none;
+  border-top: 2px solid #111;
+  margin: 12px 0 10px;
+}
+
+.boq-trade-mat-row td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.boq-mat-indent {
+  padding-left: 18px !important;
+  font-size: 9px;
+  color: #222;
+}
+
+.boq-report-notes-cell {
+  color: #c00;
+  font-size: 9px;
+  padding-top: 8px !important;
+  padding-bottom: 12px !important;
+}
+
 .boq-report-footer {
   margin-top: 28px;
   padding-top: 16px;

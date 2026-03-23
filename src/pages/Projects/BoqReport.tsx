@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Spin, Typography, message } from 'antd';
 import { ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons';
 import { projectService } from '../../services/projectService';
-import { costService, Cost, CostType } from '../../services/costService';
+import { costService, Cost } from '../../services/costService';
 import type { Project } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { buildBoqTradeGroups } from './boqReportGrouping';
 import './BoqReport.css';
 
 const { Text } = Typography;
@@ -14,109 +15,8 @@ function formatPhp(n: number): string {
   return `Php ${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/**
- * BOQ report row mapping:
- * - Labor & equipment → lump sum (lot / l.s.): one package price, qty usually 1.
- * - Materials → per piece / per unit (pc, sheet, sq.m., etc.): qty × unit reflects takeoff.
- * API laborEquipmentCost / materialCost override inference when both are set.
- */
-export function mapCostToBoqReportRow(cost: Cost, index: number) {
-  let qty = cost.estimatedQty != null && cost.estimatedQty > 0 ? cost.estimatedQty : 1;
-  let unit = (cost.unit && String(cost.unit).trim()) || '';
-
-  const lineAmount =
-    Number(cost.amount) > 0
-      ? Number(cost.amount)
-      : qty * (Number(cost.unitCost) || 0);
-
-  let labor = cost.laborEquipmentCost != null ? Number(cost.laborEquipmentCost) : NaN;
-  let material = cost.materialCost != null ? Number(cost.materialCost) : NaN;
-
-  if (!Number.isFinite(labor)) labor = 0;
-  if (!Number.isFinite(material)) material = 0;
-
-  const t = String(cost.type || '').toUpperCase();
-  const isMaterialCategory = t === CostType.MATERIAL || t === 'MATERIAL';
-  const isFuel = t === CostType.FUEL || t === 'FUEL';
-  const isLaborEquipmentCategory =
-    t === CostType.LABOR ||
-    t === 'LABOR' ||
-    t === CostType.EQUIPMENT ||
-    t === 'EQUIPMENT' ||
-    t === CostType.FORMWORKS ||
-    t === 'FORMWORKS' ||
-    t === CostType.OVERHEAD ||
-    t === 'OVERHEAD' ||
-    t === CostType.OTHER ||
-    t === 'OTHER';
-
-  if (labor === 0 && material === 0 && lineAmount > 0) {
-    if (isMaterialCategory || isFuel) {
-      material = lineAmount;
-    } else if (isLaborEquipmentCategory) {
-      labor = lineAmount;
-    } else {
-      material = lineAmount;
-    }
-  }
-
-  const materialOnly = material > 0 && labor === 0;
-  const laborOnly = labor > 0 && material === 0;
-  const mixedLaborAndMaterial = labor > 0 && material > 0;
-
-  // Units: materials → per piece / measured unit; labor & equipment → lump sum (lot / l.s.)
-  if (!unit) {
-    if (materialOnly) {
-      unit = isFuel ? 'l' : 'pc';
-    } else if (laborOnly) {
-      unit = 'lot';
-    } else if (mixedLaborAndMaterial) {
-      unit = 'lot';
-    } else {
-      unit = 'lot';
-    }
-  }
-
-  // Lump-sum labor & equipment rows: qty 1 unless user explicitly entered another qty
-  if (laborOnly || mixedLaborAndMaterial) {
-    const hasExplicitQty = cost.estimatedQty != null && cost.estimatedQty > 0;
-    if (!hasExplicitQty) {
-      qty = 1;
-    }
-  }
-
-  const unitCost = labor + material;
-  const amountCol = lineAmount > 0 ? lineAmount : unitCost * qty;
-
-  const itemNo = cost.itemNumber?.trim() || `${(index + 1).toFixed(2)}`;
-
-  const scope =
-    cost.scopeOfWorks && cost.scopeOfWorks.length > 0
-      ? cost.scopeOfWorks
-      : cost.description
-        ? cost.description
-            .split(/\n+/)
-            .map(s => s.trim())
-            .filter(Boolean)
-        : [];
-
-  const materialLines = cost.materialLines && cost.materialLines.length > 0 ? cost.materialLines : [];
-
-  const notes = cost.exclusionNotes && cost.exclusionNotes.length > 0 ? cost.exclusionNotes : [];
-
-  return {
-    itemNo,
-    title: cost.name || '—',
-    qty,
-    unit,
-    labor,
-    material,
-    unitCost: unitCost > 0 ? unitCost : amountCol / (qty || 1),
-    amount: amountCol,
-    scope,
-    materialLines,
-    notes,
-  };
+function formatQty(n: number): string {
+  return Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const BoqReport: React.FC = () => {
@@ -162,14 +62,14 @@ const BoqReport: React.FC = () => {
     load();
   }, [load]);
 
-  const rows = useMemo(() => costs.map((c, i) => mapCostToBoqReportRow(c, i)), [costs]);
+  const tradeGroups = useMemo(() => buildBoqTradeGroups(costs), [costs]);
 
   const totals = useMemo(() => {
-    const laborSum = rows.reduce((s, r) => s + r.labor, 0);
-    const materialSum = rows.reduce((s, r) => s + r.material, 0);
-    const amountSum = rows.reduce((s, r) => s + r.amount, 0);
+    const laborSum = tradeGroups.reduce((s, g) => s + g.laborSum, 0);
+    const materialSum = tradeGroups.reduce((s, g) => s + g.materialSum, 0);
+    const amountSum = tradeGroups.reduce((s, g) => s + g.amount, 0);
     return { laborSum, materialSum, amountSum };
-  }, [rows]);
+  }, [tradeGroups]);
 
   const proposedTotal = useMemo(() => {
     const p = project as Project & { boqProposedTotal?: number };
@@ -233,8 +133,9 @@ const BoqReport: React.FC = () => {
       <div className="boq-report-document">
         <h1>Bill of Quantities</h1>
         <p className="boq-report-convention">
-          Labor and equipment costs are shown as <strong>lump sum</strong> (lot / l.s.). Material quantities are{' '}
-          <strong>per piece</strong> or per listed unit (pc, sheet, sq.m., etc.).
+          BOQ is grouped by <strong>trade category</strong>. Each trade uses <strong>lot</strong> for the summary line;{' '}
+          <strong>materials</strong> under that trade are listed per quantity and unit (pc, box, sheet, etc.). Labor and equipment
+          lines roll into the lump-sum columns for that trade.
         </p>
 
         <div className="boq-report-meta">
@@ -298,69 +199,81 @@ const BoqReport: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {tradeGroups.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>
-                    No BOQ items yet. Add lines on the project BOQ tab — they will appear here automatically.
+                    No BOQ items yet. Add lines on the project BOQ tab (choose a trade category for each line).
                   </td>
                 </tr>
               ) : (
-                rows.map((r, idx) => (
-                  <tr key={idx}>
-                    <td className="col-no">{r.itemNo}</td>
-                    <td className="col-desc">
-                      <div className="boq-report-item-title">{r.title}</div>
-                      {r.scope.length > 0 && (
-                        <div className="boq-report-scope">
-                          <div className="boq-report-scope-title">SCOPE OF WORKS</div>
-                          <ol>
-                            {r.scope.map((line, i) => (
-                              <li key={i}>{line}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
-                      {r.materialLines.length > 0 && (
-                        <div>
-                          <div className="boq-report-mat-title">Materials to be use</div>
-                          {r.materialLines.map((m, i) => (
-                            <div key={i} className="boq-report-mat-line">
-                              {m.name}
-                              {m.quantity != null && (
-                                <>
-                                  {' '}
-                                  | {Number(m.quantity).toLocaleString('en-PH', { maximumFractionDigits: 2 })}{' '}
-                                  {m.unit || ''}
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {r.notes.length > 0 && (
-                        <div className="boq-report-notes">
-                          {r.notes.map((n, i) => (
+                tradeGroups.flatMap((g, gi) => {
+                  const block: React.ReactNode[] = [];
+
+                  block.push(
+                    <tr key={`g-${gi}-main`} className="boq-trade-main-row">
+                      <td className="col-no">{g.itemNo}</td>
+                      <td className="col-desc">
+                        <div className="boq-report-item-title">{g.trade.toUpperCase()}</div>
+                        {g.scopeLines.length > 0 && (
+                          <div className="boq-report-scope">
+                            <div className="boq-report-scope-title">SCOPE OF WORKS</div>
+                            <ol>
+                              {g.scopeLines.map((line, i) => (
+                                <li key={i}>{line}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                        {g.materialRows.length > 0 && (
+                          <>
+                            <hr className="boq-report-scope-mat-divider" />
+                            <div className="boq-report-mat-title">Materials to be use</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="col-qty">{formatQty(1)}</td>
+                      <td className="col-unit">lot</td>
+                      <td className="col-money">{g.laborSum > 0 ? formatPhp(g.laborSum) : '—'}</td>
+                      <td className="col-money">{g.materialSum > 0 ? formatPhp(g.materialSum) : '—'}</td>
+                      <td className="col-money">{formatPhp(g.unitCost)}</td>
+                      <td className="col-money">{formatPhp(g.amount)}</td>
+                    </tr>,
+                  );
+
+                  g.materialRows.forEach((m, mi) => {
+                    block.push(
+                      <tr key={`g-${gi}-mat-${mi}`} className="boq-trade-mat-row">
+                        <td className="col-no" />
+                        <td className="col-desc boq-mat-indent">{m.name}</td>
+                        <td className="col-qty">{formatQty(m.qty)}</td>
+                        <td className="col-unit">{m.unit}</td>
+                        <td className="col-money" colSpan={4} />
+                      </tr>,
+                    );
+                  });
+
+                  if (g.notes.length > 0) {
+                    block.push(
+                      <tr key={`g-${gi}-notes`} className="boq-trade-notes-row">
+                        <td colSpan={8} className="boq-report-notes-cell">
+                          {g.notes.map((n, i) => (
                             <div key={i}>
-                              Note: {n}
+                              <em>Note: {n}</em>
                             </div>
                           ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="col-qty">{r.qty.toLocaleString('en-PH', { maximumFractionDigits: 2 })}</td>
-                    <td className="col-unit">{r.unit}</td>
-                    <td className="col-money">{r.labor > 0 ? formatPhp(r.labor) : '—'}</td>
-                    <td className="col-money">{r.material > 0 ? formatPhp(r.material) : '—'}</td>
-                    <td className="col-money">{formatPhp(r.unitCost)}</td>
-                    <td className="col-money">{formatPhp(r.amount)}</td>
-                  </tr>
-                ))
+                        </td>
+                      </tr>,
+                    );
+                  }
+
+                  return block;
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        {rows.length > 0 && (
+        {tradeGroups.length > 0 && (
           <div className="boq-report-footer">
             <div className="boq-report-footer-row">
               <span>Labor and Equipment Cost</span>
