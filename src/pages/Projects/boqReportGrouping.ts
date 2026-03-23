@@ -1,9 +1,47 @@
 import { BOQ_TRADE_CATEGORIES, getEffectiveTradeCategory } from '../../constants/boqTradeCategories';
 import { Cost, CostType } from '../../services/costService';
 
+/**
+ * Best-effort quantity for a BOQ line (report + amount math).
+ * Uses estimatedQty when &gt; 0; if missing/zero, derives from amount ÷ unitCost when possible.
+ * Avoids forcing "1" when the API omits estimatedQty but amount and unit cost exist.
+ */
+export function resolveBoqLineQty(cost: Cost): number {
+  const raw = cost.estimatedQty;
+  if (raw != null && Number.isFinite(Number(raw)) && Number(raw) > 0) {
+    return Number(raw);
+  }
+  const amt = Number(cost.amount);
+  const uc = Number(cost.unitCost);
+  if (amt > 0 && uc > 0) {
+    return amt / uc;
+  }
+  if (raw != null && Number.isFinite(Number(raw))) {
+    return Number(raw);
+  }
+  return 1;
+}
+
+/** Combine separate BOQ logs for the same material + unit into one row (sum qty). */
+function mergeMaterialRowsByNameAndUnit(rows: { name: string; qty: number; unit: string }[]): { name: string; qty: number; unit: string }[] {
+  const map = new Map<string, { name: string; qty: number; unit: string }>();
+  for (const r of rows) {
+    const unit = (r.unit || 'pc').trim();
+    const name = (r.name || '—').trim();
+    const key = `${name.toLowerCase()}\0${unit.toLowerCase()}`;
+    const prev = map.get(key);
+    if (prev) {
+      prev.qty += r.qty;
+    } else {
+      map.set(key, { name, qty: r.qty, unit });
+    }
+  }
+  return Array.from(map.values());
+}
+
 /** Split a single cost line into labor vs material amounts (same rules as BOQ report). */
 export function getCostLaborMaterialSplit(cost: Cost): { labor: number; material: number; lineAmount: number } {
-  const qty = cost.estimatedQty != null && cost.estimatedQty > 0 ? cost.estimatedQty : 1;
+  const qty = resolveBoqLineQty(cost);
   const lineAmount =
     Number(cost.amount) > 0 ? Number(cost.amount) : qty * (Number(cost.unitCost) || 0);
 
@@ -105,13 +143,14 @@ export function buildBoqTradeGroups(costs: Cost[]): BoqTradeGroup[] {
 
     const scopeLines = buildGroupScopeLines(items);
 
-    const materialRows = items.filter(c => isMaterialBoqLineType(c.type)).map(c => {
-      const qty = c.estimatedQty != null && c.estimatedQty > 0 ? c.estimatedQty : 1;
+    const materialRowsRaw = items.filter(c => isMaterialBoqLineType(c.type)).map(c => {
+      const qty = resolveBoqLineQty(c);
       const t = String(c.type || '').toUpperCase();
       const defaultUnit = t === 'FUEL' ? 'l' : 'pc';
       const unit = (c.unit && c.unit.trim()) || defaultUnit;
       return { name: c.name || '—', qty, unit };
     });
+    const materialRows = mergeMaterialRowsByNameAndUnit(materialRowsRaw);
 
     const notes: string[] = [];
     const seenN = new Set<string>();
