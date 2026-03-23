@@ -70,6 +70,10 @@ export interface Project {
   clientEmail?: string;
   clientPhone?: string;
   location?: string;
+  /** BOQ report header/footer (optional — when API provides them) */
+  floorAreaTotalSqm?: number;
+  floorAreaBreakdown?: { label: string; sqm?: number | null }[];
+  boqProposedTotal?: number;
   isActive?: boolean;
   teamMembers?: ProjectTeamMember[];
   createdAt: string;

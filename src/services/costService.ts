@@ -59,6 +59,14 @@ export interface Cost {
   amountReceived?: number;
   /** Backend- or frontend-computed variance status */
   varianceStatus?: 'OK' | 'LOW' | 'CRITICAL' | null;
+  /** Formal BOQ report (optional — when backend supports PDF-style BOQ) */
+  itemNumber?: string;
+  sortOrder?: number;
+  laborEquipmentCost?: number;
+  materialCost?: number;
+  scopeOfWorks?: string[];
+  materialLines?: { name: string; quantity?: number; unit?: string }[];
+  exclusionNotes?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -294,6 +302,13 @@ function normalizeCost(c: any): Cost {
     actualAmount: c.actualAmount != null ? num(c.actualAmount) : undefined,
     amountReceived: c.amountReceived != null ? num(c.amountReceived) : undefined,
     varianceStatus: c.varianceStatus === 'OK' || c.varianceStatus === 'LOW' || c.varianceStatus === 'CRITICAL' ? c.varianceStatus : null,
+    itemNumber: c.itemNumber ?? c.item_number,
+    sortOrder: c.sortOrder != null ? num(c.sortOrder) : c.sort_order != null ? num(c.sort_order) : undefined,
+    laborEquipmentCost: c.laborEquipmentCost != null ? num(c.laborEquipmentCost) : c.labor_equipment_cost != null ? num(c.labor_equipment_cost) : undefined,
+    materialCost: c.materialCost != null ? num(c.materialCost) : c.material_cost != null ? num(c.material_cost) : undefined,
+    scopeOfWorks: Array.isArray(c.scopeOfWorks) ? c.scopeOfWorks : Array.isArray(c.scope_of_works) ? c.scope_of_works : undefined,
+    materialLines: Array.isArray(c.materialLines) ? c.materialLines : Array.isArray(c.material_lines) ? c.material_lines : undefined,
+    exclusionNotes: Array.isArray(c.exclusionNotes) ? c.exclusionNotes : Array.isArray(c.exclusion_notes) ? c.exclusion_notes : undefined,
   };
 }
 

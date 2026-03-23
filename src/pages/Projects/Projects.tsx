@@ -45,6 +45,7 @@ import {
   EyeOutlined,
   EnvironmentOutlined,
   CalendarOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { projectService, ProjectFilters, ProjectDashboardData } from '../../services/projectService';
@@ -517,6 +518,12 @@ const Projects: React.FC = () => {
 
             const menuItems = [
               { key: 'view', icon: <EyeOutlined />, label: 'View Details', onClick: () => goToProjectDetail(record) },
+              {
+                key: 'boq',
+                icon: <FilePdfOutlined />,
+                label: 'BOQ report',
+                onClick: () => navigate(`/projects/${record.id}/boq-report`),
+              },
               { key: 'dashboard', icon: <DashboardOutlined />, label: 'View Dashboard', onClick: () => openDashboard(record) },
               ...(isPM ? [
                 { key: 'edit', icon: <EditOutlined />, label: 'Edit Project', onClick: () => openEdit(record) },
@@ -579,15 +586,29 @@ const Projects: React.FC = () => {
                     <Progress percent={pctUsedProgress} size="small" strokeColor="#009944" showInfo={false} />
                     <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsedLabel}% used</Text>
                   </Space>
-                  <Button
-                    type="default"
-                    icon={<EyeOutlined />}
-                    block
-                    style={{ marginTop: 16, background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
-                    onClick={e => goToProjectDetail(record, e)}
-                  >
-                    View Details
-                  </Button>
+                  <Space direction="vertical" size={8} style={{ width: '100%', marginTop: 16 }}>
+                    <Button
+                      type="default"
+                      icon={<EyeOutlined />}
+                      block
+                      style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                      onClick={e => goToProjectDetail(record, e)}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      type="default"
+                      icon={<FilePdfOutlined />}
+                      block
+                      style={{ borderColor: 'rgba(0,153,68,0.45)', color: '#00ff88' }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        navigate(`/projects/${record.id}/boq-report`);
+                      }}
+                    >
+                      BOQ report
+                    </Button>
+                  </Space>
                 </Card>
               </Col>
             );

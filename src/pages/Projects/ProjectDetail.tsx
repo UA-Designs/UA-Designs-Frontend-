@@ -42,6 +42,7 @@ import {
   ToolOutlined,
   CarryOutOutlined,
   UploadOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -868,9 +869,18 @@ const ProjectDetail: React.FC = () => {
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
             <Typography.Title level={4} style={{ color: '#ffffff', margin: 0 }}>Bill of Quantities</Typography.Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944' }}>
-              Add Material
-            </Button>
+            <Space wrap>
+              <Button
+                icon={<FilePdfOutlined />}
+                onClick={() => navigate(`/projects/${projectId}/boq-report`)}
+                style={{ borderColor: 'rgba(0,153,68,0.5)', color: '#00ff88' }}
+              >
+                View BOQ report
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddBOQModalOpen(true)} style={{ background: '#009944', borderColor: '#009944' }}>
+                Add Material
+              </Button>
+            </Space>
           </div>
           <Text style={{ display: 'block', color: '#00ff88', fontSize: 20, fontWeight: 700, marginBottom: 16 }}>
             Total Project Budget (BOQ): {formatCurrency(totalBOQ || budget)}
@@ -1129,6 +1139,14 @@ const ProjectDetail: React.FC = () => {
             {project.name}
           </Typography.Title>
           <Tag color={statusCfg.color}>{statusCfg.label}</Tag>
+          <Button
+            type="primary"
+            icon={<FilePdfOutlined />}
+            onClick={() => navigate(`/projects/${projectId}/boq-report`)}
+            style={{ background: '#009944', borderColor: '#009944' }}
+          >
+            View BOQ report
+          </Button>
         </div>
         {project.clientName && (
           <Text style={{ color: '#aaa', fontSize: 14 }}>{project.clientName}</Text>
