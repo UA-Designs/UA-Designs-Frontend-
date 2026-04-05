@@ -144,7 +144,6 @@ const Materials: React.FC = () => {
         name: values.name,
         unit: values.unit ?? 'Pieces (pc)',
         unitCost: Number(values.defaultCost ?? values.unitCost ?? 0),
-        quantity: Number(values.quantity ?? 0),
         category: values.category || DEFAULT_MATERIAL_CATEGORY,
         description: values.description,
       });
@@ -449,14 +448,6 @@ const Materials: React.FC = () => {
           <Form.Item
             name="defaultCost"
             label="Unit Cost (₱)"
-            rules={[{ required: true, message: 'Required' }]}
-            initialValue={0}
-          >
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="quantity"
-            label="Quantity"
             rules={[{ required: true, message: 'Required' }]}
             initialValue={0}
           >

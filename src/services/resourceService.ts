@@ -13,7 +13,7 @@ export interface CreateMaterialData {
   projectId?: string;
   unit: string;
   unitCost: number;
-  quantity: number;
+  quantity?: number;
   description?: string;
   category?: string;
   supplier?: string;
@@ -139,15 +139,15 @@ class ResourceService {
     }
   }
 
-  // POST /api/resources/materials — required: name, unit, unitCost, quantity; projectId optional (materials are global)
+  // POST /api/resources/materials — required: name, unit, unitCost; projectId optional (materials are global)
   async createMaterial(data: CreateMaterialData): Promise<Material> {
     try {
       const payload: Record<string, unknown> = {
         name: String(data.name).trim(),
         unit: data.unit ?? 'pcs',
         unitCost: Number(data.unitCost ?? data.defaultCost ?? 0),
-        quantity: Number(data.quantity ?? 0),
       };
+      if (data.quantity != null) payload.quantity = Number(data.quantity);
       if (data.projectId != null && data.projectId !== '') payload.projectId = data.projectId;
       if (data.description != null && data.description !== '') payload.description = data.description;
       if (data.category != null && data.category !== '') payload.category = data.category;
