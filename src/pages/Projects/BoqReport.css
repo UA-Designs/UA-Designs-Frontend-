@@ -169,6 +169,12 @@
   padding-bottom: 4px;
 }
 
+.boq-trade-subtotal-row td {
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .boq-mat-indent {
   padding-left: 18px !important;
   font-size: 9px;

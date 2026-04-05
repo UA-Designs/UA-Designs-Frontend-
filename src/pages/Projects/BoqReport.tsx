@@ -224,33 +224,49 @@ const BoqReport: React.FC = () => {
                             </ol>
                           </div>
                         )}
-                        {g.materialRows.length > 0 && (
+                        {g.itemRows.length > 0 && (
                           <>
                             <hr className="boq-report-scope-mat-divider" />
-                            <div className="boq-report-mat-title">Materials to be use</div>
+                            <div className="boq-report-mat-title">Items</div>
                           </>
                         )}
                       </td>
-                      <td className="col-qty">{formatQty(1)}</td>
-                      <td className="col-unit">lot</td>
-                      <td className="col-money">{g.laborSum > 0 ? formatPhp(g.laborSum) : '—'}</td>
-                      <td className="col-money">{g.materialSum > 0 ? formatPhp(g.materialSum) : '—'}</td>
-                      <td className="col-money">{formatPhp(g.unitCost)}</td>
-                      <td className="col-money">{formatPhp(g.amount)}</td>
+                      <td className="col-qty">—</td>
+                      <td className="col-unit">—</td>
+                      <td className="col-money">—</td>
+                      <td className="col-money">—</td>
+                      <td className="col-money">—</td>
+                      <td className="col-money">—</td>
                     </tr>,
                   );
 
-                  g.materialRows.forEach((m, mi) => {
+                  g.itemRows.forEach((m, mi) => {
                     block.push(
                       <tr key={`g-${gi}-mat-${mi}`} className="boq-trade-mat-row">
                         <td className="col-no" />
                         <td className="col-desc boq-mat-indent">{m.name}</td>
                         <td className="col-qty">{formatQty(m.qty)}</td>
                         <td className="col-unit">{m.unit}</td>
-                        <td className="col-money" colSpan={4} />
+                        <td className="col-money">{m.labor > 0 ? formatPhp(m.labor) : '—'}</td>
+                        <td className="col-money">{m.material > 0 ? formatPhp(m.material) : '—'}</td>
+                        <td className="col-money">{formatPhp(m.unitCost)}</td>
+                        <td className="col-money">{formatPhp(m.amount)}</td>
                       </tr>,
                     );
                   });
+
+                  block.push(
+                    <tr key={`g-${gi}-subtotal`} className="boq-trade-subtotal-row">
+                      <td className="col-no" />
+                      <td className="col-desc"><strong>{`${g.trade.toUpperCase()} TOTAL`}</strong></td>
+                      <td className="col-qty">—</td>
+                      <td className="col-unit">—</td>
+                      <td className="col-money"><strong>{g.laborSum > 0 ? formatPhp(g.laborSum) : '—'}</strong></td>
+                      <td className="col-money"><strong>{g.materialSum > 0 ? formatPhp(g.materialSum) : '—'}</strong></td>
+                      <td className="col-money"><strong>{formatPhp(g.unitCost)}</strong></td>
+                      <td className="col-money"><strong>{formatPhp(g.amount)}</strong></td>
+                    </tr>,
+                  );
 
                   if (g.notes.length > 0) {
                     block.push(

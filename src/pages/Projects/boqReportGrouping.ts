@@ -22,23 +22,6 @@ export function resolveBoqLineQty(cost: Cost): number {
   return 1;
 }
 
-/** Combine separate BOQ logs for the same material + unit into one row (sum qty). */
-function mergeMaterialRowsByNameAndUnit(rows: { name: string; qty: number; unit: string }[]): { name: string; qty: number; unit: string }[] {
-  const map = new Map<string, { name: string; qty: number; unit: string }>();
-  for (const r of rows) {
-    const unit = (r.unit || 'pc').trim();
-    const name = (r.name || '—').trim();
-    const key = `${name.toLowerCase()}\0${unit.toLowerCase()}`;
-    const prev = map.get(key);
-    if (prev) {
-      prev.qty += r.qty;
-    } else {
-      map.set(key, { name, qty: r.qty, unit });
-    }
-  }
-  return Array.from(map.values());
-}
-
 /** Split a single cost line into labor vs material amounts (same rules as BOQ report). */
 export function getCostLaborMaterialSplit(cost: Cost): { labor: number; material: number; lineAmount: number } {
   const qty = resolveBoqLineQty(cost);
@@ -112,7 +95,15 @@ export interface BoqTradeGroup {
   unitCost: number;
   amount: number;
   scopeLines: string[];
-  materialRows: { name: string; qty: number; unit: string }[];
+  itemRows: {
+    name: string;
+    qty: number;
+    unit: string;
+    labor: number;
+    material: number;
+    unitCost: number;
+    amount: number;
+  }[];
   notes: string[];
 }
 
@@ -143,14 +134,24 @@ export function buildBoqTradeGroups(costs: Cost[]): BoqTradeGroup[] {
 
     const scopeLines = buildGroupScopeLines(items);
 
-    const materialRowsRaw = items.filter(c => isMaterialBoqLineType(c.type)).map(c => {
+    const itemRows = items.map(c => {
       const qty = resolveBoqLineQty(c);
       const t = String(c.type || '').toUpperCase();
-      const defaultUnit = t === 'FUEL' ? 'l' : 'pc';
+      const defaultUnit = t === 'FUEL' ? 'l' : (isMaterialBoqLineType(c.type) ? 'pc' : 'lot');
       const unit = (c.unit && c.unit.trim()) || defaultUnit;
-      return { name: c.name || '—', qty, unit };
+      const split = getCostLaborMaterialSplit(c);
+      const amount = Number(split.lineAmount || 0);
+      const unitCost = qty > 0 ? amount / qty : amount;
+      return {
+        name: c.name || '—',
+        qty,
+        unit,
+        labor: Number(split.labor || 0),
+        material: Number(split.material || 0),
+        unitCost,
+        amount,
+      };
     });
-    const materialRows = mergeMaterialRowsByNameAndUnit(materialRowsRaw);
 
     const notes: string[] = [];
     const seenN = new Set<string>();
@@ -172,7 +173,7 @@ export function buildBoqTradeGroups(costs: Cost[]): BoqTradeGroup[] {
       unitCost,
       amount,
       scopeLines,
-      materialRows,
+      itemRows,
       notes,
     };
   });
