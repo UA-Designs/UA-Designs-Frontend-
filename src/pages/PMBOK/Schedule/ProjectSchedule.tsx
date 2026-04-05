@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Typography,
   Button,
@@ -47,6 +47,7 @@ import {
   CreateTaskData,
   CreateDependencyData,
 } from '../../../services/scheduleService';
+import { riskService, RiskStatus } from '../../../services/riskService';
 import GanttChart from '../../../components/Schedule/GanttChart';
 import dayjs from 'dayjs';
 
@@ -82,6 +83,7 @@ const ProjectSchedule: React.FC = () => {
   const [tasks, setTasks] = useState<ScheduleTask[]>([]);
   const [dependencies, setDependencies] = useState<TaskDependency[]>([]);
   const [criticalPathData, setCriticalPathData] = useState<CriticalPathData | null>(null);
+  const [scheduleRisks, setScheduleRisks] = useState<any[]>([]);
 
   // Modal states
   const [taskModalVisible, setTaskModalVisible] = useState(false);
@@ -111,15 +113,27 @@ const ProjectSchedule: React.FC = () => {
     if (!selectedProject) return;
     setLoading(true);
     try {
-      const [tasksResult, depsResult, cpResult] = await Promise.allSettled([
+      const [tasksResult, depsResult, cpResult, risksResult] = await Promise.allSettled([
         scheduleService.getProjectTasks(selectedProject.id),
         scheduleService.getProjectDependencies(selectedProject.id),
         scheduleService.getCriticalPath(selectedProject.id),
+        riskService.getRisks(selectedProject.id, undefined, 1, 200),
       ]);
 
       if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value);
       if (depsResult.status === 'fulfilled') setDependencies(depsResult.value);
       if (cpResult.status === 'fulfilled' && cpResult.value) setCriticalPathData(cpResult.value);
+      if (risksResult.status === 'fulfilled') {
+        const allRisks = Array.isArray(risksResult.value?.risks) ? risksResult.value.risks : [];
+        const isScheduleRisk = (r: any) => {
+          const cat = `${r?.category?.name || r?.riskCategory?.name || r?.category || ''}`.toLowerCase();
+          return cat.includes('schedule');
+        };
+        const active = allRisks.filter((r: any) => r?.status !== RiskStatus.CLOSED && isScheduleRisk(r));
+        setScheduleRisks(active);
+      } else {
+        setScheduleRisks([]);
+      }
     } catch {
       message.error('Failed to load schedule data');
     } finally {
@@ -230,6 +244,40 @@ const ProjectSchedule: React.FC = () => {
   const completedCount = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
   const inProgressCount = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
   const criticalPathLength = criticalPathData?.criticalPath?.length ?? 0;
+  const estimatedFinishDate = useMemo(() => {
+    const candidates = tasks
+      .filter(t => t.startDate || t.endDate)
+      .map((t) => {
+        if (t.endDate) return dayjs(t.endDate);
+        if (t.startDate) return dayjs(t.startDate).add(t.duration ?? 1, 'day');
+        return null;
+      })
+      .filter((d): d is dayjs.Dayjs => Boolean(d && d.isValid()));
+    if (!candidates.length) return null;
+    return candidates.reduce((max, d) => (d.isAfter(max) ? d : max), candidates[0]);
+  }, [tasks]);
+
+  const scheduleDelayDays = useMemo(() => {
+    if (!scheduleRisks.length) return 0;
+    const severityFallback: Record<string, number> = {
+      LOW: 1,
+      MEDIUM: 3,
+      HIGH: 7,
+      CRITICAL: 14,
+    };
+    return scheduleRisks.reduce((sum, r: any) => {
+      const explicitDelay =
+        Number(r?.delayDays ?? r?.scheduleDelayDays ?? r?.impactDays ?? r?.delay_days ?? NaN);
+      if (Number.isFinite(explicitDelay) && explicitDelay > 0) return sum + explicitDelay;
+      const sev = String(r?.severity || '').toUpperCase();
+      return sum + (severityFallback[sev] ?? 0);
+    }, 0);
+  }, [scheduleRisks]);
+
+  const riskAdjustedFinishDate = useMemo(() => {
+    if (!estimatedFinishDate) return null;
+    return estimatedFinishDate.add(scheduleDelayDays, 'day');
+  }, [estimatedFinishDate, scheduleDelayDays]);
 
   // ---- Table Columns ----
 
@@ -582,6 +630,23 @@ const ProjectSchedule: React.FC = () => {
               {activeTab === 'gantt' && (
                 <div style={{ padding: 16 }}>
                   <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Visual timeline of tasks and their dependencies.</Text>
+                  {estimatedFinishDate && (
+                    <Alert
+                      style={{ marginBottom: 12 }}
+                      type={scheduleDelayDays > 0 ? 'warning' : 'info'}
+                      showIcon
+                      message={
+                        scheduleDelayDays > 0
+                          ? `Estimated finish moved by schedule risks: ${estimatedFinishDate.format('MMM DD, YYYY')} → ${riskAdjustedFinishDate?.format('MMM DD, YYYY')}`
+                          : `Estimated finish date: ${estimatedFinishDate.format('MMM DD, YYYY')}`
+                      }
+                      description={
+                        scheduleDelayDays > 0
+                          ? `${scheduleRisks.length} active schedule risk(s) contribute an estimated +${scheduleDelayDays} day${scheduleDelayDays !== 1 ? 's' : ''} delay.`
+                          : 'No active schedule-delay risks detected.'
+                      }
+                    />
+                  )}
                   {tasks.length === 0 ? (
                     <Alert
                       message="No tasks to display"
@@ -590,7 +655,13 @@ const ProjectSchedule: React.FC = () => {
                       showIcon
                     />
                   ) : (
-                    <GanttChart tasks={tasks} dependencies={dependencies} />
+                    <GanttChart
+                      tasks={tasks}
+                      dependencies={dependencies}
+                      riskDelayDays={scheduleDelayDays}
+                      estimatedFinishDate={estimatedFinishDate?.format('MMM DD, YYYY')}
+                      adjustedFinishDate={riskAdjustedFinishDate?.format('MMM DD, YYYY')}
+                    />
                   )}
                 </div>
               )}

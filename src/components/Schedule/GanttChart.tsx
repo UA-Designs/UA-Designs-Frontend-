@@ -16,6 +16,9 @@ const safeNum = (n: unknown): number => {
 interface GanttChartProps {
   tasks: ScheduleTask[];
   dependencies?: TaskDependency[];
+  riskDelayDays?: number;
+  estimatedFinishDate?: string;
+  adjustedFinishDate?: string;
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -26,7 +29,13 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   [TaskStatus.CANCELLED]: '#ff4d4f',
 };
 
-const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => {
+const GanttChart: React.FC<GanttChartProps> = ({
+  tasks,
+  dependencies = [],
+  riskDelayDays = 0,
+  estimatedFinishDate,
+  adjustedFinishDate,
+}) => {
   const chartData = useMemo(() => {
     if (!tasks.length) return [];
 
@@ -47,6 +56,16 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
         const end = task.endDate ? dayjs(task.endDate) : start.add(task.duration ?? 1, 'day');
         const offset = start.diff(minDate, 'day');
         const duration = end.diff(start, 'day') || 1;
+        const completedDateRaw =
+          (task as any).completedAt ??
+          (task as any).completed_at ??
+          (task as any).actualEndDate ??
+          (task as any).actual_end_date ??
+          undefined;
+        const completedDate = completedDateRaw ? dayjs(completedDateRaw) : null;
+        const completionLabel = completedDate?.isValid()
+          ? completedDate.format('MMM DD, YYYY')
+          : (task.status === TaskStatus.COMPLETED ? end.format('MMM DD, YYYY') : null);
 
         return {
           id: task.id,
@@ -57,6 +76,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
           progress: safeNum(task.progress),
           startLabel: start.format('MMM DD'),
           endLabel: end.format('MMM DD'),
+          durationDays: Math.max(1, safeNum(duration)),
+          completionLabel,
         };
       })
       .sort((a, b) => a.offset - b.offset);
@@ -92,6 +113,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
           </Tag>
           <br />
           <Text style={{ color: '#aaa', fontSize: 12 }}>Progress: {d.progress}%</Text>
+          {(d.status === TaskStatus.COMPLETED || d.completionLabel) && (
+            <>
+              <br />
+              <Text style={{ color: '#aaa', fontSize: 12 }}>
+                Done: {d.completionLabel || 'Yes'} ({d.durationDays} day{d.durationDays !== 1 ? 's' : ''})
+              </Text>
+            </>
+          )}
         </div>
       );
     }
@@ -100,6 +129,19 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, dependencies = [] }) => 
 
   return (
     <div>
+      {(estimatedFinishDate || adjustedFinishDate) && (
+        <div style={{ marginBottom: 12 }}>
+          <Text style={{ color: '#aaa', fontSize: 12 }}>
+            Estimated finish: <strong style={{ color: '#fff' }}>{estimatedFinishDate || '—'}</strong>
+            {riskDelayDays > 0 && (
+              <>
+                {' '}| Risk-adjusted finish: <strong style={{ color: '#ff4d4f' }}>{adjustedFinishDate || '—'}</strong>
+                {' '}(+{riskDelayDays} day{riskDelayDays !== 1 ? 's' : ''})
+              </>
+            )}
+          </Text>
+        </div>
+      )}
       <div style={{ marginBottom: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {Object.entries(STATUS_COLORS).map(([status, color]) => (
           <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
