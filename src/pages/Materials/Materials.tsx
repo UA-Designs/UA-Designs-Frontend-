@@ -44,6 +44,8 @@ const MATERIAL_UNITS = [
   'Rolls',
   'Bags',
   'Boxes',
+  'Lot',
+  'Lump Sum',
 ];
 
 const MATERIAL_CATEGORIES = [
