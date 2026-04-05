@@ -546,6 +546,11 @@ const ProjectDetail: React.FC = () => {
     return list;
   }, [expensesResult.expenses, varianceFilter, varianceSearch]);
 
+  const siteUsageRows = useMemo(
+    () => costs.filter((c) => Number(c.actualQty ?? 0) > 0 || Number(c.amountReceived ?? 0) > 0),
+    [costs]
+  );
+
   if (loading || !project) {
     return (
       <div style={{ padding: 24, display: 'flex', justifyContent: 'center', minHeight: 400, alignItems: 'center' }}>
@@ -861,6 +866,32 @@ const ProjectDetail: React.FC = () => {
     },
   ];
 
+  const siteUsageColumns: ColumnsType<Cost> = [
+    { title: 'Material', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
+    { title: 'UNIT', key: 'unit', render: (_, record) => <Text style={{ color: '#bbb' }}>{record.unit || '—'}</Text> },
+    { title: 'Planned Qty', key: 'plannedQty', render: (_, record) => <Text style={{ color: '#bbb' }}>{record.estimatedQty ?? 0}</Text> },
+    { title: 'Used Qty', key: 'usedQty', render: (_, record) => <Text style={{ color: '#fff' }}>{record.actualQty ?? 0}</Text> },
+    {
+      title: 'Remaining Qty',
+      key: 'remainingQty',
+      render: (_, record) => {
+        const planned = Number(record.estimatedQty ?? 0);
+        const used = Number(record.actualQty ?? 0);
+        return <Text style={{ color: '#bbb' }}>{Math.max(0, planned - used)}</Text>;
+      },
+    },
+    {
+      title: 'Actual Amount',
+      key: 'actualAmount',
+      render: (_, record) => {
+        const unitCost = record.unitCost != null ? Number(record.unitCost) : Number(record.amount ?? 0);
+        const used = Number(record.actualQty ?? 0);
+        const amountFromUsage = record.amountReceived != null ? Number(record.amountReceived) : unitCost * used;
+        return <Text style={{ color: '#00ff88' }}>{formatCurrency(amountFromUsage)}</Text>;
+      },
+    },
+  ];
+
   const expenseColumns: ColumnsType<Expense> = [
     { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
     { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
@@ -994,16 +1025,27 @@ const ProjectDetail: React.FC = () => {
                 Log Usage
               </Button>
             </div>
-            <Empty
-              description={
-                <Space direction="vertical" size={4} style={{ textAlign: 'center' }}>
-                  <Text style={{ color: '#b3b3b3', display: 'block' }}>No material usage logged yet.</Text>
-                  <Text style={{ color: '#888', fontSize: 13 }}>Log daily consumption to track variance.</Text>
-                </Space>
-              }
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              style={{ padding: 48 }}
-            />
+            {siteUsageRows.length > 0 ? (
+              <Table
+                rowKey="id"
+                dataSource={siteUsageRows}
+                columns={siteUsageColumns}
+                pagination={{ pageSize: 10 }}
+                size="small"
+                style={{ background: 'transparent' }}
+              />
+            ) : (
+              <Empty
+                description={
+                  <Space direction="vertical" size={4} style={{ textAlign: 'center' }}>
+                    <Text style={{ color: '#b3b3b3', display: 'block' }}>No material usage logged yet.</Text>
+                    <Text style={{ color: '#888', fontSize: 13 }}>Log daily consumption to track variance.</Text>
+                  </Space>
+                }
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ padding: 48 }}
+              />
+            )}
           </Card>
         </div>
       ),
