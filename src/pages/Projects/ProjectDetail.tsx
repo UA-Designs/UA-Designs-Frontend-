@@ -103,26 +103,12 @@ interface AddBOQModalProps {
   onAdded: (createdCost?: Cost) => void;
 }
 
-type MaterialSortMode = 'alphabetical' | 'recent';
-
 const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onAdded }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
-  const [materialSortMode, setMaterialSortMode] = useState<MaterialSortMode>('alphabetical');
   const category = Form.useWatch('category', form) || CostType.MATERIAL;
-
-  const loadMaterials = useCallback(async () => {
-    const sortParams =
-      materialSortMode === 'alphabetical'
-        ? { sortBy: 'name' as const, sortOrder: 'asc' as const }
-        : { sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
-    setLoadingOptions(true);
-    const mList = await resourceService.getMaterials(undefined, sortParams).catch(() => []);
-    setMaterials(Array.isArray(mList) ? mList : []);
-    setLoadingOptions(false);
-  }, [materialSortMode]);
 
   useEffect(() => {
     if (category === CostType.MATERIAL) {
@@ -136,12 +122,13 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     if (!open || !projectId) return;
     form.resetFields();
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0, tradeCategory: undefined });
+    setLoadingOptions(true);
+    const load = async () => {
+      const mList = await resourceService.getMaterials().catch(() => []);
+      setMaterials(Array.isArray(mList) ? mList : []);
+    };
+    load().finally(() => setLoadingOptions(false));
   }, [open, projectId, form]);
-
-  useEffect(() => {
-    if (!open || !projectId) return;
-    loadMaterials();
-  }, [open, projectId, materialSortMode, loadMaterials]);
 
   const materialOptions = useMemo(
     () => materials.map(m => ({ id: m.id, name: m.name })),
@@ -253,35 +240,20 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
           />
         </Form.Item>
         {category === CostType.MATERIAL ? (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ color: '#d9d9d9' }}>Sort materials by</Text>
-              <Segmented
-                size="small"
-                options={[
-                  { label: 'Alphabetical', value: 'alphabetical' },
-                  { label: 'Recently Added', value: 'recent' },
-                ]}
-                value={materialSortMode}
-                onChange={(value) => setMaterialSortMode(value as MaterialSortMode)}
-                style={{ background: '#2a2a2a' }}
-              />
-            </div>
-            <Form.Item
-              name="materialId"
-              label={<span style={labelStyle}>Material *</span>}
-              rules={[{ required: true, message: 'Select material' }]}
-            >
-              <Select
-                placeholder="Select material"
-                loading={loadingOptions}
-                style={{ width: '100%' }}
-                dropdownStyle={{ background: '#1f1f1f' }}
-                optionFilterProp="label"
-                options={materialOptions.map(o => ({ label: o.name, value: o.id }))}
-              />
-            </Form.Item>
-          </>
+          <Form.Item
+            name="materialId"
+            label={<span style={labelStyle}>Material *</span>}
+            rules={[{ required: true, message: 'Select material' }]}
+          >
+            <Select
+              placeholder="Select material"
+              loading={loadingOptions}
+              style={{ width: '100%' }}
+              dropdownStyle={{ background: '#1f1f1f' }}
+              optionFilterProp="label"
+              options={materialOptions.map(o => ({ label: o.name, value: o.id }))}
+            />
+          </Form.Item>
         ) : (
           <Form.Item
             name="itemName"

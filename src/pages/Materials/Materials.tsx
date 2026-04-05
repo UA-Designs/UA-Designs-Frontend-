@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -65,6 +65,8 @@ export interface MaterialCatalogItem extends Material {
   description?: string;
 }
 
+type MaterialCatalogSortMode = 'alphabetical' | 'recent';
+
 const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
@@ -75,6 +77,7 @@ const Materials: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [sortMode, setSortMode] = useState<MaterialCatalogSortMode>('alphabetical');
 
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -84,10 +87,14 @@ const Materials: React.FC = () => {
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const fetchMaterials = async () => {
+  const fetchMaterials = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await resourceService.getMaterials();
+      const sortParams =
+        sortMode === 'alphabetical'
+          ? { sortBy: 'name' as const, sortOrder: 'asc' as const }
+          : { sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const list = await resourceService.getMaterials(undefined, sortParams);
       setMaterials(Array.isArray(list) ? list : []);
     } catch (err: any) {
       message.error(err.message || 'Failed to load materials');
@@ -95,11 +102,11 @@ const Materials: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortMode]);
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [fetchMaterials]);
 
   const filteredMaterials = useMemo(() => {
     let list = materials;
@@ -367,6 +374,17 @@ const Materials: React.FC = () => {
                 <Option key={c} value={c}>{c}</Option>
               ))}
             </Select>
+          </Col>
+          <Col xs={24} sm={10} md={8}>
+            <Select
+              style={{ width: '100%' }}
+              value={sortMode}
+              onChange={(v) => setSortMode(v as MaterialCatalogSortMode)}
+              options={[
+                { label: 'Sort: Alphabetical', value: 'alphabetical' },
+                { label: 'Sort: Recently Added', value: 'recent' },
+              ]}
+            />
           </Col>
         </Row>
       </Card>
