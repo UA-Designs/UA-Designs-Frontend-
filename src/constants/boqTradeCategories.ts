@@ -1,22 +1,11 @@
 /** Trade categories for BOQ grouping (formal BOQ / report). */
 export const BOQ_TRADE_CATEGORIES = [
-  'Gen Requirements',
-  'Earthworks',
-  'Concrete Work',
-  'RSB Works',
-  'Masonry Works',
-  'Plastering Works',
-  'Roofing',
-  'Ceiling Works',
-  'Tiles Works',
-  'Paint Works',
-  'Doors & Windows',
-  'Electrical Works',
-  'Plumbing Works',
-  'Formworks',
-  'Labor',
-  'Equipment',
-  'Custom',
+  'Structural',
+  'Architectural',
+  'Mechanical',
+  'Electrical',
+  'Plumbing',
+  'Fire Protection',
 ] as const;
 
 export type BoqTradeCategory = (typeof BOQ_TRADE_CATEGORIES)[number];
