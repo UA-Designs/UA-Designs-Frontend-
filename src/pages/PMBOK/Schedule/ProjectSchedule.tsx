@@ -672,18 +672,23 @@ const ProjectSchedule: React.FC = () => {
                   <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Visual timeline of tasks and their dependencies.</Text>
                   {estimatedFinishDate && (
                     <Alert
-                      style={{ marginBottom: 12 }}
+                      style={{
+                        marginBottom: 12,
+                        background: effectiveScheduleDelayDays > 0 ? 'rgba(250,173,20,0.14)' : 'rgba(0,153,68,0.14)',
+                        border: `1px solid ${effectiveScheduleDelayDays > 0 ? 'rgba(250,173,20,0.35)' : 'rgba(0,153,68,0.35)'}`,
+                        borderRadius: 8,
+                      }}
                       type={effectiveScheduleDelayDays > 0 ? 'warning' : 'info'}
                       showIcon
                       message={
                         effectiveScheduleDelayDays > 0
-                          ? `Estimated finish moved by schedule risks: ${estimatedFinishDate.format('MMM DD, YYYY')} → ${riskAdjustedFinishDate?.format('MMM DD, YYYY')}`
-                          : `Estimated finish date: ${estimatedFinishDate.format('MMM DD, YYYY')}`
+                          ? <span style={{ color: '#fff' }}>{`Estimated finish moved by schedule risks: ${estimatedFinishDate.format('MMM DD, YYYY')} → ${riskAdjustedFinishDate?.format('MMM DD, YYYY')}`}</span>
+                          : <span style={{ color: '#fff' }}>{`Estimated finish date: ${estimatedFinishDate.format('MMM DD, YYYY')}`}</span>
                       }
                       description={
                         effectiveScheduleDelayDays > 0
-                          ? `${scheduleRisks.length} active schedule risk(s) contribute an estimated +${effectiveScheduleDelayDays} day${effectiveScheduleDelayDays !== 1 ? 's' : ''} delay.`
-                          : 'No active schedule-delay risks detected.'
+                          ? <span style={{ color: '#d9d9d9' }}>{`${scheduleRisks.length} active schedule risk(s) contribute an estimated +${effectiveScheduleDelayDays} day${effectiveScheduleDelayDays !== 1 ? 's' : ''} delay.`}</span>
+                          : <span style={{ color: '#d9d9d9' }}>No active schedule-delay risks detected.</span>
                       }
                     />
                   )}
