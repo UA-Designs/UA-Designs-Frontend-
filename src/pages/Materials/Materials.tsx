@@ -49,16 +49,14 @@ const MATERIAL_UNITS = [
 ];
 
 const MATERIAL_CATEGORIES = [
-  'Other',
-  'Steel & Metal',
-  'Wood & Lumber',
-  'Cement & Concrete',
-  'Roofing',
-  'Plumbing',
+  'Structural',
+  'Architectural',
+  'Mechanical',
   'Electrical',
-  'Finishing',
-  'Hardware',
+  'Plumbing',
+  'Fire Protection',
 ];
+const DEFAULT_MATERIAL_CATEGORY = 'Structural';
 
 export interface MaterialCatalogItem extends Material {
   unit?: string;
@@ -121,7 +119,7 @@ const Materials: React.FC = () => {
       );
     }
     if (categoryFilter) {
-      list = list.filter((m) => (m.category || 'Other') === categoryFilter);
+      list = list.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === categoryFilter);
     }
     return list;
   }, [materials, search, categoryFilter]);
@@ -129,7 +127,7 @@ const Materials: React.FC = () => {
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { Total: materials.length };
     MATERIAL_CATEGORIES.forEach((cat) => {
-      counts[cat] = materials.filter((m) => (m.category || 'Other') === cat).length;
+      counts[cat] = materials.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === cat).length;
     });
     return counts;
   }, [materials]);
@@ -147,7 +145,7 @@ const Materials: React.FC = () => {
         unit: values.unit ?? 'Pieces (pc)',
         unitCost: Number(values.defaultCost ?? values.unitCost ?? 0),
         quantity: Number(values.quantity ?? 0),
-        category: values.category || 'Other',
+        category: values.category || DEFAULT_MATERIAL_CATEGORY,
         description: values.description,
       });
       message.success('Material added');
@@ -166,7 +164,7 @@ const Materials: React.FC = () => {
     editForm.setFieldsValue({
       name: record.name,
       unit: record.unit || 'Pieces (pc)',
-      category: record.category || 'Other',
+      category: record.category || DEFAULT_MATERIAL_CATEGORY,
       defaultCost: record.defaultCost ?? 0,
       description: record.description,
     });
@@ -180,7 +178,7 @@ const Materials: React.FC = () => {
       await resourceService.updateMaterial(editingMaterial.id, {
         name: values.name,
         unit: values.unit,
-        category: values.category || 'Other',
+        category: values.category || DEFAULT_MATERIAL_CATEGORY,
         defaultCost: values.defaultCost ?? 0,
         description: values.description,
       });
@@ -231,14 +229,14 @@ const Materials: React.FC = () => {
       render: (v: string) => (
         <span
           style={{
-            background: v === 'Other' ? 'rgba(255,255,255,0.1)' : 'rgba(0,153,68,0.2)',
-            color: v === 'Other' ? '#aaa' : '#00ff88',
+            background: 'rgba(0,153,68,0.2)',
+            color: '#00ff88',
             padding: '2px 10px',
             borderRadius: 6,
             fontSize: 12,
           }}
         >
-          {v || 'Other'}
+          {v || DEFAULT_MATERIAL_CATEGORY}
         </span>
       ),
     },
@@ -317,9 +315,9 @@ const Materials: React.FC = () => {
             style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
             bodyStyle={{ padding: 16 }}
           >
-            <Text style={{ color: '#aaa', fontSize: 13 }}>Steel & Metal</Text>
+            <Text style={{ color: '#aaa', fontSize: 13 }}>Structural</Text>
             <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 700 }}>
-              {categoryCounts['Steel & Metal'] ?? 0}
+              {categoryCounts.Structural ?? 0}
             </div>
           </Card>
         </Col>
@@ -328,9 +326,9 @@ const Materials: React.FC = () => {
             style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
             bodyStyle={{ padding: 16 }}
           >
-            <Text style={{ color: '#aaa', fontSize: 13 }}>Wood & Lumber</Text>
+            <Text style={{ color: '#aaa', fontSize: 13 }}>Architectural</Text>
             <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 700 }}>
-              {categoryCounts['Wood & Lumber'] ?? 0}
+              {categoryCounts.Architectural ?? 0}
             </div>
           </Card>
         </Col>
@@ -339,9 +337,9 @@ const Materials: React.FC = () => {
             style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}
             bodyStyle={{ padding: 16 }}
           >
-            <Text style={{ color: '#aaa', fontSize: 13 }}>Cement & Concrete</Text>
+            <Text style={{ color: '#aaa', fontSize: 13 }}>Mechanical</Text>
             <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 700 }}>
-              {categoryCounts['Cement & Concrete'] ?? 0}
+              {categoryCounts.Mechanical ?? 0}
             </div>
           </Card>
         </Col>
@@ -467,7 +465,7 @@ const Materials: React.FC = () => {
           <Form.Item
             name="category"
             label="Category"
-            initialValue="Other"
+            initialValue={DEFAULT_MATERIAL_CATEGORY}
           >
             <Select
               placeholder="Select category"
