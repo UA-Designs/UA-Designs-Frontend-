@@ -550,6 +550,25 @@ const ProjectDetail: React.FC = () => {
     () => costs.filter((c) => Number(c.actualQty ?? 0) > 0 || Number(c.amountReceived ?? 0) > 0),
     [costs]
   );
+  const materialQtyVarianceRows = useMemo(
+    () =>
+      costs.filter((c) =>
+        (c.type || '').toString().toUpperCase() === CostType.MATERIAL &&
+        (
+          Number(c.estimatedQty ?? 0) > 0 ||
+          Number(c.actualQty ?? 0) > 0 ||
+          Number(c.amountReceived ?? 0) > 0
+        )
+      ),
+    [costs]
+  );
+  const materialQtyVarianceSummary = useMemo(() => {
+    const plannedQty = materialQtyVarianceRows.reduce((sum, c) => sum + Number(c.estimatedQty ?? 0), 0);
+    const usedQty = materialQtyVarianceRows.reduce((sum, c) => sum + Number(c.actualQty ?? 0), 0);
+    const unusedQty = Math.max(0, plannedQty - usedQty);
+    const usagePct = plannedQty > 0 ? (usedQty / plannedQty) * 100 : 0;
+    return { plannedQty, usedQty, unusedQty, usagePct };
+  }, [materialQtyVarianceRows]);
 
   if (loading || !project) {
     return (
@@ -892,6 +911,32 @@ const ProjectDetail: React.FC = () => {
     },
   ];
 
+  const materialQtyVarianceColumns: ColumnsType<Cost> = [
+    { title: 'Material', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
+    { title: 'UNIT', key: 'unit', render: (_, record) => <Text style={{ color: '#bbb' }}>{record.unit || '—'}</Text> },
+    { title: 'BOQ Qty', key: 'plannedQty', render: (_, record) => <Text style={{ color: '#bbb' }}>{Number(record.estimatedQty ?? 0)}</Text> },
+    { title: 'Used Qty', key: 'usedQty', render: (_, record) => <Text style={{ color: '#fff' }}>{Number(record.actualQty ?? 0)}</Text> },
+    {
+      title: 'Unused Qty',
+      key: 'unusedQty',
+      render: (_, record) => {
+        const planned = Number(record.estimatedQty ?? 0);
+        const used = Number(record.actualQty ?? 0);
+        return <Text style={{ color: '#00ff88' }}>{Math.max(0, planned - used)}</Text>;
+      },
+    },
+    {
+      title: 'Usage %',
+      key: 'usagePct',
+      render: (_, record) => {
+        const planned = Number(record.estimatedQty ?? 0);
+        const used = Number(record.actualQty ?? 0);
+        const pct = planned > 0 ? Math.min(999, (used / planned) * 100) : 0;
+        return <Text style={{ color: '#bbb' }}>{`${pct.toFixed(1)}%`}</Text>;
+      },
+    },
+  ];
+
   const expenseColumns: ColumnsType<Expense> = [
     { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <Text style={{ color: '#fff' }}>{n || '—'}</Text> },
     { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text> },
@@ -1110,6 +1155,19 @@ const ProjectDetail: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </ChartErrorBoundary>
+          </Card>
+          <Card title="Material Quantity Variance (BOQ vs Site Usage)" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12, marginBottom: 24 }}>
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Total BOQ Qty</Text><div style={{ color: '#fff', fontWeight: 600 }}>{materialQtyVarianceSummary.plannedQty.toFixed(2)}</div></Card></Col>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Total Used Qty</Text><div style={{ color: '#fff', fontWeight: 600 }}>{materialQtyVarianceSummary.usedQty.toFixed(2)}</div></Card></Col>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Total Unused Qty</Text><div style={{ color: '#00ff88', fontWeight: 600 }}>{materialQtyVarianceSummary.unusedQty.toFixed(2)}</div></Card></Col>
+              <Col xs={12} md={6}><Card size="small" style={{ background: 'rgba(0,0,0,0.2)' }}><Text style={{ color: '#aaa', fontSize: 12 }}>Usage Rate</Text><div style={{ color: '#fff', fontWeight: 600 }}>{materialQtyVarianceSummary.usagePct.toFixed(1)}%</div></Card></Col>
+            </Row>
+            {materialQtyVarianceRows.length > 0 ? (
+              <Table rowKey="id" dataSource={materialQtyVarianceRows} columns={materialQtyVarianceColumns} pagination={{ pageSize: 5 }} size="small" style={{ background: 'transparent' }} />
+            ) : (
+              <Empty description="No BOQ material quantity data yet." image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 24 }} />
+            )}
           </Card>
           <Card title="Detailed Variance Report" style={{ background: '#1f1f1f', border: '1px solid rgba(0,153,68,0.2)', borderRadius: 12 }}>
             <Space size="small" style={{ marginBottom: 16 }}>
