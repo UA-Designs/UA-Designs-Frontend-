@@ -63,6 +63,12 @@ import { Project } from '../../types';
 import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
 import { BOQ_TRADE_CATEGORIES, getEffectiveTradeCategory } from '../../constants/boqTradeCategories';
 
+/** BOQ line unit of measure — stored as `unit` on the cost; backend accepts any string. */
+const BOQ_UNIT_OF_MEASURE_OPTIONS = [
+  { label: 'Lot', value: 'Lot' },
+  { label: 'Lump Sum', value: 'Lump Sum' },
+];
+
 const { Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -147,7 +153,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
       if (!unit) {
         if (cat === CostType.MATERIAL) unit = 'pc';
         else if (cat === CostType.FUEL) unit = 'l';
-        else unit = 'lot';
+        else unit = 'Lot';
       }
 
       const scopeOfWorks =
@@ -275,11 +281,13 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="unit" label={<span style={labelStyle}>Unit (optional)</span>}>
-          <Input
-            style={inputStyle}
-            placeholder="Leave blank to use pc (material), lot (labor/equipment), or l (fuel)"
+        <Form.Item name="unit" label={<span style={labelStyle}>Unit of measure</span>}>
+          <Select
             allowClear
+            placeholder="Auto — material catalog, Lot (labor/equipment/formworks), or l (fuel)"
+            style={{ width: '100%' }}
+            dropdownStyle={{ background: '#1f1f1f' }}
+            options={BOQ_UNIT_OF_MEASURE_OPTIONS}
           />
         </Form.Item>
         <Form.Item name="scopeLines" label={<span style={labelStyle}>Scope of work (optional)</span>}>
