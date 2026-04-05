@@ -56,6 +56,7 @@ import {
   RiskMatrix as RiskMatrixType,
   RiskMonitoring as RiskMonitoringType,
 } from '../../../services/riskService';
+import { scheduleService, ScheduleTask } from '../../../services/scheduleService';
 import RiskMatrix from '../../../components/Charts/RiskMatrix';
 
 const { useBreakpoint } = Grid;
@@ -78,6 +79,7 @@ const ProjectRisk: React.FC = () => {
   const [riskMatrix, setRiskMatrix] = useState<RiskMatrixType | null>(null);
   const [monitoring, setMonitoring] = useState<RiskMonitoringType | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [scheduleTasks, setScheduleTasks] = useState<ScheduleTask[]>([]);
 
   // Modal states
   const [riskModalVisible, setRiskModalVisible] = useState(false);
@@ -104,6 +106,7 @@ const ProjectRisk: React.FC = () => {
       setMitigations([]);
       setRiskMatrix(null);
       setMonitoring(null);
+      setScheduleTasks([]);
       loadRiskData();
     }
   }, [selectedProject]);
@@ -115,17 +118,19 @@ const ProjectRisk: React.FC = () => {
 
     setLoading(true);
     try {
-      const [risksData, mitigationsData, matrixData, monitoringData] = await Promise.allSettled([
+      const [risksData, mitigationsData, matrixData, monitoringData, tasksData] = await Promise.allSettled([
         riskService.getRisks(selectedProject.id),
         riskService.getMitigations(selectedProject.id),
         riskService.getRiskMatrix(selectedProject.id),
         riskService.getRiskMonitoring(selectedProject.id),
+        scheduleService.getProjectTasks(selectedProject.id),
       ]);
 
       if (risksData.status === 'fulfilled') setRisks(risksData.value.risks);
       if (mitigationsData.status === 'fulfilled') setMitigations(mitigationsData.value.mitigations);
       if (matrixData.status === 'fulfilled' && matrixData.value) setRiskMatrix(matrixData.value);
       if (monitoringData.status === 'fulfilled' && monitoringData.value) setMonitoring(monitoringData.value);
+      if (tasksData.status === 'fulfilled') setScheduleTasks(Array.isArray(tasksData.value) ? tasksData.value : []);
     } catch (error: any) {
       console.error('Error loading risk data:', error);
       message.error('Failed to load risk data');
@@ -154,6 +159,8 @@ const ProjectRisk: React.FC = () => {
       probability: risk.probability,
       impact: risk.impact,
       responseStrategy: risk.responseStrategy,
+      linkedTaskIds: (risk as any).linkedTaskIds ?? (risk as any).linked_task_ids ?? (risk as any).taskIds ?? [],
+      scheduleImpactDays: Number((risk as any).scheduleImpactDays ?? (risk as any).delayDays ?? (risk as any).delay_days ?? 0),
     });
     setRiskModalVisible(true);
   };
@@ -188,6 +195,8 @@ const ProjectRisk: React.FC = () => {
         severity: values.severity,
         responseStrategy: values.responseStrategy,
         projectId: selectedProject?.id,
+        linkedTaskIds: Array.isArray(values.linkedTaskIds) ? values.linkedTaskIds : [],
+        scheduleImpactDays: Number(values.scheduleImpactDays ?? 0),
       };
 
       if (editingRisk) {
@@ -402,6 +411,34 @@ const ProjectRisk: React.FC = () => {
       render: (status: RiskStatus) => (
         <Tag color={getStatusColor(status)}>{status}</Tag>
       ),
+    },
+    {
+      title: 'Schedule Impact',
+      key: 'scheduleImpact',
+      render: (_: any, record: Risk) => {
+        const linked: string[] =
+          Array.isArray((record as any).linkedTaskIds) ? (record as any).linkedTaskIds
+            : Array.isArray((record as any).linked_task_ids) ? (record as any).linked_task_ids
+              : Array.isArray((record as any).taskIds) ? (record as any).taskIds
+                : [];
+        const delay = Number((record as any).scheduleImpactDays ?? (record as any).delayDays ?? (record as any).delay_days ?? 0);
+        if (!linked.length && delay <= 0) return <Text type="secondary">—</Text>;
+        const linkedNames = linked
+          .map((id) => scheduleTasks.find((t) => t.id === id)?.name)
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(', ');
+        return (
+          <Space direction="vertical" size={0}>
+            <Text style={{ fontSize: 12, color: '#faad14' }}>
+              +{Math.max(0, delay)} day{Math.max(0, delay) !== 1 ? 's' : ''}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              {linked.length > 0 ? (linkedNames || `${linked.length} task(s) linked`) : 'No task linked'}
+            </Text>
+          </Space>
+        );
+      },
     },
     {
       title: 'Actions',
@@ -826,6 +863,34 @@ const ProjectRisk: React.FC = () => {
               <Option value="ACCEPT">Accept</Option>
             </Select>
           </Form.Item>
+          <Row gutter={16}>
+            <Col span={16}>
+              <Form.Item
+                name="linkedTaskIds"
+                label="Linked schedule task(s)"
+                tooltip="Select task(s) impacted by this risk so Schedule/Gantt can show delays."
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Select impacted task(s)"
+                  options={scheduleTasks.map((t) => ({ value: t.id, label: t.name }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="scheduleImpactDays"
+                label="Delay impact (days)"
+                tooltip="Estimated delay this risk adds to linked tasks."
+                initialValue={0}
+              >
+                <InputNumber min={0} step={1} style={{ width: '100%' }} placeholder="0" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 

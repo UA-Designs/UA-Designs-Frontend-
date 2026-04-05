@@ -19,6 +19,7 @@ interface GanttChartProps {
   riskDelayDays?: number;
   estimatedFinishDate?: string;
   adjustedFinishDate?: string;
+  taskRiskDelayMap?: Record<string, number>;
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -35,6 +36,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   riskDelayDays = 0,
   estimatedFinishDate,
   adjustedFinishDate,
+  taskRiskDelayMap = {},
 }) => {
   const chartData = useMemo(() => {
     if (!tasks.length) return [];
@@ -78,6 +80,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
           endLabel: end.format('MMM DD'),
           durationDays: Math.max(1, safeNum(duration)),
           completionLabel,
+          taskRiskDelayDays: Number(taskRiskDelayMap[task.id] ?? 0),
         };
       })
       .sort((a, b) => a.offset - b.offset);
@@ -118,6 +121,14 @@ const GanttChart: React.FC<GanttChartProps> = ({
               <br />
               <Text style={{ color: '#aaa', fontSize: 12 }}>
                 Done: {d.completionLabel || 'Yes'} ({d.durationDays} day{d.durationDays !== 1 ? 's' : ''})
+              </Text>
+            </>
+          )}
+          {d.taskRiskDelayDays > 0 && (
+            <>
+              <br />
+              <Text style={{ color: '#faad14', fontSize: 12 }}>
+                Risk delay on task: +{d.taskRiskDelayDays} day{d.taskRiskDelayDays !== 1 ? 's' : ''}
               </Text>
             </>
           )}
@@ -176,7 +187,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
           {/* Actual duration bar */}
           <Bar dataKey="duration" stackId="gantt" radius={[2, 2, 2, 2]} isAnimationActive={false}>
             {chartData.map(entry => (
-              <Cell key={entry.id} fill={STATUS_COLORS[entry.status] || '#595959'} />
+              <Cell
+                key={entry.id}
+                fill={entry.taskRiskDelayDays > 0 ? '#faad14' : (STATUS_COLORS[entry.status] || '#595959')}
+              />
             ))}
           </Bar>
         </BarChart>

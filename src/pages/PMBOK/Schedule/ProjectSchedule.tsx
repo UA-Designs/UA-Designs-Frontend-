@@ -125,9 +125,17 @@ const ProjectSchedule: React.FC = () => {
       if (cpResult.status === 'fulfilled' && cpResult.value) setCriticalPathData(cpResult.value);
       if (risksResult.status === 'fulfilled') {
         const allRisks = Array.isArray(risksResult.value?.risks) ? risksResult.value.risks : [];
+        const linkedTaskIds = (r: any): string[] =>
+          Array.isArray(r?.linkedTaskIds)
+            ? r.linkedTaskIds
+            : Array.isArray(r?.linked_task_ids)
+              ? r.linked_task_ids
+              : Array.isArray(r?.taskIds)
+                ? r.taskIds
+                : [];
         const isScheduleRisk = (r: any) => {
           const cat = `${r?.category?.name || r?.riskCategory?.name || r?.category || ''}`.toLowerCase();
-          return cat.includes('schedule');
+          return cat.includes('schedule') || linkedTaskIds(r).length > 0;
         };
         const active = allRisks.filter((r: any) => r?.status !== RiskStatus.CLOSED && isScheduleRisk(r));
         setScheduleRisks(active);
@@ -274,10 +282,42 @@ const ProjectSchedule: React.FC = () => {
     }, 0);
   }, [scheduleRisks]);
 
+  const taskRiskDelayMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!scheduleRisks.length) return map;
+    const severityFallback: Record<string, number> = {
+      LOW: 1,
+      MEDIUM: 3,
+      HIGH: 7,
+      CRITICAL: 14,
+    };
+    scheduleRisks.forEach((r: any) => {
+      const explicitDelay = Number(r?.scheduleImpactDays ?? r?.delayDays ?? r?.scheduleDelayDays ?? r?.impactDays ?? r?.delay_days ?? NaN);
+      const delay = Number.isFinite(explicitDelay) && explicitDelay > 0
+        ? explicitDelay
+        : (severityFallback[String(r?.severity || '').toUpperCase()] ?? 0);
+      const linked: string[] =
+        Array.isArray(r?.linkedTaskIds) ? r.linkedTaskIds
+          : Array.isArray(r?.linked_task_ids) ? r.linked_task_ids
+            : Array.isArray(r?.taskIds) ? r.taskIds
+              : [];
+      linked.forEach((taskId) => {
+        if (!taskId) return;
+        map[taskId] = (map[taskId] ?? 0) + delay;
+      });
+    });
+    return map;
+  }, [scheduleRisks]);
+
+  const effectiveScheduleDelayDays = useMemo(() => {
+    const linkedTotal = Object.values(taskRiskDelayMap).reduce((sum, v) => sum + Number(v || 0), 0);
+    return linkedTotal > 0 ? linkedTotal : scheduleDelayDays;
+  }, [taskRiskDelayMap, scheduleDelayDays]);
+
   const riskAdjustedFinishDate = useMemo(() => {
     if (!estimatedFinishDate) return null;
-    return estimatedFinishDate.add(scheduleDelayDays, 'day');
-  }, [estimatedFinishDate, scheduleDelayDays]);
+    return estimatedFinishDate.add(effectiveScheduleDelayDays, 'day');
+  }, [estimatedFinishDate, effectiveScheduleDelayDays]);
 
   // ---- Table Columns ----
 
@@ -633,16 +673,16 @@ const ProjectSchedule: React.FC = () => {
                   {estimatedFinishDate && (
                     <Alert
                       style={{ marginBottom: 12 }}
-                      type={scheduleDelayDays > 0 ? 'warning' : 'info'}
+                      type={effectiveScheduleDelayDays > 0 ? 'warning' : 'info'}
                       showIcon
                       message={
-                        scheduleDelayDays > 0
+                        effectiveScheduleDelayDays > 0
                           ? `Estimated finish moved by schedule risks: ${estimatedFinishDate.format('MMM DD, YYYY')} → ${riskAdjustedFinishDate?.format('MMM DD, YYYY')}`
                           : `Estimated finish date: ${estimatedFinishDate.format('MMM DD, YYYY')}`
                       }
                       description={
-                        scheduleDelayDays > 0
-                          ? `${scheduleRisks.length} active schedule risk(s) contribute an estimated +${scheduleDelayDays} day${scheduleDelayDays !== 1 ? 's' : ''} delay.`
+                        effectiveScheduleDelayDays > 0
+                          ? `${scheduleRisks.length} active schedule risk(s) contribute an estimated +${effectiveScheduleDelayDays} day${effectiveScheduleDelayDays !== 1 ? 's' : ''} delay.`
                           : 'No active schedule-delay risks detected.'
                       }
                     />
@@ -658,9 +698,10 @@ const ProjectSchedule: React.FC = () => {
                     <GanttChart
                       tasks={tasks}
                       dependencies={dependencies}
-                      riskDelayDays={scheduleDelayDays}
+                      riskDelayDays={effectiveScheduleDelayDays}
                       estimatedFinishDate={estimatedFinishDate?.format('MMM DD, YYYY')}
                       adjustedFinishDate={riskAdjustedFinishDate?.format('MMM DD, YYYY')}
+                      taskRiskDelayMap={taskRiskDelayMap}
                     />
                   )}
                 </div>
