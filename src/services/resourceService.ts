@@ -104,13 +104,22 @@ interface ApiResponse<T> {
   data: T;
 }
 
+type MaterialSortBy = 'name' | 'createdAt';
+type MaterialSortOrder = 'asc' | 'desc';
+
 class ResourceService {
   // ==================== MATERIALS ====================
 
-  // GET /api/resources/materials — optional ?projectId= (camelCase). API returns data: array, pagination.
-  async getMaterials(projectId?: string): Promise<Material[]> {
+  // GET /api/resources/materials — optional ?projectId=, ?sortBy=, ?sortOrder= (camelCase).
+  async getMaterials(
+    projectId?: string,
+    sort?: { sortBy?: MaterialSortBy; sortOrder?: MaterialSortOrder }
+  ): Promise<Material[]> {
     try {
-      const params = projectId ? { projectId } : undefined;
+      const params: Record<string, string> = {};
+      if (projectId) params.projectId = projectId;
+      if (sort?.sortBy) params.sortBy = sort.sortBy;
+      if (sort?.sortOrder) params.sortOrder = sort.sortOrder;
       const response = await apiService.get<ApiResponse<Material[]>>('/resources/materials', { params });
       const d = response.data?.data;
       const list = Array.isArray(d) ? d : [];
