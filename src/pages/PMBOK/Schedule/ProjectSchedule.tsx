@@ -49,6 +49,8 @@ import {
 } from '../../../services/scheduleService';
 import { riskService, RiskStatus } from '../../../services/riskService';
 import GanttChart from '../../../components/Schedule/GanttChart';
+import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -319,6 +321,46 @@ const ProjectSchedule: React.FC = () => {
     return estimatedFinishDate.add(effectiveScheduleDelayDays, 'day');
   }, [estimatedFinishDate, effectiveScheduleDelayDays]);
 
+  const sCurveData = useMemo(() => {
+    if (!tasks.length) return [];
+    const entries = tasks
+      .filter((t) => t.startDate || t.endDate)
+      .map((t) => {
+        const baseStart = t.startDate ? dayjs(t.startDate) : (t.endDate ? dayjs(t.endDate) : null);
+        const plannedEnd = t.endDate
+          ? dayjs(t.endDate)
+          : (t.startDate ? dayjs(t.startDate).add(t.duration ?? 1, 'day') : null);
+        if (!baseStart || !plannedEnd || !baseStart.isValid() || !plannedEnd.isValid()) return null;
+        const delayDays = Number(taskRiskDelayMap[t.id] ?? 0);
+        const actualEnd = plannedEnd.add(delayDays > 0 ? delayDays : 0, 'day');
+        return { id: t.id, start: baseStart, plannedEnd, actualEnd };
+      })
+      .filter((x): x is { id: string; start: dayjs.Dayjs; plannedEnd: dayjs.Dayjs; actualEnd: dayjs.Dayjs } => Boolean(x));
+    if (!entries.length) return [];
+
+    const start = entries.reduce((min, e) => (e.start.isBefore(min) ? e.start : min), entries[0].start).startOf('day');
+    const milestones = new Set<string>([start.format('YYYY-MM-DD')]);
+    entries.forEach((e) => {
+      milestones.add(e.plannedEnd.startOf('day').format('YYYY-MM-DD'));
+      milestones.add(e.actualEnd.startOf('day').format('YYYY-MM-DD'));
+    });
+
+    const total = entries.length;
+    return Array.from(milestones)
+      .sort()
+      .map((key) => {
+        const d = dayjs(key);
+        const plannedDone = entries.filter((e) => !e.plannedEnd.isAfter(d, 'day')).length;
+        const actualDone = entries.filter((e) => !e.actualEnd.isAfter(d, 'day')).length;
+        return {
+          date: key,
+          label: d.format('MMM DD'),
+          plannedPct: total > 0 ? (plannedDone / total) * 100 : 0,
+          actualPct: total > 0 ? (actualDone / total) * 100 : 0,
+        };
+      });
+  }, [tasks, taskRiskDelayMap]);
+
   // ---- Table Columns ----
 
   const taskColumns = [
@@ -456,7 +498,7 @@ const ProjectSchedule: React.FC = () => {
     { key: 'tasks',         icon: <UnorderedListOutlined />, label: 'Tasks' },
     { key: 'dependencies',  icon: <ApartmentOutlined />,    label: 'Dependencies' },
     { key: 'critical-path', icon: <NodeIndexOutlined />,    label: 'Critical Path' },
-    { key: 'gantt',         icon: <CalendarOutlined />,     label: 'Gantt Chart' },
+    { key: 'gantt',         icon: <CalendarOutlined />,     label: 'Charts' },
   ];
 
   /* ─── quick-stat definitions ─── */
@@ -676,10 +718,39 @@ const ProjectSchedule: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Gantt Chart ── */}
+              {/* ── Charts (S-Curve + Gantt) ── */}
               {activeTab === 'gantt' && (
                 <div style={{ padding: 16 }}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Visual timeline of tasks and their dependencies.</Text>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Schedule charts: S-Curve (original vs delayed) and Gantt timeline.</Text>
+                  <div style={{ marginBottom: 16, background: '#111', border: '1px solid #333', borderRadius: 8, padding: 12 }}>
+                    <Text style={{ color: '#fff', fontWeight: 600, display: 'block', marginBottom: 8 }}>S-Curve: Original vs Delayed Schedule</Text>
+                    {sCurveData.length > 1 ? (
+                      <ChartErrorBoundary height={260}>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <LineChart data={sCurveData} margin={{ top: 8, right: 20, left: 10, bottom: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+                            <XAxis dataKey="label" tick={{ fill: '#bbb', fontSize: 11 }} />
+                            <YAxis domain={[0, 100]} tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+                            <Tooltip
+                              formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name === 'plannedPct' ? 'Original plan' : 'Delayed/actual']}
+                              labelFormatter={(label: any, payload: any) => payload?.[0]?.payload?.date || label}
+                              contentStyle={{ background: '#1f1f1f', border: '1px solid #333' }}
+                            />
+                            <Line type="monotone" dataKey="plannedPct" name="Original plan" stroke="#00aaff" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="actualPct" name="Delayed/actual" stroke="#faad14" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </ChartErrorBoundary>
+                    ) : (
+                      <Alert
+                        message={<span style={{ color: '#fff' }}>S-Curve not available yet</span>}
+                        description={<span style={{ color: '#d9d9d9' }}>Add at least two dated tasks to draw the schedule comparison curve.</span>}
+                        type="info"
+                        showIcon
+                        style={{ background: 'rgba(0,153,68,0.14)', border: '1px solid rgba(0,153,68,0.35)', borderRadius: 8 }}
+                      />
+                    )}
+                  </div>
                   {estimatedFinishDate && (
                     <Alert
                       style={{
