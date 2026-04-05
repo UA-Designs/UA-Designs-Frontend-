@@ -617,10 +617,15 @@ const ProjectSchedule: React.FC = () => {
                   {criticalPathData && criticalPathData.criticalPath?.length > 0 ? (
                     <>
                       <Alert
-                        message={`Total duration: ${criticalPathData.totalDuration} days`}
+                        message={<span style={{ color: '#fff' }}>{`Total duration: ${criticalPathData.totalDuration} days`}</span>}
                         type="warning"
                         showIcon
-                        style={{ marginBottom: 20 }}
+                        style={{
+                          marginBottom: 20,
+                          background: 'rgba(250,173,20,0.14)',
+                          border: '1px solid rgba(250,173,20,0.35)',
+                          borderRadius: 8,
+                        }}
                       />
                       <div style={{
                         display: 'flex',
@@ -657,10 +662,15 @@ const ProjectSchedule: React.FC = () => {
                     </>
                   ) : (
                     <Alert
-                      message="No critical path yet"
-                      description="Add tasks and dependencies (e.g. Finish-to-Start) so the system can compute the critical path."
+                      message={<span style={{ color: '#fff' }}>No critical path yet</span>}
+                      description={<span style={{ color: '#d9d9d9' }}>Add tasks and dependencies (e.g. Finish-to-Start) so the system can compute the critical path.</span>}
                       type="info"
                       showIcon
+                      style={{
+                        background: 'rgba(0,153,68,0.14)',
+                        border: '1px solid rgba(0,153,68,0.35)',
+                        borderRadius: 8,
+                      }}
                     />
                   )}
                 </div>
