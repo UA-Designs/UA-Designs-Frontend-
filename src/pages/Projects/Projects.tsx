@@ -73,6 +73,14 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 const formatCurrency = (v?: number) =>
   v !== undefined ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
+const toNumberLoose = (v: any): number => {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined) return 0;
+  const cleaned = String(v).replace(/[^0-9.-]/g, '');
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 const Projects: React.FC = () => {
@@ -109,6 +117,7 @@ const Projects: React.FC = () => {
   const [dashboardData, setDashboardData]             = useState<ProjectDashboardData | null>(null);
   const [dashboardLoading, setDashboardLoading]       = useState(false);
   const [boqTotalByProject, setBoqTotalByProject]     = useState<Record<string, number>>({});
+  const [budgetTotalByProject, setBudgetTotalByProject] = useState<Record<string, number>>({});
 
   const [pmUsers, setPmUsers]         = useState<any[]>([]);
   const [pmLoading, setPmLoading]     = useState(false);
@@ -128,9 +137,10 @@ const Projects: React.FC = () => {
       if (filterStatus) filters.status      = filterStatus;
       if (filterType)   filters.projectType = filterType;
 
-      const [result, costs] = await Promise.all([
+      const [result, costs, budgets] = await Promise.all([
         projectService.getProjectsFiltered(filters),
         costService.getCosts().catch(() => []),
+        costService.getBudgets().catch(() => []),
       ]);
       setProjects(result.projects);
       setTotalCount(result.pagination.total);
@@ -143,12 +153,38 @@ const Projects: React.FC = () => {
         }
       });
       setBoqTotalByProject(byProject);
+
+      const budgetByProject: Record<string, number> = {};
+      (budgets || []).forEach((b: any) => {
+        const id = b.projectId ?? b.project_id;
+        if (!id) return;
+        const key = String(id).toLowerCase();
+        const amount = toNumberLoose(b.amount ?? b.totalBudget ?? b.total_budget ?? b.budget);
+        if (amount > 0) budgetByProject[key] = (budgetByProject[key] ?? 0) + amount;
+      });
+      setBudgetTotalByProject(budgetByProject);
     } catch (err: any) {
       message.error(err.message || 'Failed to load projects');
     } finally {
       setLoading(false);
     }
   }, [page, pageSize, search, filterStatus, filterType]);
+
+  const getProjectBudget = useCallback((p: any): number => {
+    const direct = toNumberLoose(
+      p?.budget ??
+      p?.budget_amount ??
+      p?.totalBudget ??
+      p?.total_budget ??
+      p?.projectBudget ??
+      p?.project_budget ??
+      p?.approvedBudget ??
+      p?.approved_budget
+    );
+    if (direct > 0) return direct;
+    const pid = String(p?.id ?? p?._id ?? '').toLowerCase();
+    return budgetTotalByProject[pid] ?? 0;
+  }, [budgetTotalByProject]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -245,7 +281,7 @@ const Projects: React.FC = () => {
       description: project.description,
       startDate: project.startDate ? dayjs(project.startDate) : null,
       endDate: (project.endDate || project.plannedEndDate) ? dayjs(project.endDate || project.plannedEndDate) : null,
-      budget: project.budget,
+      budget: getProjectBudget(project),
       clientEmail: project.clientEmail,
       clientPhone: project.clientPhone,
       location: project.location,
@@ -506,12 +542,13 @@ const Projects: React.FC = () => {
             const apiSpent = Number((record as any).actualCost ?? 0);
             const boqSpent = boqTotalByProject[String(record.id ?? (record as any)._id ?? '').toLowerCase()] ?? 0;
             const spent = apiSpent > 0 ? apiSpent : boqSpent;
-            const remaining = Math.max(0, (record.budget ?? 0) - spent);
-            const pctUsed = record.budget ? (spent / record.budget) * 100 : 0;
-            const pctUsedLabel = record.budget
+            const projectBudget = getProjectBudget(record);
+            const remaining = Math.max(0, projectBudget - spent);
+            const pctUsed = projectBudget ? (spent / projectBudget) * 100 : 0;
+            const pctUsedLabel = projectBudget
               ? (pctUsed === 0 && spent > 0 ? '<1' : (pctUsed > 0 && pctUsed < 1 ? pctUsed.toFixed(1) : String(Math.round(pctUsed))))
               : '0';
-            const pctUsedProgress = record.budget
+            const pctUsedProgress = projectBudget
               ? Math.max(0, Math.min(100, Math.round(pctUsed === 0 && spent > 0 ? 1 : pctUsed)))
               : 0;
             const assignedCount = (record as any).teamMembers?.length ?? 0;
@@ -581,7 +618,7 @@ const Projects: React.FC = () => {
                   </Space>
                   <Divider style={{ borderColor: 'rgba(255,255,255,0.08)', margin: '12px 0' }} />
                   <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                    <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(record.budget)}</Text>
+                    <Text style={{ color: '#aaa', fontSize: 12 }}>Budget: {formatCurrency(projectBudget)}</Text>
                     <Text style={{ color: '#aaa', fontSize: 12 }}>Remaining: {formatCurrency(remaining)}</Text>
                     <Progress percent={pctUsedProgress} size="small" strokeColor="#009944" showInfo={false} />
                     <Text style={{ color: '#00ff88', fontSize: 12 }}>{pctUsedLabel}% used</Text>

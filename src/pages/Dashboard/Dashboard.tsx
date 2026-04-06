@@ -42,6 +42,13 @@ const { Text } = Typography;
 
 const formatPeso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 const formatPesoK = (v: number) => (v >= 1_000_000 ? `P${(v / 1_000_000).toFixed(0)}M` : `P${(v / 1_000).toFixed(0)}K`);
+const toNumberLoose = (v: any): number => {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined) return 0;
+  const cleaned = String(v).replace(/[^0-9.-]/g, '');
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -51,6 +58,7 @@ const Dashboard: React.FC = () => {
   const [projectStats, setProjectStats] = useState<any | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [boqTotalByProject, setBoqTotalByProject] = useState<Record<string, number>>({});
+  const [budgetTotalByProject, setBudgetTotalByProject] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,11 +66,12 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [statsData, projectStatsData, projectsResp, costs] = await Promise.all([
+      const [statsData, projectStatsData, projectsResp, costs, budgets] = await Promise.all([
         dashboardService.getStats().catch(() => null),
         projectService.getProjectStats().catch(() => null),
         projectService.getProjectsFiltered().catch(() => ({ projects: [], pagination: { total: 0 } })),
         costService.getCosts().catch(() => []),
+        costService.getBudgets().catch(() => []),
       ]);
       if (statsData) setStats(statsData);
       if (projectStatsData) setProjectStats(projectStatsData);
@@ -77,6 +86,16 @@ const Dashboard: React.FC = () => {
         }
       });
       setBoqTotalByProject(byProject);
+
+      const budgetByProject: Record<string, number> = {};
+      (budgets || []).forEach((b: any) => {
+        const id = b.projectId ?? b.project_id;
+        if (!id) return;
+        const key = String(id).toLowerCase();
+        const amount = toNumberLoose(b.amount ?? b.totalBudget ?? b.total_budget ?? b.budget);
+        if (amount > 0) budgetByProject[key] = (budgetByProject[key] ?? 0) + amount;
+      });
+      setBudgetTotalByProject(budgetByProject);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
     } finally {
@@ -105,6 +124,22 @@ const Dashboard: React.FC = () => {
     return boqTotalByProject[pid] ?? 0;
   };
 
+  const getBudget = (p: any) => {
+    const direct = toNumberLoose(
+      p?.budget ??
+      p?.budget_amount ??
+      p?.totalBudget ??
+      p?.total_budget ??
+      p?.projectBudget ??
+      p?.project_budget ??
+      p?.approvedBudget ??
+      p?.approved_budget
+    );
+    if (direct > 0) return direct;
+    const pid = String(p?.id ?? p?._id ?? '').toLowerCase();
+    return budgetTotalByProject[pid] ?? 0;
+  };
+
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px', background: 'transparent', minHeight: '100vh' }}>
@@ -131,7 +166,7 @@ const Dashboard: React.FC = () => {
           const name = p.name || p.projectName || 'Project';
           const short =
             name.length > 18 ? `${name.slice(0, 15)}...` : name;
-          const budget = Number(p.budget ?? 0);
+          const budget = getBudget(p);
           const spent = getSpent(p);
           return {
             name: short,
@@ -145,7 +180,7 @@ const Dashboard: React.FC = () => {
     projects.length > 0
       ? projects.map((p) => {
           const spent = getSpent(p);
-          const budget = Number(p.budget ?? 0);
+          const budget = getBudget(p);
           const remaining = Math.max(0, budget - spent);
           const pctUsedRaw = budget > 0 ? (spent / budget) * 100 : 0;
           const pctUsedLabel =
@@ -186,7 +221,7 @@ const Dashboard: React.FC = () => {
   };
 
   // Prefer totals derived from the projects list so cards stay in sync with what we display
-  const derivedBudget = projects.reduce((sum, p) => sum + (Number(p.budget ?? 0) || 0), 0);
+  const derivedBudget = projects.reduce((sum, p) => sum + getBudget(p), 0);
   const derivedSpent = projects.reduce((sum, p) => sum + getSpent(p), 0);
   const derivedActive = projects.filter((p) => {
     const s = String((p as any).status ?? '').toLowerCase();
@@ -198,7 +233,7 @@ const Dashboard: React.FC = () => {
   const totalSpent = projects.length > 0 ? derivedSpent : (projectStats?.spentBudget ?? stats?.actualCost ?? 0);
   const activeProjects = projects.length > 0 ? derivedActive : (projectStats?.activeProjects ?? stats?.activeProjects ?? 0);
   const overBudgetCount = projects.filter((p) => {
-    const b = Number(p.budget ?? 0);
+    const b = getBudget(p);
     const s = getSpent(p);
     return b > 0 && s > b;
   }).length;
@@ -241,7 +276,7 @@ const Dashboard: React.FC = () => {
     },
   ];
   const tradeAlertsFromData = projects.map((p) => {
-    const budget = Number(p.budget ?? 0);
+    const budget = getBudget(p);
     const spent = getSpent(p);
     const pct = budget > 0 ? (spent / budget) * 100 : 0;
     const noBudget = budget <= 0;
@@ -266,12 +301,12 @@ const Dashboard: React.FC = () => {
 
   const criticalAlertsFromData = projects
     .filter((p) => {
-      const b = Number(p.budget ?? 0);
+      const b = getBudget(p);
       const s = getSpent(p);
       return b > 0 && s > b;
     })
     .map((p) => {
-      const budget = Number(p.budget ?? 0);
+      const budget = getBudget(p);
       const spent = getSpent(p);
       const overBy = spent - budget;
       const percent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
