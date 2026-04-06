@@ -73,6 +73,18 @@ type MaterialCatalogSortMode = 'alphabetical' | 'recent';
 const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
 
+const getMaterialDefaultCost = (m: MaterialCatalogItem): number | undefined => {
+  const raw =
+    m.defaultCost ??
+    (m as any).unitCost ??
+    (m as any).unit_cost ??
+    (m as any).costPerUnit ??
+    (m as any).cost_per_unit;
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 const Materials: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
@@ -191,7 +203,7 @@ const Materials: React.FC = () => {
       name: record.name,
       unit: record.unit || 'Pieces (pc)',
       category: record.category || DEFAULT_MATERIAL_CATEGORY,
-      defaultCost: record.defaultCost ?? 0,
+      defaultCost: getMaterialDefaultCost(record) ?? 0,
       description: record.description,
     });
     setEditModalVisible(true);
@@ -270,8 +282,8 @@ const Materials: React.FC = () => {
       title: 'Default Cost',
       dataIndex: 'defaultCost',
       key: 'defaultCost',
-      render: (v: number) => (
-        <Text style={{ color: '#00ff88' }}>{formatCurrency(v)}</Text>
+      render: (_: number, record: MaterialCatalogItem) => (
+        <Text style={{ color: '#00ff88' }}>{formatCurrency(getMaterialDefaultCost(record))}</Text>
       ),
     },
     {
