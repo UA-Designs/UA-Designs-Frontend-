@@ -208,11 +208,20 @@ const Dashboard: React.FC = () => {
 
   // BOQ: single "Overall" row from real totals (no per-category on dashboard)
   const overallPctUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const overallNoBudget = totalBudget <= 0;
   const overallIsCritical = totalBudget > 0 && totalSpent > totalBudget;
   const overallAt80 = totalBudget > 0 && !overallIsCritical && overallPctUsed >= ALERT_80_PCT;
   const overallAt50 = totalBudget > 0 && !overallIsCritical && !overallAt80 && overallPctUsed >= ALERT_50_PCT;
-  const overallStatus = overallIsCritical ? 'Critical' : overallAt80 ? '80% Alert' : overallAt50 ? '50% Alert' : 'On Track';
-  const overallStatusColor = overallIsCritical ? 'red' : overallAt80 ? 'orange' : overallAt50 ? 'gold' : 'green';
+  const overallStatus = overallIsCritical
+    ? 'Critical'
+    : overallNoBudget
+      ? 'Warning'
+      : overallAt80
+        ? 'Warning (80%)'
+        : overallAt50
+          ? 'Warning (50%)'
+          : 'On Track';
+  const overallStatusColor = overallIsCritical ? 'red' : overallNoBudget ? 'gold' : (overallAt80 || overallAt50) ? 'orange' : 'green';
   const boqCategoriesFromData = [
     {
       key: 'overall',
@@ -235,12 +244,13 @@ const Dashboard: React.FC = () => {
     const budget = Number(p.budget ?? 0);
     const spent = getSpent(p);
     const pct = budget > 0 ? (spent / budget) * 100 : 0;
+    const noBudget = budget <= 0;
     const over = budget > 0 && spent > budget;
     const at80 = budget > 0 && !over && pct >= ALERT_80_PCT;
     const at50 = budget > 0 && !over && !at80 && pct >= ALERT_50_PCT;
-    const status = over ? 'critical' : at80 ? 'alert-80' : at50 ? 'alert-50' : 'on track';
-    const statusTag = over ? 'Critical' : at80 ? '80% Alert' : at50 ? '50% Alert' : 'On track';
-    const color = over ? '#ff4d4f' : at80 ? '#fa8c16' : at50 ? '#faad14' : '#52c41a';
+    const status = over ? 'critical' : noBudget ? 'warning-no-budget' : at80 ? 'warning-80' : at50 ? 'warning-50' : 'on-track';
+    const statusTag = over ? 'Critical' : noBudget ? 'Warning: No Budget' : at80 ? 'Warning (80%)' : at50 ? 'Warning (50%)' : 'On Track';
+    const color = over ? '#ff4d4f' : noBudget ? '#faad14' : at80 ? '#fa8c16' : at50 ? '#faad14' : '#52c41a';
     return {
       name: p.name || p.projectName || 'Unnamed Project',
       status,
@@ -252,10 +262,7 @@ const Dashboard: React.FC = () => {
       icon: '📁',
     };
   });
-  const alert50List = tradeAlertsFromData.filter((t) => t.status === 'alert-50');
-  const alert80List = tradeAlertsFromData.filter((t) => t.status === 'alert-80');
-  const criticalList = tradeAlertsFromData.filter((t) => t.status === 'critical');
-  const tradeNeedAttentionCount = alert50List.length + alert80List.length + criticalList.length;
+  const tradeNeedAttentionCount = tradeAlertsFromData.filter((t) => t.status !== 'on-track').length;
 
   const criticalAlertsFromData = projects
     .filter((p) => {
@@ -441,56 +448,44 @@ const Dashboard: React.FC = () => {
               {tradeAlertsFromData.length === 0 ? (
                 <Text style={{ color: 'rgba(255,255,255,0.65)' }}>No projects yet. Alerts will show when projects are over or near budget.</Text>
               ) : (
-                <>
-                  {[
-                    { key: 'a50', title: '50% Alerts', list: alert50List, tagColor: 'gold' as const },
-                    { key: 'a80', title: '80% Alerts', list: alert80List, tagColor: 'orange' as const },
-                    { key: 'critical', title: 'Critical Alerts (Over Budget)', list: criticalList, tagColor: 'red' as const },
-                  ].map((group) => (
-                    <div key={group.key} style={{ marginBottom: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text strong style={{ color: '#fff' }}>{group.title}</Text>
-                        <Tag color={group.tagColor}>{group.list.length}</Tag>
+                tradeAlertsFromData.map((t) => {
+                  const pct = t.budget > 0 ? Math.min(100, t.percent) : 0;
+                  const tagColor =
+                    t.status === 'critical'
+                      ? 'red'
+                      : t.status === 'warning-80'
+                        ? 'orange'
+                        : t.status === 'warning-50' || t.status === 'warning-no-budget'
+                          ? 'gold'
+                          : 'green';
+                  return (
+                    <div
+                      key={t.name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 0',
+                        borderBottom: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                    >
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                        {t.icon}
                       </div>
-                      {group.list.length === 0 ? (
-                        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, display: 'block', marginBottom: 8 }}>
-                          No projects in this alert level.
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text strong style={{ color: '#fff' }}>{t.name}</Text>
+                          <Tag color={tagColor}>{t.statusTag}</Tag>
+                        </div>
+                        <Progress percent={Math.round(pct)} showInfo={false} strokeColor={t.color} size="small" style={{ marginTop: 4 }} />
+                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
+                          P{Number(t.spent).toLocaleString()} / P{Number(t.budget).toLocaleString()}
                         </Text>
-                      ) : (
-                        group.list.map((t) => {
-                          const pct = t.budget > 0 ? Math.min(100, t.percent) : 0;
-                          return (
-                            <div
-                              key={`${group.key}-${t.name}`}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 12,
-                                padding: '10px 0',
-                                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                              }}
-                            >
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                                {t.icon}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <Text strong style={{ color: '#fff' }}>{t.name}</Text>
-                                  <Tag color={group.tagColor}>{t.statusTag}</Tag>
-                                </div>
-                                <Progress percent={Math.round(pct)} showInfo={false} strokeColor={t.color} size="small" style={{ marginTop: 4 }} />
-                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
-                                  P{Number(t.spent).toLocaleString()} / P{Number(t.budget).toLocaleString()}
-                                </Text>
-                              </div>
-                              <DownOutlined style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
-                            </div>
-                          );
-                        })
-                      )}
+                      </div>
+                      <DownOutlined style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
                     </div>
-                  ))}
-                </>
+                  );
+                })
               )}
             </div>
           </Card>
