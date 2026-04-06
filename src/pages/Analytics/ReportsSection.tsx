@@ -6,7 +6,7 @@ import {
 import {
   DownloadOutlined, ReloadOutlined,
   DollarOutlined, ExclamationCircleOutlined,
-  CalendarOutlined, UsergroupAddOutlined, BarChartOutlined,
+  CalendarOutlined, UsergroupAddOutlined, BarChartOutlined, InfoCircleOutlined,
 } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -77,6 +77,152 @@ const autoFitColumns = (ws: XLSX.WorkSheet) => {
     colWidths.push(Math.min(maxLen + 2, 50));
   }
   ws['!cols'] = colWidths.map(w => ({ wch: w }));
+};
+
+const readNumber = (obj: any, keys: string[]): number | null => {
+  for (const key of keys) {
+    const raw = obj?.[key];
+    if (raw === null || raw === undefined || raw === '') continue;
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+};
+
+const formatMoney = (n: number | null) =>
+  n === null ? '—' : `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const formatRatio = (n: number | null) => (n === null ? '—' : n.toFixed(2));
+const formatPercent = (n: number | null) => (n === null ? '—' : `${n.toFixed(1)}%`);
+
+const evaluateMetric = (
+  value: number | null,
+  goodThreshold: number,
+  warnThreshold: number,
+  inverse = false
+): { label: string; color: string; text: string } => {
+  if (value === null) return { label: 'No data', color: 'default', text: 'Metric is unavailable.' };
+  const good = inverse ? value <= goodThreshold : value >= goodThreshold;
+  const warn = inverse ? value <= warnThreshold : value >= warnThreshold;
+  if (good) return { label: 'Good', color: 'success', text: 'Healthy performance.' };
+  if (warn) return { label: 'Watch', color: 'warning', text: 'Close to target. Monitor closely.' };
+  return { label: 'Risk', color: 'error', text: 'Needs corrective action.' };
+};
+
+const renderEvmData = (data: any) => {
+  const totalBudget = readNumber(data, ['totalBudget', 'total_budget', 'projectBudget', 'budget']);
+  const pv = readNumber(data, ['plannedValue', 'planned_value', 'pv']);
+  const ev = readNumber(data, ['earnedValue', 'earned_value', 'ev']);
+  const ac = readNumber(data, ['actualCost', 'actual_cost', 'ac']);
+  const cpi = readNumber(data, ['cpi']);
+  const spi = readNumber(data, ['spi']);
+  const budgetUsedPct = totalBudget && totalBudget > 0 && ac !== null ? (ac / totalBudget) * 100 : null;
+
+  const cpiStatus = evaluateMetric(cpi, 1, 0.95);
+  const spiStatus = evaluateMetric(spi, 1, 0.95);
+  const costVariance = ev !== null && ac !== null ? ev - ac : null;
+  const scheduleVariance = ev !== null && pv !== null ? ev - pv : null;
+
+  const plainSummary =
+    cpi === null || spi === null
+      ? 'Some EVM metrics are missing, so this summary is partial.'
+      : cpi >= 1 && spi >= 1
+        ? 'Project is spending efficiently and progressing on/above plan.'
+        : cpi < 1 && spi >= 1
+          ? 'Project is progressing on plan, but cost efficiency is below target.'
+          : cpi >= 1 && spi < 1
+            ? 'Project is cost-efficient, but schedule progress is behind plan.'
+            : 'Project is behind schedule and cost efficiency risk is present.';
+
+  const budgetHealth =
+    budgetUsedPct === null
+      ? 'Budget utilization unavailable.'
+      : budgetUsedPct > 100
+        ? 'Actual spend exceeded project budget.'
+        : `Budget used is ${formatPercent(budgetUsedPct)} (within budget cap).`;
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Alert
+        type="info"
+        showIcon
+        icon={<InfoCircleOutlined />}
+        message={<span style={{ color: '#fff' }}>Client-friendly EVM summary</span>}
+        description={<span style={{ color: '#d9d9d9' }}>{plainSummary}</span>}
+        style={{ background: 'rgba(24,144,255,0.12)', border: '1px solid rgba(24,144,255,0.35)', borderRadius: 8 }}
+      />
+
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={12} lg={8}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>CPI (Cost Performance)</Text>} value={formatRatio(cpi)} valueStyle={{ color: '#ffffff', fontSize: 18, fontWeight: 700 }} />
+            <Tag color={cpiStatus.color} style={{ marginTop: 10 }}>{cpiStatus.label}</Tag>
+            <div style={{ marginTop: 8, color: '#9ca3af', fontSize: 12 }}>
+              {cpiStatus.text} {cpi !== null && cpi >= 1 ? 'Each peso spent is generating expected or better value.' : ''}
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>SPI (Schedule Performance)</Text>} value={formatRatio(spi)} valueStyle={{ color: '#ffffff', fontSize: 18, fontWeight: 700 }} />
+            <Tag color={spiStatus.color} style={{ marginTop: 10 }}>{spiStatus.label}</Tag>
+            <div style={{ marginTop: 8, color: '#9ca3af', fontSize: 12 }}>
+              {spiStatus.text} {spi !== null && spi >= 1 ? 'Work is being completed at planned pace or faster.' : ''}
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Cost Variance (EV - AC)</Text>} value={formatMoney(costVariance)} valueStyle={{ color: costVariance !== null && costVariance >= 0 ? '#22c55e' : '#f87171', fontSize: 18, fontWeight: 700 }} />
+            <div style={{ marginTop: 8, color: '#9ca3af', fontSize: 12 }}>
+              {costVariance === null ? 'Missing data.' : costVariance >= 0 ? 'Positive is better: work value is higher than cost spent.' : 'Negative means spending is outpacing earned work value.'}
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Project Budget</Text>} value={formatMoney(totalBudget)} valueStyle={{ color: '#fff', fontSize: 16, fontWeight: 600 }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Budget Used</Text>} value={formatPercent(budgetUsedPct)} valueStyle={{ color: budgetUsedPct !== null && budgetUsedPct > 100 ? '#f87171' : '#22c55e', fontSize: 16, fontWeight: 600 }} />
+            <div style={{ marginTop: 8, color: '#9ca3af', fontSize: 12 }}>{budgetHealth}</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Planned Value (PV)</Text>} value={formatMoney(pv)} valueStyle={{ color: '#fff', fontSize: 16, fontWeight: 600 }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Earned Value (EV)</Text>} value={formatMoney(ev)} valueStyle={{ color: '#fff', fontSize: 16, fontWeight: 600 }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Actual Cost (AC)</Text>} value={formatMoney(ac)} valueStyle={{ color: '#fff', fontSize: 16, fontWeight: 600 }} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+            <Statistic title={<Text style={{ color: '#777', fontSize: 11 }}>Schedule Variance (EV - PV)</Text>} value={formatMoney(scheduleVariance)} valueStyle={{ color: scheduleVariance !== null && scheduleVariance >= 0 ? '#22c55e' : '#f87171', fontSize: 16, fontWeight: 600 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8 }} bodyStyle={{ padding: '12px 14px' }}>
+        <Text strong style={{ color: '#fff', display: 'block', marginBottom: 8 }}>Quick guide for clients</Text>
+        <Text style={{ color: '#bbb', display: 'block', fontSize: 12 }}>- `CPI` greater than 1.00: spending is efficient; less than 1.00: over-budget pressure.</Text>
+        <Text style={{ color: '#bbb', display: 'block', fontSize: 12 }}>- `SPI` greater than 1.00: ahead/on time; less than 1.00: behind schedule.</Text>
+        <Text style={{ color: '#bbb', display: 'block', fontSize: 12 }}>- EVM shows performance vs plan; it is not the same as accounting profit.</Text>
+      </Card>
+    </Space>
+  );
 };
 
 const buildWorksheet = (data: any, reportTitle: string, projectName: string): XLSX.WorkSheet => {
@@ -385,6 +531,59 @@ const renderData = (data: any) => {
   );
 };
 
+const hydrateReportData = (reportKey: string, data: any, projectBudget?: number) => {
+  if (!data || typeof data !== 'object') return data;
+  const budgetFromData = readNumber(data, ['totalBudget', 'total_budget', 'projectBudget', 'budget']);
+  const effectiveBudget =
+    budgetFromData && budgetFromData > 0
+      ? budgetFromData
+      : (projectBudget != null && Number.isFinite(Number(projectBudget)) && Number(projectBudget) > 0
+          ? Number(projectBudget)
+          : null);
+
+  if (reportKey === 'cost_overview') {
+    return {
+      ...data,
+      totalBudget: effectiveBudget ?? 0,
+      total_budget: effectiveBudget ?? 0,
+      variance:
+        data?.variance ??
+        data?.costVariance ??
+        (effectiveBudget != null && readNumber(data, ['totalCosts', 'total_costs', 'actualCost', 'actual_cost']) != null
+          ? effectiveBudget - Number(readNumber(data, ['totalCosts', 'total_costs', 'actualCost', 'actual_cost']))
+          : data?.variance),
+    };
+  }
+
+  if (reportKey === 'cost_forecast') {
+    return {
+      ...data,
+      totalBudget: effectiveBudget ?? 0,
+      total_budget: effectiveBudget ?? 0,
+      budget: effectiveBudget ?? data?.budget ?? 0,
+    };
+  }
+
+  if (reportKey === 'evm') {
+    const actual = readNumber(data, ['actualCost', 'actual_cost', 'ac']);
+    const budgetUsedPct = effectiveBudget && effectiveBudget > 0 && actual != null ? (actual / effectiveBudget) * 100 : null;
+    return {
+      ...data,
+      totalBudget: effectiveBudget ?? 0,
+      total_budget: effectiveBudget ?? 0,
+      budgetUsedPct,
+      budget_used_pct: budgetUsedPct,
+    };
+  }
+
+  return data;
+};
+
+const renderReportData = (reportKey: string, data: any) => {
+  if (reportKey === 'evm') return renderEvmData(data);
+  return renderData(data);
+};
+
 const ReportsSection: React.FC = () => {
   const { selectedProject, setSelectedProject, projects, isLoading: projectsLoading } = useProject();
   const screens = useBreakpoint();
@@ -541,7 +740,7 @@ const ReportsSection: React.FC = () => {
                     {hasError ? (
                       <Text style={{ color: '#ff4d4f', fontSize: 13 }}>{state?.error}</Text>
                     ) : state?.data ? (
-                      renderData(state.data)
+                      renderReportData(def.key, hydrateReportData(def.key, state.data, selectedProject?.budget))
                     ) : (
                       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text style={{ color: '#555' }}>No data returned from API</Text>} />
                     )}
