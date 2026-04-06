@@ -78,6 +78,47 @@ export interface ProjectStatsResponse {
   };
 }
 
+const parseNumberLoose = (value: any): number => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === null || value === undefined) return 0;
+  const cleaned = String(value).replace(/[^0-9.-]/g, '');
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeProject = (raw: any): Project => {
+  const p = raw ?? {};
+  const budgetRaw =
+    p.budget ??
+    p.budget_amount ??
+    p.totalBudget ??
+    p.total_budget ??
+    p.projectBudget ??
+    p.project_budget ??
+    p.approvedBudget ??
+    p.approved_budget ??
+    p.allocatedBudget ??
+    p.allocated_budget;
+  const actualCostRaw =
+    p.actualCost ??
+    p.actual_cost ??
+    p.totalActualCost ??
+    p.total_actual_cost;
+
+  return {
+    ...p,
+    id: p.id ?? p._id,
+    budget: parseNumberLoose(budgetRaw),
+    actualCost: parseNumberLoose(actualCostRaw),
+    location: p.location ?? p.address ?? '',
+    startDate: p.startDate ?? p.start_date ?? null,
+    endDate: p.endDate ?? p.end_date ?? null,
+    plannedEndDate: p.plannedEndDate ?? p.planned_end_date ?? p.endDate ?? p.end_date ?? null,
+    actualEndDate: p.actualEndDate ?? p.actual_end_date ?? null,
+    clientName: p.clientName ?? p.client_name ?? null,
+  } as Project;
+};
+
 class ProjectService {
   async getProjects(): Promise<Project[]> {
     try {
@@ -86,15 +127,15 @@ class ProjectService {
 
       // Paginated format: { success, data: { projects: [...], pagination: {...} } }
       if (d.success && d.data?.projects && Array.isArray(d.data.projects)) {
-        return d.data.projects;
+        return d.data.projects.map((p: any) => normalizeProject(p));
       }
       // Flat array format: { success, data: Project[] }
       if (d.success && Array.isArray(d.data)) {
-        return d.data;
+        return d.data.map((p: any) => normalizeProject(p));
       }
       // Raw array
       if (Array.isArray(d)) {
-        return d;
+        return d.map((p: any) => normalizeProject(p));
       }
       return [];
     } catch (error: any) {
@@ -112,21 +153,10 @@ class ProjectService {
       if (!response.data?.success || !data) throw new Error('Project not found');
       // API returns { success, data: { project } } — project is under data.project
       const raw = (data as any).project ?? data;
-      const p = raw as any;
-      const budgetVal = raw.budget ?? p.budget_amount ?? p.budget;
-      const budgetNum = budgetVal != null ? parseFloat(String(budgetVal)) : 0;
-      return {
+      return normalizeProject({
         ...raw,
-        id: raw.id ?? p._id,
-        location: raw.location ?? p.location ?? p.address ?? '',
-        startDate: raw.startDate ?? p.start_date ?? null,
-        endDate: raw.endDate ?? p.end_date ?? null,
-        plannedEndDate: raw.plannedEndDate ?? p.planned_end_date ?? raw.endDate ?? null,
-        actualEndDate: raw.actualEndDate ?? p.actual_end_date ?? null,
-        clientName: raw.clientName ?? p.client_name ?? null,
-        budget: Number.isFinite(budgetNum) ? budgetNum : 0,
         actualCost: undefined, // use getProjectBudgetOverview for spent
-      } as Project;
+      });
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch project');
     }
@@ -185,7 +215,21 @@ class ProjectService {
   async getProjectStats(): Promise<ProjectStatsResponse['data']> {
     try {
       const response = await apiService.get<ProjectStatsResponse>('/projects/stats/overview');
-      return response.data.success ? response.data.data : {
+      if (response.data.success) {
+        const d: any = response.data.data ?? {};
+        return {
+          ...d,
+          totalProjects: parseNumberLoose(d.totalProjects),
+          activeProjects: parseNumberLoose(d.activeProjects),
+          completedProjects: parseNumberLoose(d.completedProjects),
+          onHoldProjects: parseNumberLoose(d.onHoldProjects),
+          cancelledProjects: parseNumberLoose(d.cancelledProjects),
+          totalBudget: parseNumberLoose(d.totalBudget ?? d.total_budget ?? d.projectBudget ?? d.project_budget),
+          spentBudget: parseNumberLoose(d.spentBudget ?? d.spent_budget ?? d.totalSpent ?? d.total_spent),
+          remainingBudget: parseNumberLoose(d.remainingBudget ?? d.remaining_budget),
+        };
+      }
+      return {
         totalProjects: 0,
         activeProjects: 0,
         completedProjects: 0,
@@ -213,11 +257,21 @@ class ProjectService {
       const d = response.data;
       // API may return { success, data: { projects, pagination } } or { success, data: Project[] }
       if (d.success && d.data?.projects) {
-        return d.data as ProjectsPagedResponse;
+        const payload = d.data as ProjectsPagedResponse;
+        return {
+          ...payload,
+          projects: (payload.projects || []).map((p: any) => normalizeProject(p)),
+        };
       } else if (d.success && Array.isArray(d.data)) {
-        return { projects: d.data, pagination: { total: d.data.length, page: 1, limit: d.data.length, totalPages: 1 } };
+        return {
+          projects: d.data.map((p: any) => normalizeProject(p)),
+          pagination: { total: d.data.length, page: 1, limit: d.data.length, totalPages: 1 },
+        };
       } else if (Array.isArray(d)) {
-        return { projects: d, pagination: { total: d.length, page: 1, limit: d.length, totalPages: 1 } };
+        return {
+          projects: d.map((p: any) => normalizeProject(p)),
+          pagination: { total: d.length, page: 1, limit: d.length, totalPages: 1 },
+        };
       }
       return { projects: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
     } catch (error: any) {
@@ -229,8 +283,8 @@ class ProjectService {
     try {
       const response = await apiService.get<any>(`/projects/status/${status}`);
       const d = response.data;
-      if (d.success && Array.isArray(d.data)) return d.data;
-      if (Array.isArray(d)) return d;
+      if (d.success && Array.isArray(d.data)) return d.data.map((p: any) => normalizeProject(p));
+      if (Array.isArray(d)) return d.map((p: any) => normalizeProject(p));
       return [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch projects by status');
@@ -241,8 +295,8 @@ class ProjectService {
     try {
       const response = await apiService.get<any>(`/projects/type/${type}`);
       const d = response.data;
-      if (d.success && Array.isArray(d.data)) return d.data;
-      if (Array.isArray(d)) return d;
+      if (d.success && Array.isArray(d.data)) return d.data.map((p: any) => normalizeProject(p));
+      if (Array.isArray(d)) return d.map((p: any) => normalizeProject(p));
       return [];
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch projects by type');
