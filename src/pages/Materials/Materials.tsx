@@ -143,7 +143,11 @@ const Materials: React.FC = () => {
       existing.push(m);
       byCategory.set(category, existing);
     });
-    return MATERIAL_CATEGORIES
+    const categoryOrder = [
+      ...MATERIAL_CATEGORIES.filter((category) => byCategory.has(category)),
+      ...Array.from(byCategory.keys()).filter((category) => !MATERIAL_CATEGORIES.includes(category)),
+    ];
+    return categoryOrder
       .map((category) => ({
         category,
         items: (byCategory.get(category) || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
