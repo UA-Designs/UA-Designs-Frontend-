@@ -1,0 +1,161 @@
+.materials-print-page {
+  display: none;
+}
+
+.materials-print-document {
+  background: #fff;
+  color: #111;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+
+.materials-print-document h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.materials-print-convention {
+  margin: 0 0 16px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: #444;
+  text-align: center;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.materials-print-meta {
+  font-size: 11px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.materials-print-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 4px;
+}
+
+.materials-print-meta-label {
+  font-weight: 600;
+}
+
+.materials-print-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.materials-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+  table-layout: fixed;
+  background: transparent;
+  border: none;
+}
+
+.materials-print-table th,
+.materials-print-table td {
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 8px;
+  vertical-align: top;
+  word-wrap: break-word;
+  background: transparent;
+}
+
+.materials-print-table thead th {
+  background: transparent;
+  font-weight: 700;
+  text-align: center;
+  color: #222;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.18);
+  padding-bottom: 10px;
+}
+
+.materials-print-table .col-no {
+  width: 8%;
+  text-align: center;
+}
+
+.materials-print-table .col-desc {
+  width: 28%;
+}
+
+.materials-print-table .col-unit {
+  width: 16%;
+  text-align: center;
+}
+
+.materials-print-table .col-category {
+  width: 20%;
+}
+
+.materials-print-table .col-desc2 {
+  width: 28%;
+}
+
+.materials-print-group-row td {
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+@media print {
+  .materials-print-page {
+    display: block !important;
+  }
+
+  .materials-print-document {
+    box-shadow: none;
+    border-radius: 0;
+    max-width: none;
+    margin: 0;
+    padding: 12mm 14mm;
+  }
+
+  .ant-layout-sider,
+  .ant-layout-header,
+  .ant-layout-footer {
+    display: none !important;
+  }
+
+  .ant-layout {
+    margin-left: 0 !important;
+  }
+
+  .ant-layout-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .ant-card,
+  .ant-modal-root,
+  .ant-message,
+  .ant-notification,
+  .ant-table-wrapper,
+  .ant-btn,
+  .ant-select,
+  .ant-input {
+    display: none !important;
+  }
+
+  .materials-print-table {
+    font-size: 8pt;
+  }
+
+  .materials-print-table th,
+  .materials-print-table td {
+    page-break-inside: avoid;
+  }
+}

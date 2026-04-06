@@ -23,9 +23,12 @@ import {
   EditOutlined,
   DeleteOutlined,
   AppstoreOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { resourceService, Material } from '../../services/resourceService';
+import dayjs from 'dayjs';
+import './MaterialsPrint.css';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -131,6 +134,26 @@ const Materials: React.FC = () => {
     });
     return counts;
   }, [materials]);
+
+  const printableGroups = useMemo(() => {
+    const byCategory = new Map<string, MaterialCatalogItem[]>();
+    filteredMaterials.forEach((m) => {
+      const category = m.category || DEFAULT_MATERIAL_CATEGORY;
+      const existing = byCategory.get(category) || [];
+      existing.push(m);
+      byCategory.set(category, existing);
+    });
+    return MATERIAL_CATEGORIES
+      .map((category) => ({
+        category,
+        items: (byCategory.get(category) || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [filteredMaterials]);
+
+  const handlePrintCatalog = () => {
+    window.print();
+  };
 
   const openAddModal = () => {
     addForm.resetFields();
@@ -285,14 +308,23 @@ const Materials: React.FC = () => {
           </Text>
         </Col>
         <Col xs={24} md="auto">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openAddModal}
-            style={{ background: '#009944', borderColor: '#009944' }}
-          >
-            Add Material
-          </Button>
+          <Space>
+            <Button
+              icon={<PrinterOutlined />}
+              onClick={handlePrintCatalog}
+              style={{ borderColor: '#009944', color: '#009944' }}
+            >
+              Export Printable Catalog
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openAddModal}
+              style={{ background: '#009944', borderColor: '#009944' }}
+            >
+              Add Material
+            </Button>
+          </Space>
         </Col>
       </Row>
 
@@ -526,6 +558,83 @@ const Materials: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <div className="materials-print-page" aria-hidden>
+        <div className="materials-print-document">
+          <h1>Materials Catalog</h1>
+          <p className="materials-print-convention">
+            Printable materials catalog for inventory reference. Cost fields are intentionally excluded.
+          </p>
+
+          <div className="materials-print-meta">
+            <div className="materials-print-meta-row">
+              <span>
+                <span className="materials-print-meta-label">Generated: </span>
+                {dayjs().format('MMM DD, YYYY hh:mm A')}
+              </span>
+            </div>
+            <div className="materials-print-meta-row">
+              <span>
+                <span className="materials-print-meta-label">Total Materials: </span>
+                {filteredMaterials.length}
+              </span>
+              <span>
+                <span className="materials-print-meta-label">Category Filter: </span>
+                {categoryFilter || 'All Categories'}
+              </span>
+              <span>
+                <span className="materials-print-meta-label">Search: </span>
+                {search.trim() || '—'}
+              </span>
+            </div>
+          </div>
+
+          <div className="materials-print-table-wrap">
+            <table className="materials-print-table">
+              <thead>
+                <tr>
+                  <th className="col-no">Item No.</th>
+                  <th className="col-desc">Material Name</th>
+                  <th className="col-unit">Unit</th>
+                  <th className="col-category">Category</th>
+                  <th className="col-desc2">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printableGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>
+                      No materials to print.
+                    </td>
+                  </tr>
+                ) : (
+                  printableGroups.flatMap((group) => {
+                    const rows: React.ReactNode[] = [];
+                    rows.push(
+                      <tr key={`group-${group.category}`} className="materials-print-group-row">
+                        <td className="col-no">—</td>
+                        <td className="col-desc" colSpan={4}>{group.category.toUpperCase()}</td>
+                      </tr>
+                    );
+                    group.items.forEach((item, index) => {
+                      rows.push(
+                        <tr key={item.id}>
+                          <td className="col-no">{index + 1}</td>
+                          <td className="col-desc">{item.name || '—'}</td>
+                          <td className="col-unit">{item.unit || '—'}</td>
+                          <td className="col-category">{item.category || DEFAULT_MATERIAL_CATEGORY}</td>
+                          <td className="col-desc2">{item.description || '—'}</td>
+                        </tr>
+                      );
+                    });
+                    return rows;
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
