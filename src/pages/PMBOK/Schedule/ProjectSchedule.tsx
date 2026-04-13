@@ -721,9 +721,9 @@ const ProjectSchedule: React.FC = () => {
               {/* ── Charts (S-Curve + Gantt) ── */}
               {activeTab === 'gantt' && (
                 <div style={{ padding: 16 }}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Schedule charts: S-Curve (original vs delayed) and Gantt timeline.</Text>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>Schedule charts: S-Curve (planned vs actual) and Gantt timeline.</Text>
                   <div style={{ marginBottom: 16, background: '#111', border: '1px solid #333', borderRadius: 8, padding: 12 }}>
-                    <Text style={{ color: '#fff', fontWeight: 600, display: 'block', marginBottom: 8 }}>S-Curve: Original vs Delayed Schedule</Text>
+                    <Text style={{ color: '#fff', fontWeight: 600, display: 'block', marginBottom: 8 }}>S-Curve: Planned vs Actual Schedule</Text>
                     {sCurveData.length > 1 ? (
                       <ChartErrorBoundary height={260}>
                         <ResponsiveContainer width="100%" height={260}>
@@ -732,12 +732,12 @@ const ProjectSchedule: React.FC = () => {
                             <XAxis dataKey="label" tick={{ fill: '#bbb', fontSize: 11 }} />
                             <YAxis domain={[0, 100]} tick={{ fill: '#bbb', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
                             <Tooltip
-                              formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name === 'plannedPct' ? 'Original plan' : 'Delayed/actual']}
+                              formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name === 'plannedPct' ? 'Planned' : 'Actual']}
                               labelFormatter={(label: any, payload: any) => payload?.[0]?.payload?.date || label}
                               contentStyle={{ background: '#1f1f1f', border: '1px solid #333' }}
                             />
-                            <Line type="monotone" dataKey="plannedPct" name="Original plan" stroke="#00aaff" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="actualPct" name="Delayed/actual" stroke="#faad14" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="plannedPct" name="Planned" stroke="#00aaff" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="actualPct" name="Actual" stroke="#faad14" strokeWidth={2} dot={false} />
                           </LineChart>
                         </ResponsiveContainer>
                       </ChartErrorBoundary>
