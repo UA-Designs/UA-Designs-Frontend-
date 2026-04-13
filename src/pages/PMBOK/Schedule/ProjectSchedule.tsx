@@ -48,6 +48,7 @@ import {
   CreateDependencyData,
 } from '../../../services/scheduleService';
 import { riskService, RiskStatus } from '../../../services/riskService';
+import { UserRole } from '../../../types';
 import GanttChart from '../../../components/Schedule/GanttChart';
 import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
@@ -75,7 +76,7 @@ const priorityColors: Record<TaskPriority, string> = {
 
 const ProjectSchedule: React.FC = () => {
   const { selectedProject, isLoading: projectsLoading } = useProject();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
@@ -115,10 +116,20 @@ const ProjectSchedule: React.FC = () => {
     if (!selectedProject) return;
     setLoading(true);
     try {
+      const isAdminOrProprietor =
+        user?.role === UserRole.ADMIN || user?.role === UserRole.PROPRIETOR;
+      const projectManagerId = selectedProject.projectManagerId || selectedProject.projectManager?.id;
+      const isProjectManager = Boolean(projectManagerId && user?.id && projectManagerId === user.id);
+      const canReadProjectPathData = isAdminOrProprietor || isProjectManager;
+
       const [tasksResult, depsResult, cpResult, risksResult] = await Promise.allSettled([
         scheduleService.getProjectTasks(selectedProject.id),
-        scheduleService.getProjectDependencies(selectedProject.id),
-        scheduleService.getCriticalPath(selectedProject.id),
+        canReadProjectPathData
+          ? scheduleService.getProjectDependencies(selectedProject.id)
+          : Promise.resolve([]),
+        canReadProjectPathData
+          ? scheduleService.getCriticalPath(selectedProject.id)
+          : Promise.resolve(null),
         riskService.getRisks(selectedProject.id, undefined, 1, 200),
       ]);
 
