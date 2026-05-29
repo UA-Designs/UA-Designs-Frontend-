@@ -107,26 +107,92 @@ interface ApiResponse<T> {
 type MaterialSortBy = 'name' | 'createdAt';
 type MaterialSortOrder = 'asc' | 'desc';
 
+export interface MaterialListParams {
+  projectId?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: MaterialSortBy;
+  sortOrder?: MaterialSortOrder;
+}
+
+export interface MaterialPagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface MaterialListResult {
+  materials: Material[];
+  pagination: MaterialPagination;
+}
+
+const defaultMaterialPagination = (limit = 25): MaterialPagination => ({
+  currentPage: 1,
+  totalPages: 0,
+  totalItems: 0,
+  hasNext: false,
+  hasPrev: false,
+});
+
 class ResourceService {
   // ==================== MATERIALS ====================
 
-  // GET /api/resources/materials — optional ?projectId=, ?sortBy=, ?sortOrder= (camelCase).
-  async getMaterials(
-    projectId?: string,
-    sort?: { sortBy?: MaterialSortBy; sortOrder?: MaterialSortOrder }
-  ): Promise<Material[]> {
+  // GET /api/resources/materials — ?page=, ?limit=, ?projectId=, ?sortBy=, ?sortOrder=
+  async getMaterials(params: MaterialListParams = {}): Promise<MaterialListResult> {
     try {
-      const params: Record<string, string> = {};
-      if (projectId) params.projectId = projectId;
-      if (sort?.sortBy) params.sortBy = sort.sortBy;
-      if (sort?.sortOrder) params.sortOrder = sort.sortOrder;
-      const response = await apiService.get<ApiResponse<Material[]>>('/resources/materials', { params });
+      const query: Record<string, string | number> = {};
+      if (params.projectId) query.projectId = params.projectId;
+      if (params.sortBy) query.sortBy = params.sortBy;
+      if (params.sortOrder) query.sortOrder = params.sortOrder;
+      if (params.page != null) query.page = params.page;
+      if (params.limit != null) query.limit = params.limit;
+
+      const response = await apiService.get<ApiResponse<Material[]> & { pagination?: MaterialPagination }>(
+        '/resources/materials',
+        { params: query }
+      );
       const d = response.data?.data;
-      const list = Array.isArray(d) ? d : [];
-      return response.data?.success ? list : [];
+      const materials = Array.isArray(d) ? d : [];
+      const raw = response.data?.pagination;
+      const limit = params.limit ?? 25;
+      const pagination: MaterialPagination = raw
+        ? {
+            currentPage: raw.currentPage ?? 1,
+            totalPages: raw.totalPages ?? 1,
+            totalItems: raw.totalItems ?? materials.length,
+            hasNext: Boolean(raw.hasNext),
+            hasPrev: Boolean(raw.hasPrev),
+          }
+        : {
+            currentPage: params.page ?? 1,
+            totalPages: materials.length > 0 ? 1 : 0,
+            totalItems: materials.length,
+            hasNext: false,
+            hasPrev: false,
+          };
+
+      return response.data?.success
+        ? { materials, pagination }
+        : { materials: [], pagination: defaultMaterialPagination(limit) };
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch materials');
     }
+  }
+
+  /** All pages merged — for dropdowns and category totals. */
+  async getAllMaterials(params: Omit<MaterialListParams, 'page' | 'limit'> = {}): Promise<Material[]> {
+    const pageSize = 500;
+    const first = await this.getMaterials({ ...params, page: 1, limit: pageSize });
+    if (!first.pagination.hasNext) return first.materials;
+
+    const all = [...first.materials];
+    for (let p = 2; p <= first.pagination.totalPages; p += 1) {
+      const next = await this.getMaterials({ ...params, page: p, limit: pageSize });
+      all.push(...next.materials);
+    }
+    return all;
   }
 
   // GET /api/resources/materials/:id
@@ -165,6 +231,12 @@ class ResourceService {
       const msg = err?.message ?? err?.error ?? error.message;
       const details = Array.isArray(err?.errors) ? err.errors.map((e: any) => `${e.field ?? e.param}: ${e.message ?? e.msg}`).join('; ') : '';
       const body = typeof err === 'string' ? err : null;
+      if (status === 401) {
+        throw new Error(msg || 'Session expired. Please sign in again.');
+      }
+      if (status === 503) {
+        throw new Error(msg || 'Materials table needs a one-time update. Contact your administrator.');
+      }
       const prefix = status === 500 ? 'Server error (500). Check backend logs. ' : '';
       const fallback = status === 500 ? (msg || body || 'Backend failed while creating material.') : 'Failed to create material';
       throw new Error(prefix + (details ? `${msg || 'Validation error'} — ${details}` : body || msg || fallback));

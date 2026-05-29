@@ -124,7 +124,7 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
     form.setFieldsValue({ category: CostType.MATERIAL, estimatedQty: 0, unitCost: 0, tradeCategory: undefined });
     setLoadingOptions(true);
     const load = async () => {
-      const mList = await resourceService.getMaterials().catch(() => []);
+      const mList = await resourceService.getAllMaterials().catch(() => []);
       setMaterials(Array.isArray(mList) ? mList : []);
     };
     load().finally(() => setLoadingOptions(false));

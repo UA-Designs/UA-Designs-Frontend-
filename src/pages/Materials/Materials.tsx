@@ -61,6 +61,9 @@ const MATERIAL_CATEGORIES = [
 ];
 const DEFAULT_MATERIAL_CATEGORY = 'Structural';
 
+const DEFAULT_MATERIALS_PAGE_SIZE = 25;
+const MATERIALS_PAGE_SIZE_OPTIONS = ['10', '25', '50'];
+
 export interface MaterialCatalogItem extends Material {
   unit?: string;
   category?: string;
@@ -89,7 +92,11 @@ const Materials: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [materials, setMaterials] = useState<MaterialCatalogItem[]>([]);
+  const [allMaterialsForStats, setAllMaterialsForStats] = useState<MaterialCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_MATERIALS_PAGE_SIZE);
+  const [totalItems, setTotalItems] = useState(0);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [sortMode, setSortMode] = useState<MaterialCatalogSortMode>('alphabetical');
@@ -102,26 +109,58 @@ const Materials: React.FC = () => {
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
+  const sortParams = useMemo(
+    () =>
+      sortMode === 'alphabetical'
+        ? { sortBy: 'name' as const, sortOrder: 'asc' as const }
+        : { sortBy: 'createdAt' as const, sortOrder: 'desc' as const },
+    [sortMode]
+  );
+
   const fetchMaterials = useCallback(async () => {
     setLoading(true);
     try {
-      const sortParams =
-        sortMode === 'alphabetical'
-          ? { sortBy: 'name' as const, sortOrder: 'asc' as const }
-          : { sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
-      const list = await resourceService.getMaterials(undefined, sortParams);
-      setMaterials(Array.isArray(list) ? list : []);
+      const result = await resourceService.getMaterials({
+        page,
+        limit: pageSize,
+        ...sortParams,
+      });
+      setMaterials(Array.isArray(result.materials) ? result.materials : []);
+      setTotalItems(result.pagination.totalItems);
+      if (page > result.pagination.totalPages && result.pagination.totalPages > 0) {
+        setPage(result.pagination.totalPages);
+      }
     } catch (err: any) {
       message.error(err.message || 'Failed to load materials');
       setMaterials([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
-  }, [sortMode]);
+  }, [page, pageSize, sortParams]);
 
   useEffect(() => {
     fetchMaterials();
   }, [fetchMaterials]);
+
+  useEffect(() => {
+    let cancelled = false;
+    resourceService
+      .getAllMaterials(sortParams)
+      .then((list) => {
+        if (!cancelled) setAllMaterialsForStats(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAllMaterialsForStats([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sortParams]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, categoryFilter]);
 
   const filteredMaterials = useMemo(() => {
     let list = materials;
@@ -140,12 +179,13 @@ const Materials: React.FC = () => {
   }, [materials, search, categoryFilter]);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { Total: materials.length };
+    const source = allMaterialsForStats.length > 0 ? allMaterialsForStats : materials;
+    const counts: Record<string, number> = { Total: totalItems || source.length };
     MATERIAL_CATEGORIES.forEach((cat) => {
-      counts[cat] = materials.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === cat).length;
+      counts[cat] = source.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === cat).length;
     });
     return counts;
-  }, [materials]);
+  }, [allMaterialsForStats, materials, totalItems]);
 
   const printableGroups = useMemo(() => {
     const byCategory = new Map<string, MaterialCatalogItem[]>();
@@ -189,7 +229,14 @@ const Materials: React.FC = () => {
       message.success('Material added');
       setAddModalVisible(false);
       addForm.resetFields();
-      fetchMaterials();
+      if (sortMode === 'recent' && page !== 1) {
+        setPage(1);
+      } else {
+        fetchMaterials();
+        resourceService.getAllMaterials(sortParams).then((list) => {
+          setAllMaterialsForStats(Array.isArray(list) ? list : []);
+        }).catch(() => {});
+      }
     } catch (err: any) {
       message.error(err.message || 'Failed to add material');
     } finally {
@@ -224,6 +271,9 @@ const Materials: React.FC = () => {
       setEditModalVisible(false);
       setEditingMaterial(null);
       fetchMaterials();
+      resourceService.getAllMaterials(sortParams).then((list) => {
+        setAllMaterialsForStats(Array.isArray(list) ? list : []);
+      }).catch(() => {});
     } catch (err: any) {
       message.error(err.message || 'Failed to update material');
     } finally {
@@ -236,6 +286,9 @@ const Materials: React.FC = () => {
       await resourceService.deleteMaterial(id);
       message.success('Material deleted');
       fetchMaterials();
+      resourceService.getAllMaterials(sortParams).then((list) => {
+        setAllMaterialsForStats(Array.isArray(list) ? list : []);
+      }).catch(() => {});
     } catch (err: any) {
       message.error(err.message || 'Failed to delete material');
     }
@@ -426,7 +479,10 @@ const Materials: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               value={sortMode}
-              onChange={(v) => setSortMode(v as MaterialCatalogSortMode)}
+              onChange={(v) => {
+                setSortMode(v as MaterialCatalogSortMode);
+                setPage(1);
+              }}
               options={[
                 { label: 'Sort: Alphabetical', value: 'alphabetical' },
                 { label: 'Sort: Recently Added', value: 'recent' },
@@ -447,8 +503,21 @@ const Materials: React.FC = () => {
           columns={columns}
           loading={loading}
           pagination={{
-            pageSize: 10,
-            showTotal: (t) => `${t} materials`,
+            current: page,
+            pageSize,
+            total: totalItems,
+            showSizeChanger: true,
+            pageSizeOptions: MATERIALS_PAGE_SIZE_OPTIONS,
+            showTotal: (total, [start, end]) =>
+              total > 0 ? `${start}-${end} of ${total} materials` : '0 materials',
+            onChange: (nextPage, nextPageSize) => {
+              if (nextPageSize !== pageSize) {
+                setPageSize(nextPageSize);
+                setPage(1);
+              } else {
+                setPage(nextPage);
+              }
+            },
             style: { padding: '16px 24px' },
           }}
           style={{ background: '#1f1f1f' }}
