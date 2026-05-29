@@ -1,4 +1,9 @@
 import { apiService } from './api';
+import {
+  isKnownMaterialCategory,
+  normalizeMaterialCategory,
+  normalizeMaterialRecord,
+} from '../utils/materialCategory';
 
 // ---- Interfaces ----
 
@@ -111,9 +116,35 @@ export interface MaterialListParams {
   projectId?: string;
   page?: number;
   limit?: number;
+  category?: string;
   sortBy?: MaterialSortBy;
   sortOrder?: MaterialSortOrder;
 }
+
+const mapMaterialRow = (row: Material): Material =>
+  normalizeMaterialRecord(row) as Material;
+
+const buildMaterialWritePayload = (data: Partial<CreateMaterialData>): Record<string, unknown> => {
+  const payload: Record<string, unknown> = {};
+  if (data.name != null) payload.name = String(data.name).trim();
+  if (data.unit != null) payload.unit = data.unit;
+  const unitCost = data.unitCost ?? data.defaultCost;
+  if (unitCost != null) payload.unitCost = Number(unitCost);
+  if (data.quantity != null) payload.quantity = Number(data.quantity);
+  if (data.projectId != null && data.projectId !== '') payload.projectId = data.projectId;
+  if (data.description != null && data.description !== '') payload.description = data.description;
+  if (data.supplier != null && data.supplier !== '') payload.supplier = data.supplier;
+  if (data.status != null && data.status !== '') payload.status = data.status;
+  if (data.deliveryDate != null && data.deliveryDate !== '') payload.deliveryDate = data.deliveryDate;
+  if (data.location != null && data.location !== '') payload.location = data.location;
+  if (data.notes != null && data.notes !== '') payload.notes = data.notes;
+  if (data.category != null && data.category !== '') {
+    const category = normalizeMaterialCategory(data.category);
+    payload.category = category;
+    if (isKnownMaterialCategory(category)) payload.tradeCategory = category;
+  }
+  return payload;
+};
 
 export interface MaterialPagination {
   currentPage: number;
@@ -148,13 +179,14 @@ class ResourceService {
       if (params.sortOrder) query.sortOrder = params.sortOrder;
       if (params.page != null) query.page = params.page;
       if (params.limit != null) query.limit = params.limit;
+      if (params.category) query.category = normalizeMaterialCategory(params.category);
 
       const response = await apiService.get<ApiResponse<Material[]> & { pagination?: MaterialPagination }>(
         '/resources/materials',
         { params: query }
       );
       const d = response.data?.data;
-      const materials = Array.isArray(d) ? d : [];
+      const materials = (Array.isArray(d) ? d : []).map(mapMaterialRow);
       const raw = response.data?.pagination;
       const limit = params.limit ?? 25;
       const pagination: MaterialPagination = raw
@@ -199,7 +231,7 @@ class ResourceService {
   async getMaterialById(id: string): Promise<Material | null> {
     try {
       const response = await apiService.get<ApiResponse<Material>>(`/resources/materials/${id}`);
-      return response.data.success ? response.data.data : null;
+      return response.data.success ? mapMaterialRow(response.data.data) : null;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch material');
     }
@@ -208,22 +240,13 @@ class ResourceService {
   // POST /api/resources/materials — required: name, unit, unitCost; projectId optional (materials are global)
   async createMaterial(data: CreateMaterialData): Promise<Material> {
     try {
-      const payload: Record<string, unknown> = {
-        name: String(data.name).trim(),
-        unit: data.unit ?? 'pcs',
+      const payload = buildMaterialWritePayload({
+        ...data,
         unitCost: Number(data.unitCost ?? data.defaultCost ?? 0),
-      };
-      if (data.quantity != null) payload.quantity = Number(data.quantity);
-      if (data.projectId != null && data.projectId !== '') payload.projectId = data.projectId;
-      if (data.description != null && data.description !== '') payload.description = data.description;
-      if (data.category != null && data.category !== '') payload.category = data.category;
-      if (data.supplier != null && data.supplier !== '') payload.supplier = data.supplier;
-      if (data.status != null && data.status !== '') payload.status = data.status;
-      if (data.deliveryDate != null && data.deliveryDate !== '') payload.deliveryDate = data.deliveryDate;
-      if (data.location != null && data.location !== '') payload.location = data.location;
-      if (data.notes != null && data.notes !== '') payload.notes = data.notes;
+        unit: data.unit ?? 'pcs',
+      });
       const response = await apiService.post<ApiResponse<Material>>('/resources/materials', payload);
-      if (response.data.success) return response.data.data;
+      if (response.data.success) return mapMaterialRow(response.data.data);
       throw new Error('Failed to create material');
     } catch (error: any) {
       const status = error.response?.status;
@@ -246,8 +269,9 @@ class ResourceService {
   // PUT /api/resources/materials/:id
   async updateMaterial(id: string, data: Partial<CreateMaterialData>): Promise<Material> {
     try {
-      const response = await apiService.put<ApiResponse<Material>>(`/resources/materials/${id}`, data);
-      if (response.data.success) return response.data.data;
+      const payload = buildMaterialWritePayload(data);
+      const response = await apiService.put<ApiResponse<Material>>(`/resources/materials/${id}`, payload);
+      if (response.data.success) return mapMaterialRow(response.data.data);
       throw new Error('Failed to update material');
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to update material');

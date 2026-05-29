@@ -62,6 +62,7 @@ import { resourceService, Material, Labor, Equipment } from '../../services/reso
 import { Project } from '../../types';
 import { ChartErrorBoundary } from '../../components/Charts/ChartErrorBoundary';
 import { BOQ_TRADE_CATEGORIES, getEffectiveTradeCategory } from '../../constants/boqTradeCategories';
+import { getMaterialCategoryFromRecord, isKnownMaterialCategory } from '../../utils/materialCategory';
 
 /** BOQ line unit of measure — stored as `unit` on the cost; backend accepts any string. */
 const BOQ_UNIT_OF_MEASURE_OPTIONS = [
@@ -252,6 +253,14 @@ const AddBOQModal: React.FC<AddBOQModalProps> = ({ open, projectId, onClose, onA
               dropdownStyle={{ background: '#1f1f1f' }}
               optionFilterProp="label"
               options={materialOptions.map(o => ({ label: o.name, value: o.id }))}
+              onChange={(materialId: string) => {
+                const mat = materials.find((x) => x.id === materialId);
+                if (!mat) return;
+                const catalogCategory = getMaterialCategoryFromRecord(mat as Record<string, unknown>);
+                if (isKnownMaterialCategory(catalogCategory)) {
+                  form.setFieldValue('tradeCategory', catalogCategory);
+                }
+              }}
             />
           </Form.Item>
         ) : (

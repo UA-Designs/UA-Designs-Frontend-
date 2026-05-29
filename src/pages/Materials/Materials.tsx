@@ -27,6 +27,11 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { resourceService, Material } from '../../services/resourceService';
+import {
+  DEFAULT_MATERIAL_CATEGORY,
+  getMaterialCategoryFromRecord,
+  MATERIAL_CATEGORIES,
+} from '../../utils/materialCategory';
 import dayjs from 'dayjs';
 import './MaterialsPrint.css';
 
@@ -51,16 +56,6 @@ const MATERIAL_UNITS = [
   'Lump Sum',
 ];
 
-const MATERIAL_CATEGORIES = [
-  'Structural',
-  'Architectural',
-  'Mechanical',
-  'Electrical',
-  'Plumbing',
-  'Fire Protection',
-];
-const DEFAULT_MATERIAL_CATEGORY = 'Structural';
-
 const DEFAULT_MATERIALS_PAGE_SIZE = 25;
 const MATERIALS_PAGE_SIZE_OPTIONS = ['10', '25', '50'];
 
@@ -75,6 +70,9 @@ type MaterialCatalogSortMode = 'alphabetical' | 'recent';
 
 const formatCurrency = (v?: number) =>
   v !== undefined && v !== null ? `₱${Number(v).toLocaleString('en-PH')}` : '—';
+
+const getCatalogCategory = (m: MaterialCatalogItem): string =>
+  getMaterialCategoryFromRecord(m as Record<string, unknown>);
 
 const getMaterialDefaultCost = (m: MaterialCatalogItem): number | undefined => {
   const raw =
@@ -123,6 +121,7 @@ const Materials: React.FC = () => {
       const result = await resourceService.getMaterials({
         page,
         limit: pageSize,
+        category: categoryFilter || undefined,
         ...sortParams,
       });
       setMaterials(Array.isArray(result.materials) ? result.materials : []);
@@ -137,7 +136,7 @@ const Materials: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, sortParams]);
+  }, [page, pageSize, sortParams, categoryFilter]);
 
   useEffect(() => {
     fetchMaterials();
@@ -169,11 +168,11 @@ const Materials: React.FC = () => {
       list = list.filter(
         (m) =>
           (m.name || '').toLowerCase().includes(q) ||
-          (m.category || '').toLowerCase().includes(q)
+          getCatalogCategory(m).toLowerCase().includes(q)
       );
     }
     if (categoryFilter) {
-      list = list.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === categoryFilter);
+      list = list.filter((m) => getCatalogCategory(m) === categoryFilter);
     }
     return list;
   }, [materials, search, categoryFilter]);
@@ -182,7 +181,7 @@ const Materials: React.FC = () => {
     const source = allMaterialsForStats.length > 0 ? allMaterialsForStats : materials;
     const counts: Record<string, number> = { Total: totalItems || source.length };
     MATERIAL_CATEGORIES.forEach((cat) => {
-      counts[cat] = source.filter((m) => (m.category || DEFAULT_MATERIAL_CATEGORY) === cat).length;
+      counts[cat] = source.filter((m) => getCatalogCategory(m) === cat).length;
     });
     return counts;
   }, [allMaterialsForStats, materials, totalItems]);
@@ -190,7 +189,7 @@ const Materials: React.FC = () => {
   const printableGroups = useMemo(() => {
     const byCategory = new Map<string, MaterialCatalogItem[]>();
     filteredMaterials.forEach((m) => {
-      const category = m.category || DEFAULT_MATERIAL_CATEGORY;
+      const category = getCatalogCategory(m);
       const existing = byCategory.get(category) || [];
       existing.push(m);
       byCategory.set(category, existing);
@@ -249,7 +248,7 @@ const Materials: React.FC = () => {
     editForm.setFieldsValue({
       name: record.name,
       unit: record.unit || 'Pieces (pc)',
-      category: record.category || DEFAULT_MATERIAL_CATEGORY,
+      category: getCatalogCategory(record),
       defaultCost: getMaterialDefaultCost(record) ?? 0,
       description: record.description,
     });
@@ -317,7 +316,7 @@ const Materials: React.FC = () => {
       title: 'Category',
       dataIndex: 'category',
       key: 'category',
-      render: (v: string) => (
+      render: (_: string, record: MaterialCatalogItem) => (
         <span
           style={{
             background: 'rgba(0,153,68,0.2)',
@@ -327,7 +326,7 @@ const Materials: React.FC = () => {
             fontSize: 12,
           }}
         >
-          {v || DEFAULT_MATERIAL_CATEGORY}
+          {getCatalogCategory(record)}
         </span>
       ),
     },
@@ -707,7 +706,7 @@ const Materials: React.FC = () => {
                           <td className="col-no">{index + 1}</td>
                           <td className="col-desc">{item.name || '—'}</td>
                           <td className="col-unit">{item.unit || '—'}</td>
-                          <td className="col-category">{item.category || DEFAULT_MATERIAL_CATEGORY}</td>
+                          <td className="col-category">{getCatalogCategory(item)}</td>
                           <td className="col-desc2">{item.description || '—'}</td>
                         </tr>
                       );
