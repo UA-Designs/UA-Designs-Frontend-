@@ -374,7 +374,14 @@ class CostService {
       if (response.data.success) return response.data.data;
       throw new Error('Failed to update cost');
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to update cost');
+      const status = error.response?.status;
+      const msg = error.response?.data?.message;
+      if (status === 403) {
+        throw new Error(
+          msg || 'This BOQ item is approved or paid and cannot be edited unless you are an admin or proprietor.'
+        );
+      }
+      throw new Error(msg || 'Failed to update cost');
     }
   }
 
