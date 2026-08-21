@@ -38,6 +38,7 @@ import {
   MoreOutlined,
   FlagOutlined,
   AuditOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ProjectSelector from '../../../components/common/ProjectSelector';
@@ -56,8 +57,10 @@ import {
   RiskMatrix as RiskMatrixType,
   RiskMonitoring as RiskMonitoringType,
 } from '../../../services/riskService';
+import { aiService } from '../../../services/aiService';
 import { scheduleService, ScheduleTask } from '../../../services/scheduleService';
 import RiskMatrix from '../../../components/Charts/RiskMatrix';
+import AIConfidenceBadge from '../../../components/ai/AIConfidenceBadge';
 
 const { useBreakpoint } = Grid;
 
@@ -80,6 +83,8 @@ const ProjectRisk: React.FC = () => {
   const [monitoring, setMonitoring] = useState<RiskMonitoringType | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [scheduleTasks, setScheduleTasks] = useState<ScheduleTask[]>([]);
+  const [aiScoringLoading, setAiScoringLoading] = useState(false);
+  const [aiReviewedRiskIds, setAiReviewedRiskIds] = useState<Record<string, boolean>>({});
 
   // Modal states
   const [riskModalVisible, setRiskModalVisible] = useState(false);
@@ -141,6 +146,63 @@ const ProjectRisk: React.FC = () => {
 
   const handleRefresh = () => {
     loadRiskData();
+  };
+
+  const hasAiSuggestion = (risk: Risk): boolean => {
+    const r: any = risk as any;
+    return r.aiGeneratedAt != null || r.aiConfidence != null || r.aiSeverity != null;
+  };
+
+  const markAiReviewed = (riskId: string) => {
+    setAiReviewedRiskIds(prev => ({ ...prev, [riskId]: true }));
+  };
+
+  const handleRunAiRiskScoring = async () => {
+    if (!selectedProject) return;
+    setAiScoringLoading(true);
+    try {
+      await aiService.runRiskScoring(selectedProject.id);
+      message.success('AI risk scoring completed. Review suggestions below.');
+      setAiReviewedRiskIds({});
+      await loadRiskData();
+    } catch (error: any) {
+      message.error(error?.message || 'Failed to run AI risk scoring');
+    } finally {
+      setAiScoringLoading(false);
+    }
+  };
+
+  const handleApplyAiSuggestion = async (risk: Risk) => {
+    const r: any = risk as any;
+    const aiProbability = r.aiProbability;
+    const aiImpact = r.aiImpact;
+    const aiSeverity = r.aiSeverity;
+    const aiRiskScore = r.aiRiskScore;
+
+    if (aiProbability == null && aiImpact == null && aiSeverity == null && aiRiskScore == null) {
+      message.info('No AI suggestion values found for this risk.');
+      return;
+    }
+
+    try {
+      const payload: any = {};
+      if (typeof aiProbability === 'number') payload.probability = aiProbability;
+      if (typeof aiImpact === 'number') payload.impact = aiImpact;
+      if (typeof aiSeverity === 'string') payload.severity = aiSeverity;
+      if (typeof aiRiskScore === 'number') payload.riskScore = aiRiskScore;
+
+      await riskService.updateRisk(risk.id, payload);
+      message.success('AI suggestion applied to baseline risk fields.');
+      markAiReviewed(risk.id);
+      await loadRiskData();
+    } catch (error: any) {
+      message.error(error?.message || 'Failed to apply AI suggestion');
+    }
+  };
+
+  const handleKeepBaseline = (risk: Risk) => {
+    markAiReviewed(risk.id);
+    message.info('Kept baseline risk values (AI suggestion dismissed for review).');
   };
 
   const handleAddRisk = () => {
@@ -441,6 +503,66 @@ const ProjectRisk: React.FC = () => {
       },
     },
     {
+      title: 'AI Suggested',
+      key: 'aiSuggested',
+      width: 260,
+      render: (_: any, record: Risk) => {
+        const r: any = record as any;
+        if (!hasAiSuggestion(record)) return <Text type="secondary">—</Text>;
+
+        const aiSeverity = r.aiSeverity as RiskSeverity | undefined;
+        const aiConfidence = typeof r.aiConfidence === 'number' ? (r.aiConfidence as number) : null;
+        const aiReasons = r.aiReasons;
+        const reasonsText =
+          typeof aiReasons === 'string'
+            ? aiReasons
+            : aiReasons
+              ? (() => {
+                  try {
+                    return JSON.stringify(aiReasons);
+                  } catch {
+                    return String(aiReasons);
+                  }
+                })()
+              : '';
+
+        return (
+          <Space direction="vertical" size={4}>
+            <Tag color={aiSeverity ? getSeverityColor(aiSeverity) : 'default'}>{aiSeverity || '—'}</Tag>
+            <AIConfidenceBadge confidence={aiConfidence} />
+            {reasonsText ? (
+              <Text type="secondary" style={{ fontSize: 12, maxWidth: 220 }}>
+                {reasonsText.length > 80 ? `${reasonsText.substring(0, 80)}…` : reasonsText}
+              </Text>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 12 }}>No reasons provided</Text>
+            )}
+          </Space>
+        );
+      },
+    },
+    {
+      title: 'AI Actions',
+      key: 'aiActions',
+      width: 180,
+      render: (_: any, record: Risk) => {
+        if (!hasAiSuggestion(record)) return null;
+        const reviewed = !!aiReviewedRiskIds[record.id];
+        if (reviewed) return <Tag color="green">Reviewed</Tag>;
+
+        return (
+          <Space size={8}>
+            <Button size="small" onClick={() => handleApplyAiSuggestion(record)} disabled={!can('MANAGER_AND_ABOVE')}>
+              Apply
+            </Button>
+            <Button size="small" onClick={() => handleKeepBaseline(record)}>
+              Keep
+            </Button>
+          </Space>
+        );
+      },
+    },
+    {
       title: 'Actions',
       key: 'actions',
       width: 80,
@@ -641,19 +763,34 @@ const ProjectRisk: React.FC = () => {
                   <>
                     <div style={{ padding: '12px 16px', borderBottom: '1px solid #333333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text type="secondary" style={{ fontSize: 13 }}>Potential issues that could affect the project. Use the ⋮ menu on each row to assess, mitigate, or escalate.</Text>
-                      {can('ENGINEER_AND_ABOVE') && (
-                        <Button icon={<PlusOutlined />} onClick={handleAddRisk}
-                          style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}>
-                          Add risk
-                        </Button>
-                      )}
+                      <Space>
+                        {can('MANAGER_AND_ABOVE') && (
+                          <Button
+                            icon={<RobotOutlined />}
+                            loading={aiScoringLoading}
+                            onClick={handleRunAiRiskScoring}
+                            style={{ background: '#1f6feb', borderColor: '#1f6feb', color: '#ffffff' }}
+                          >
+                            Run AI Risk Scoring
+                          </Button>
+                        )}
+                        {can('ENGINEER_AND_ABOVE') && (
+                          <Button
+                            icon={<PlusOutlined />}
+                            onClick={handleAddRisk}
+                            style={{ background: '#00aaff', borderColor: '#00aaff', color: '#ffffff' }}
+                          >
+                            Add risk
+                          </Button>
+                        )}
+                      </Space>
                     </div>
                     <Table
                       columns={riskColumns}
                       dataSource={safeRisks}
                       rowKey="id"
                       pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} risk${t !== 1 ? 's' : ''}` }}
-                      scroll={{ x: 1200 }}
+                      scroll={{ x: 1400 }}
                       locale={{ emptyText: 'No risks yet. Click "Add risk" to log the first risk (e.g. weather delay, material shortage).' }}
                     />
                   </>
