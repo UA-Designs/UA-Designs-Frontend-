@@ -472,6 +472,22 @@ class AiService {
     return this.chat(projectId, message, conversationId);
   }
 
+  sendAiChat(opts: {
+    projectId: string;
+    message: string;
+    conversationId?: string;
+  }) {
+    return this.chat(opts.projectId, opts.message, opts.conversationId);
+  }
+
+  approveAiAction(id: string) {
+    return this.approveAction(id);
+  }
+
+  rejectAiAction(id: string) {
+    return this.rejectAction(id);
+  }
+
   async approveAction(id: string): Promise<ActionDecisionResponse> {
     const response = await apiService.post<unknown>(
       `/ai/actions/${id}/approve`,
@@ -546,3 +562,12 @@ class AiService {
 }
 
 export const aiService = new AiService();
+
+export const sendAiChat = (opts: {
+  projectId: string;
+  message: string;
+  conversationId?: string;
+}) => aiService.sendAiChat(opts);
+
+export const approveAiAction = (id: string) => aiService.approveAiAction(id);
+export const rejectAiAction = (id: string) => aiService.rejectAiAction(id);

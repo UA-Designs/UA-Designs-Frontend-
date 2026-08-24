@@ -39,7 +39,8 @@ const { Text } = Typography;
 const { TextArea } = Input;
 
 const MESSAGE_MAX = 2000;
-const EMPTY_LINE = 'Ask about schedule, cost, risk, or this project’s tasks.';
+const EMPTY_LINE =
+  'Ask about this project’s forecast, budget, schedule, resources, or what to prioritize.';
 const DISABLED_LINE = 'The assistant is not configured on the server.';
 
 type ChatRole = 'user' | 'assistant';
@@ -64,14 +65,18 @@ interface ThreadStore {
 interface ProjectAIChatProps {
   projectId: string;
   assistantName?: string;
+  projectName?: string;
+  variant?: 'page' | 'drawer';
   onActionExecuted?: (proposal: ActionProposal) => void;
 }
 
 const QUICK_PROMPTS = [
-  'Estimated schedule',
-  'Cost forecast',
-  'Top risks',
-  'Overdue tasks',
+  'What is the forecast for this project?',
+  'Are we going to exceed the budget?',
+  'When will the project finish?',
+  'Why are we forecasted to be late?',
+  'What resources will we need?',
+  'What should I prioritize?',
 ];
 
 const HIDDEN_PARAM_KEYS = new Set([
@@ -654,6 +659,67 @@ interface ProposalCardProps {
   onReject: (id: string) => void;
 }
 
+type ReplyKind = 'FACT' | 'FORECAST' | 'RECOMMENDATION';
+
+const KIND_RE =
+  /^(?:\*\*)?(FACT|FORECAST|RECOMMENDATION)(?:\*\*)?\s*[:.\-–]\s*(.*)$/i;
+
+function parseLabeledReply(
+  text: string
+): Array<{ kind: ReplyKind | null; text: string }> {
+  const lines = text.split('\n');
+  const blocks: Array<{ kind: ReplyKind | null; text: string }> = [];
+  let current: { kind: ReplyKind | null; lines: string[] } | null = null;
+
+  const flush = () => {
+    if (!current) return;
+    const joined = current.lines.join('\n').trim();
+    if (joined) blocks.push({ kind: current.kind, text: joined });
+    current = null;
+  };
+
+  for (const line of lines) {
+    const match = line.trim().match(KIND_RE);
+    if (match) {
+      flush();
+      current = {
+        kind: match[1].toUpperCase() as ReplyKind,
+        lines: [match[2] || ''],
+      };
+    } else if (current) {
+      current.lines.push(line);
+    } else {
+      current = { kind: null, lines: [line] };
+    }
+  }
+  flush();
+  return blocks.length ? blocks : [{ kind: null, text }];
+}
+
+const ReplyBody: React.FC<{ text: string }> = ({ text }) => {
+  const blocks = parseLabeledReply(text);
+  const labeled = blocks.some(b => b.kind);
+  if (!labeled) {
+    return <p>{text}</p>;
+  }
+  return (
+    <div className="ua-ai-reply-blocks">
+      {blocks.map((block, i) => (
+        <div key={`${block.kind || 'body'}-${i}`} className="ua-ai-reply-block">
+          {block.kind && (
+            <span
+              className={`ua-ai-kind ua-ai-kind--${block.kind.toLowerCase()}`}
+            >
+              {block.kind}
+            </span>
+          )}
+          <p>{block.text}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ProposalCard: React.FC<ProposalCardProps> = ({
   proposal,
   busy,
@@ -734,6 +800,8 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
 const ProjectAIChat: React.FC<ProjectAIChatProps> = ({
   projectId,
   assistantName = 'NUKI',
+  projectName,
+  variant = 'page',
   onActionExecuted,
 }) => {
   const { user } = useAuth();
@@ -921,10 +989,14 @@ const ProjectAIChat: React.FC<ProjectAIChatProps> = ({
     ? 'ua-ai-composer__count ua-ai-composer__count--warn'
     : 'ua-ai-composer__count';
 
+  const panelTitle = projectName
+    ? `${assistantName} · ${projectName}`
+    : assistantName;
+
   return (
     <Card
-      className="ua-ai-panel"
-      title={assistantName}
+      className={`ua-ai-panel ${variant === 'drawer' ? 'ua-ai-panel--drawer' : ''}`}
+      title={variant === 'drawer' ? null : panelTitle}
       extra={
         <Button
           type="text"
@@ -968,7 +1040,7 @@ const ProjectAIChat: React.FC<ProjectAIChatProps> = ({
                   {!isUser && (
                     <span className="ua-ai-label">{assistantName}</span>
                   )}
-                  <p>{msg.text}</p>
+                  {isUser ? <p>{msg.text}</p> : <ReplyBody text={msg.text} />}
                   {msg.error && msg.retryable && retryText && (
                     <div className="ua-ai-retry">
                       <Button

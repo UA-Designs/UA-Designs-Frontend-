@@ -30,14 +30,16 @@ import {
   BarChartOutlined,
   ExclamationCircleOutlined,
   UsergroupAddOutlined,
-  ToolOutlined,
   AuditOutlined,
   AppstoreOutlined,
+  LineChartOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useProject } from '../../contexts/ProjectContext';
 import Logo from '../Logo/Logo';
+import GlobalAIDrawer from '../ai/GlobalAIDrawer';
 
 const { Header, Sider, Content } = AntLayout;
 const { Text } = Typography;
@@ -50,6 +52,7 @@ const SIDEBAR_HEADING = '#7a9b85';
 const Layout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const { user, logout, isLoading, can } = useAuth();
@@ -112,6 +115,8 @@ const Layout: React.FC = () => {
     { key: '/pmbok/risk', icon: <ExclamationCircleOutlined />, label: 'Risk Management' },
     { key: '/pmbok/stakeholders', icon: <UsergroupAddOutlined />, label: 'Stakeholders' },
     { key: '/analytics', icon: <BarChartOutlined />, label: 'Analytics' },
+    { key: '/forecasting', icon: <LineChartOutlined />, label: 'Forecasting' },
+    { key: 'ai-assistant', icon: <RobotOutlined />, label: 'AI Assistant' },
     { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
   ];
 
@@ -165,11 +170,28 @@ const Layout: React.FC = () => {
   }));
 
   const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === 'ai-assistant') {
+      setAiDrawerOpen(true);
+      if (isMobile) setMobileMenuOpen(false);
+      return;
+    }
     if (key.startsWith('/')) {
       navigate(key);
       if (isMobile) setMobileMenuOpen(false);
     }
   };
+
+  const selectedMenuKeys = (() => {
+    const path = location.pathname;
+    const keys: string[] = [];
+    if (path === '/forecasting' || /^\/projects\/[^/]+\/forecasting/.test(path)) {
+      keys.push('/forecasting');
+    } else {
+      keys.push(path);
+    }
+    if (aiDrawerOpen) keys.push('ai-assistant');
+    return keys;
+  })();
 
   const sidebarContent = (
     <ConfigProvider theme={{ token: { colorPrimary: SIDEBAR_ACCENT } }}>
@@ -193,7 +215,7 @@ const Layout: React.FC = () => {
           <Menu
             theme="dark"
             mode="inline"
-            selectedKeys={[location.pathname]}
+            selectedKeys={selectedMenuKeys}
             items={menuItems}
             onClick={handleMenuClick}
             style={{ borderRight: 0, background: 'transparent' }}
@@ -312,6 +334,19 @@ const Layout: React.FC = () => {
             />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <Button
+              type="text"
+              icon={<RobotOutlined />}
+              onClick={() => setAiDrawerOpen(true)}
+              aria-label="Open AI Assistant"
+              style={{
+                fontSize: '16px',
+                color: '#009944',
+                borderRadius: '8px',
+                width: 40,
+                height: 40,
+              }}
+            />
             <Dropdown
               menu={{ items: notificationMenuItems }}
               placement="bottomRight"
@@ -393,6 +428,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </Content>
       </AntLayout>
+      <GlobalAIDrawer open={aiDrawerOpen} onClose={() => setAiDrawerOpen(false)} />
     </AntLayout>
   );
 };

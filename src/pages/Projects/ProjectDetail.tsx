@@ -89,6 +89,7 @@ import {
 } from '../../utils/materialCategory';
 import { useAuth } from '../../contexts/AuthContext';
 import ProjectAIChat from '../../components/ai/ProjectAIChat';
+import ProjectForecastDashboard from '../Forecasting/components/ProjectForecastDashboard';
 
 /** BOQ line unit of measure — stored as `unit` on the cost; backend accepts any string. */
 const BOQ_UNIT_OF_MEASURE_OPTIONS = [
@@ -2635,6 +2636,23 @@ const ProjectDetail: React.FC = () => {
       ),
     },
     {
+      key: 'forecasting',
+      label: (
+        <>
+          Forecasting <LineChartOutlined />
+        </>
+      ),
+      children: (
+        <div style={{ marginTop: 16 }}>
+          {projectId ? (
+            <ProjectForecastDashboard projectId={projectId} embedded />
+          ) : (
+            <Empty description="No project selected" />
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'ai-assistant',
       label: <Badge dot={hasUnreviewedAiRisks}>NUKI</Badge>,
       children: (
@@ -2642,6 +2660,7 @@ const ProjectDetail: React.FC = () => {
           <ProjectAIChat
             key={`${user?.id || 'anon'}:${projectId}`}
             projectId={projectId!}
+            projectName={project?.name}
             onActionExecuted={refreshAfterAiAction}
           />
         </div>

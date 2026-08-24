@@ -121,6 +121,62 @@
   word-break: break-word;
 }
 
+.ua-ai-reply-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ua-ai-reply-block p {
+  margin: 0;
+}
+
+.ua-ai-kind {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-bottom: 6px;
+}
+
+.ua-ai-kind--fact {
+  color: #00aaff;
+  background: rgba(0, 170, 255, 0.12);
+}
+
+.ua-ai-kind--forecast {
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.12);
+}
+
+.ua-ai-kind--recommendation {
+  color: #009944;
+  background: rgba(0, 153, 68, 0.12);
+}
+
+.ua-ai-panel--drawer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+.ua-ai-panel--drawer .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ua-ai-panel--drawer .ua-ai-thread {
+  flex: 1;
+  height: auto;
+  min-height: 220px;
+}
+
 .ua-ai-msg--error p {
   color: #b3b3b3;
 }

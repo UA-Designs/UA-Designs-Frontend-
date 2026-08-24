@@ -32,6 +32,7 @@ export interface ProjectDashboardData {
   stakeholderCount: number;
   recentTasks?: any[];
   recentRisks?: any[];
+  forecasting?: unknown;
   [key: string]: any;
 }
 

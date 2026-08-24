@@ -30,6 +30,8 @@ import ProjectSchedule from './pages/PMBOK/Schedule/ProjectSchedule';
 import ProjectCost from './pages/PMBOK/Cost/ProjectCost';
 import ProjectRisk from './pages/PMBOK/Risk/ProjectRisk';
 import ProjectStakeholders from './pages/PMBOK/Stakeholders/ProjectStakeholders';
+import Forecasting from './pages/Forecasting/Forecasting';
+import ProjectForecasting from './pages/Forecasting/ProjectForecasting';
 
 function App() {
   return (
@@ -61,6 +63,8 @@ function App() {
               <Route path="materials" element={<Materials />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
+              <Route path="forecasting" element={<Forecasting />} />
+              <Route path="projects/:projectId/forecasting" element={<ProjectForecasting />} />
               <Route path="profile" element={<Profile />} />
               <Route path="reports" element={<Navigate to="/analytics" replace />} />
               <Route path="settings" element={<Settings />} />
