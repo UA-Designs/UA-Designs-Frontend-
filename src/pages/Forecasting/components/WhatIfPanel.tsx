@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -19,6 +18,7 @@ import {
 } from '../../../services/forecastService';
 import { scheduleService, ScheduleTask } from '../../../services/scheduleService';
 import { fmtDate, fmtIndex, fmtNumber, fmtPhp } from '../forecastFormat';
+import DarkAlert from './DarkAlert';
 
 const { Text, Title } = Typography;
 
@@ -173,7 +173,7 @@ const WhatIfPanel: React.FC<WhatIfPanelProps> = ({ projectId }) => {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Alert
+      <DarkAlert
         type="info"
         showIcon
         message="SCENARIO / WHAT-IF"
@@ -262,7 +262,7 @@ const WhatIfPanel: React.FC<WhatIfPanelProps> = ({ projectId }) => {
         </Form>
       </Card>
 
-      {error && <Alert type="error" showIcon message={error} />}
+      {error && <DarkAlert type="error" showIcon message={error} />}
 
       {result != null && (
         <Row gutter={[16, 16]}>

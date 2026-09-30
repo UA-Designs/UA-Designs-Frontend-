@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -36,6 +35,7 @@ import { Can } from '../../../components/rbac/Can';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ForecastStatusBadge from './ForecastStatusBadge';
+import DarkAlert from './DarkAlert';
 import WhatIfPanel from './WhatIfPanel';
 import {
   CostTimelineChart,
@@ -143,18 +143,18 @@ const DataQualityBanner: React.FC<{ forecast: NormalizedProjectForecast }> = ({
     .filter((row): row is { key: string; text: string } => row != null);
 
   return (
-    <Alert
+    <DarkAlert
       type="warning"
       showIcon
       message="Insufficient data to produce a forecast"
       description={
         <div>
-          <Text style={{ color: '#bbb' }}>
+          <Text style={{ color: '#b3b3b3' }}>
             Cards show n/a until the API has enough project data. No estimated
             figures are displayed.
           </Text>
           {lines.length > 0 && (
-            <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: '#bbb' }}>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: '#b3b3b3' }}>
               {lines.map(row => (
                 <li key={row.key}>{row.text}</li>
               ))}
@@ -355,7 +355,7 @@ const ProjectForecastDashboard: React.FC<ProjectForecastDashboardProps> = ({
   }
 
   if (error && !forecast) {
-    return <Alert type="error" showIcon message={error} />;
+    return <DarkAlert type="error" showIcon message={error} />;
   }
 
   if (!forecast) {
@@ -371,7 +371,7 @@ const ProjectForecastDashboard: React.FC<ProjectForecastDashboardProps> = ({
 
   const overview = (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      {error && <Alert type="error" showIcon message={error} closable onClose={() => setError(null)} />}
+      {error && <DarkAlert type="error" showIcon message={error} closable onClose={() => setError(null)} />}
       <DataQualityBanner forecast={forecast} />
       {methodology && (
         <Text style={{ color: '#888', fontSize: 12 }}>Methodology: {methodology}</Text>

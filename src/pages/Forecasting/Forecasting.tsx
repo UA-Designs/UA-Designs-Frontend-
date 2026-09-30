@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -22,6 +21,7 @@ import {
 } from '../../services/forecastService';
 import { useProject } from '../../contexts/ProjectContext';
 import ForecastStatusBadge from './components/ForecastStatusBadge';
+import DarkAlert from './components/DarkAlert';
 import { fmtDays, fmtPhp } from './forecastFormat';
 
 const { Title, Text } = Typography;
@@ -191,7 +191,7 @@ const Forecasting: React.FC = () => {
 
       <Card style={cardStyle} title="At-risk overview">
         {error && (
-          <Alert
+          <DarkAlert
             type="error"
             showIcon
             message={error}

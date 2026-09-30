@@ -1,0 +1,57 @@
+/* Dark-theme alerts for Forecasting — match UA Designs cards, not Ant defaults. */
+
+.ua-forecast-alert.ant-alert {
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.ua-forecast-alert .ant-alert-message {
+  font-weight: 600;
+}
+
+.ua-forecast-alert .ant-alert-description {
+  color: #b3b3b3 !important;
+}
+
+.ua-forecast-alert--warning.ant-alert {
+  background: rgba(255, 170, 0, 0.08) !important;
+  border: 1px solid rgba(255, 170, 0, 0.28) !important;
+}
+
+.ua-forecast-alert--warning .ant-alert-message {
+  color: #fde68a !important;
+}
+
+.ua-forecast-alert--warning .ant-alert-icon {
+  color: #ffaa00 !important;
+}
+
+.ua-forecast-alert--info.ant-alert {
+  background: rgba(0, 153, 68, 0.08) !important;
+  border: 1px solid rgba(0, 153, 68, 0.28) !important;
+}
+
+.ua-forecast-alert--info .ant-alert-message {
+  color: #ffffff !important;
+}
+
+.ua-forecast-alert--info .ant-alert-icon {
+  color: #00cc66 !important;
+}
+
+.ua-forecast-alert--error.ant-alert {
+  background: rgba(255, 0, 64, 0.08) !important;
+  border: 1px solid rgba(255, 64, 96, 0.28) !important;
+}
+
+.ua-forecast-alert--error .ant-alert-message {
+  color: #fca5a5 !important;
+}
+
+.ua-forecast-alert--error .ant-alert-icon {
+  color: #ff4d6a !important;
+}
+
+.ua-forecast-alert .ant-alert-close-icon {
+  color: #808080 !important;
+}
