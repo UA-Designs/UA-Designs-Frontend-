@@ -82,6 +82,9 @@ class ApiService {
           requestUrl.includes('/auth/login') ||
           requestUrl.includes('/auth/register');
         const isAiRequest = requestUrl.includes('/ai/');
+        const isQuietRequest =
+          isAiRequest ||
+          requestUrl.includes('/stakeholders/conversations/pusher/auth');
         const isPublicAuthPage =
           window.location.pathname === '/login' ||
           window.location.pathname === '/register' ||
@@ -100,26 +103,26 @@ class ApiService {
             window.location.href = '/login';
           }
         } else if (error.response?.status === 403) {
-          if (!isAiRequest) {
+          if (!isQuietRequest) {
             toast.error(
               error.response?.data?.message ||
                 'You do not have permission to perform this action.'
             );
           }
         } else if (error.response?.status === 404) {
-          if (!isAiRequest) {
+          if (!isQuietRequest) {
             toast.error('Resource not found');
           }
         } else if (error.response?.status === 500) {
-          if (!isAiRequest) {
+          if (!isQuietRequest) {
             toast.error('Internal server error. Please try again later.');
           }
         } else if (error.code === 'ECONNABORTED') {
-          if (!isAiRequest) {
+          if (!isQuietRequest) {
             toast.error('Request timeout. Please check your connection.');
           }
         } else if (!error.response) {
-          if (!isAiRequest) {
+          if (!isQuietRequest) {
             toast.error('Network error. Please check your connection.');
           }
         }

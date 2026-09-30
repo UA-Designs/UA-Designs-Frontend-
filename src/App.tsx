@@ -65,6 +65,10 @@ function App() {
               <Route path="projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
               <Route path="forecasting" element={<Forecasting />} />
               <Route path="projects/:projectId/forecasting" element={<ProjectForecasting />} />
+              <Route
+                path="projects/:projectId/messages"
+                element={<ProjectStakeholders initialTab="messages" />}
+              />
               <Route path="profile" element={<Profile />} />
               <Route path="reports" element={<Navigate to="/analytics" replace />} />
               <Route path="settings" element={<Settings />} />

@@ -186,6 +186,8 @@ const Layout: React.FC = () => {
     const keys: string[] = [];
     if (path === '/forecasting' || /^\/projects\/[^/]+\/forecasting/.test(path)) {
       keys.push('/forecasting');
+    } else if (path === '/pmbok/stakeholders' || /^\/projects\/[^/]+\/messages/.test(path)) {
+      keys.push('/pmbok/stakeholders');
     } else {
       keys.push(path);
     }

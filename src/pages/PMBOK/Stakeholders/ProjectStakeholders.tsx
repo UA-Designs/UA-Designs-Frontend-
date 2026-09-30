@@ -31,6 +31,7 @@ import {
   MessageOutlined,
   StarOutlined,
   PercentageOutlined,
+  CommentOutlined,
 } from '@ant-design/icons';
 import {
   ScatterChart,
@@ -43,6 +44,7 @@ import {
   ResponsiveContainer,
   Label,
 } from 'recharts';
+import { useParams } from 'react-router-dom';
 import ProjectSelector from '../../../components/common/ProjectSelector';
 import { ChartErrorBoundary } from '../../../components/Charts/ChartErrorBoundary';
 import { useProject } from '../../../contexts/ProjectContext';
@@ -53,6 +55,7 @@ import {
   Communication,
   EngagementRecord,
 } from '../../../services/stakeholderService';
+import StakeholderMessenger from './StakeholderMessenger';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -66,13 +69,15 @@ const influenceColor = (level: string) =>
 
 // ---- Component ----
 
-const ProjectStakeholders: React.FC = () => {
-  const { selectedProject, isLoading: projectsLoading } = useProject();
+const ProjectStakeholders: React.FC<{ initialTab?: string }> = ({ initialTab }) => {
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const { selectedProject, setSelectedProject, projects, isLoading: projectsLoading } = useProject();
   const { can } = useAuth();
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('register');
+  const [activeTab, setActiveTab] = useState(initialTab || 'register');
+  const [messageStakeholderId, setMessageStakeholderId] = useState<string | null>(null);
 
   // Data states
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
@@ -110,6 +115,16 @@ const ProjectStakeholders: React.FC = () => {
       loadData();
     }
   }, [selectedProject]);
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (!routeProjectId || !projects.length) return;
+    const match = projects.find(p => p.id === routeProjectId);
+    if (match && selectedProject?.id !== match.id) setSelectedProject(match);
+  }, [routeProjectId, projects, selectedProject, setSelectedProject]);
 
 
 
@@ -343,6 +358,17 @@ const ProjectStakeholders: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Stakeholder) => (
         <Space>
+          <Button
+            type="link"
+            icon={<CommentOutlined />}
+            size="small"
+            onClick={() => {
+              setMessageStakeholderId(record.id);
+              setActiveTab('messages');
+            }}
+          >
+            Message
+          </Button>
           {can('MANAGER_AND_ABOVE') && (
             <Button type="link" icon={<EditOutlined />} size="small"
               onClick={() => openStakeholderModal(record)}>Edit</Button>
@@ -393,6 +419,7 @@ const ProjectStakeholders: React.FC = () => {
 
   const shTabItems = [
     { key: 'register',       icon: <TeamOutlined />,    label: 'Register'          },
+    { key: 'messages',       icon: <CommentOutlined />, label: 'Messages'          },
     { key: 'communications', icon: <MessageOutlined />, label: 'Communications'    },
     { key: 'engagement',     icon: null,                label: 'Engagement'        },
     { key: 'matrix',         icon: null,                label: 'Influence Matrix'  },
@@ -482,6 +509,15 @@ const ProjectStakeholders: React.FC = () => {
                       locale={{ emptyText: 'No stakeholders yet. Click "Add stakeholder" to add contacts (e.g. client, suppliers, team).' }}
                     />
                   </>
+                )}
+
+                {/* Messages */}
+                {activeTab === 'messages' && selectedProject && (
+                  <StakeholderMessenger
+                    projectId={selectedProject.id}
+                    stakeholders={stakeholders}
+                    openStakeholderId={messageStakeholderId}
+                  />
                 )}
 
                 {/* Communications */}
